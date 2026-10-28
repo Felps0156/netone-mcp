@@ -1,8 +1,8 @@
 # PRD — NetOne MCP: Servidor de Consulta e Análise Read-Only
 
-> **Versão:** 1.0.0 — planejamento inicial  
+> **Versão:** 1.1.0 — revisão autorizada: POST de consulta com allowlist e sem mutação comercial  
 > **Data:** 27/10/2026  
-> **Status:** Especificado para desenvolvimento, com bloqueio técnico condicionado à validação dos endpoints de leitura  
+> **Status:** NOT_READY — POSTs de consulta candidatos aprovados no planejamento; G0 = BLOCKED por validação de segurança/execução pendente, não pelo método HTTP; nenhuma operação comercial liberada  
 > **Produto:** `netone-mcp`  
 > **Distribuição prevista:** repositório público, instalação por operador autorizado  
 > **Stack central:** Python **3.14+** · SDK MCP mantido · LangChain **1.x+** · LangGraph · cliente HTTP · Pydantic · `.venv` · `requirements.txt`  
@@ -24,7 +24,7 @@ Este `PRD.md` é a **fonte única de verdade para planejamento e implementação
 - A especificação distingue **requisitos**, **evidências externas**, **hipóteses** e **entregas futuras**. Nenhum exemplo de JSON, endpoint ou fluxo proposto comprova suporte real da API.
 - Qualquer alteração de escopo deve atualizar a versão do PRD, o registro de decisões, os riscos, o roadmap e as sprints afetadas; nunca marcar tarefas retroativamente sem evidência.
 
-> **Atenção — bloqueio relevante:** o código legado de referência realiza consultas de reduzidos e estoque por **HTTP POST** com token no cabeçalho `netone-auth-token`. Isso evidencia como *aquele código* consulta o ERP, **não comprova que existem versões GET** dos mesmos recursos. O prompt de origem proíbe POST em operações comerciais, mesmo que semanticamente apenas consultem. Por isso, a implementação de consulta comercial depende de encontrar e validar alternativas **GET realmente read-only**. Caso não existam, não contornar a restrição; registrar o impasse para uma nova decisão explícita do responsável. Consultas não verificadas **não** integram o escopo liberado da V1.
+> **Política vigente — autorização explícita do responsável em 27/10/2026:** read-only significa **ausência de mutação comercial**, não obrigatoriedade de GET. A versão 1.1.0 substitui a proibição geral de POST comercial pela admissão restrita dos POSTs documentados de consulta de reduzidos, preços e estoque, identificados literalmente na seção 10.5. Isso permite planejar/adaptar a lógica legada; não autoriza copiar código inseguro, iniciar outras sprints, executar chamadas reais, liberar tools ou presumir segurança só pelo método HTTP. Cadastro, alteração, exclusão, reserva, movimentação e sincronização com escrita permanecem proibidos. S0.11 e G0 continuam bloqueados pela evidência de segurança e validação ainda pendentes. A antiga política GET-only é histórica e não rege novas implementações.
 
 ## Índice
 
@@ -84,8 +84,9 @@ Integrar sistemas assistidos por IA a ERPs frequentemente exige código específ
 
 ### 1.4 Status de evidência
 
-- **CONFIRMADO em código legado:** cabeçalho `netone-auth-token`; paginação com chaves `page`, `limit`, `totalPages`, `result`; requisições **POST** no código de produtos e estoque; consulta em lotes com `idsReduzidos`; uso de campos comerciais identificados na seção 11.
-- **NÃO CONFIRMADO:** contratos oficiais completos, endpoints GET alternativos, limites reais, renovação de token, eventual OAuth, consistência de preços/estoque e execução real MCP da V1.
+- **CONFIRMADO em código legado, reinspecionado na Sprint 0:** cabeçalho `netone-auth-token`; paginação com chaves `page`, `limit`, `totalPages`, `result`; requisições **POST** de produtos e estoque; lotes com `idsReduzidos`. Nenhum código legado foi executado.
+- **CONFIRMADO na documentação oficial em 27/10/2026:** as dez consultas do grupo Produto inspecionadas usam **POST**; autenticação por token de usuário no header, recuperável no ERP ou por **POST de autenticação** `/app-web/api/v2/auth/login`. Estoque é físico menos reservas, no depósito informado ou parametrizado do usuário; `valor` é descrito como varejo, distinto de atacado. Evidências e conflitos: `docs/api-capabilities.md`.
+- **NÃO CONFIRMADO:** ausência de efeitos colaterais comerciais dos candidatos de consulta, limites reais, validade/renovação do token, eventual OAuth, permissões e contratos executados na instalação. GET equivalente não é mais pré-requisito; nenhum método, isoladamente, comprova segurança. Nenhuma chamada autenticada foi realizada.
 - **PROPOSTO:** servidor stdio, validação tipada, normalização de respostas, limites conservadores, documentação pública e análise sem LLM obrigatório.
 
 ---
@@ -119,7 +120,7 @@ Integrar sistemas assistidos por IA a ERPs frequentemente exige código específ
 | Descoberta de tools MCP | **100% das tools liberadas** | Inspeção manual com cliente MCP |
 | Respostas com origem/estado dos dados | **100% das tools comerciais** | Verificar contratos de retorno |
 | Fluxos com dados parciais | **Indicação explícita** | Simular limitação com dados sanitizados e revisar resposta |
-| Consulta real de produtos | **Somente se GET seguro for comprovado** | Evidência de documentação + validação autorizada |
+| Consulta real de produtos | **Somente por operação read-only aprovada** | Contrato documentado + revisão de ausência de mutação + validação autorizada |
 
 **Tempo de resposta:** estabelecer baseline durante a validação; não declarar SLA numérico sem dados reais da API. Definir limites de tamanho, tempo e número de requisições antes de qualquer consulta ampla.
 
@@ -127,7 +128,7 @@ Integrar sistemas assistidos por IA a ERPs frequentemente exige código específ
 
 ## 3. Escopo, Premissas e Exclusões
 
-### 3.1 No escopo V1, condicionado a evidência de GET seguro
+### 3.1 No escopo V1, condicionado a operação read-only comprovada
 
 - Conexão com uma instância NetOne configurada por ambiente.
 - Autenticação estritamente necessária às leituras comprovadas.
@@ -141,7 +142,7 @@ Integrar sistemas assistidos por IA a ERPs frequentemente exige código específ
 - Criar, editar, atualizar, excluir, reservar ou movimentar qualquer registro comercial.
 - Alterar preços, estoque, vendas, pedidos, clientes, fornecedores, regras ou cadastros.
 - Endpoint HTTP arbitrário, proxy genérico, execução de comandos ou SQL arbitrário.
-- Acesso comercial por POST, PUT, PATCH, DELETE ou outro método mutável, **ainda que o servidor remoto o utilize com semântica de consulta**.
+- Operações comerciais mutáveis por **qualquer método**, incluindo GET; PUT, PATCH, DELETE e POST fora dos candidatos de consulta aprovados na seção 10.5. POST não é permitido genericamente: método, rota e schema de consulta precisam de revisão individual, validação e allowlist literal.
 - Ferramentas MCP de autenticação administrativa ou divulgação de tokens.
 - Banco de dados próprio, sincronização persistente, migrations, cache persistente.
 - Testes unitários, de integração automatizados ou arquivos de testes.
@@ -163,10 +164,12 @@ Integrar sistemas assistidos por IA a ERPs frequentemente exige código específ
 **G0 — Condição para liberar as Sprints 4 a 10 com operações reais:**
 
 1. Obter documentação e evidências dos métodos, rotas e formatos dos recursos pretendidos.
-2. Comprovar pelo menos um **GET** comercial efetivamente sem efeitos colaterais.
+2. Comprovar pelo menos uma operação comercial de consulta efetivamente sem mutação de negócio, pelo método exato documentado; POST só nos candidatos da seção 10.5. Descrever evidência, limites e como efeitos colaterais foram descartados; uma resposta 200 ou o nome «Busca» não bastam.
 3. Comprovar autenticação autorizada e ausência de exposição de segredos.
 4. Registrar o catálogo de endpoints e suas evidências no inventário de capacidades.
-5. Se nenhum GET existir, classificar o núcleo comercial como **BLOQUEADO**. O SDK MCP e estrutura podem ser preparados offline, mas **não** contornar a política READ-ONLY.
+5. Se nenhuma operação satisfizer contrato, revisão de segurança e validação autorizada, classificar o núcleo comercial como **BLOQUEADO**. A inexistência de GET não bloqueia por si só. Fundação offline pode ser preparada em outra sprint expressamente autorizada, sem contornar a política READ-ONLY.
+
+**Situação atual:** os três POSTs centrais são candidatos documentados e aceitos para planejamento, não rotas liberadas. A autorização desta revisão cobre documentos; não cobre login, chamadas reais ou início da Sprint 1. G0 = BLOCKED enquanto S0.11 e validação operacional segura não tiverem evidência. Implementar um cliente seguro para posterior validação em sprint autorizada não exige fingir G0 = PASS; chamadas comerciais continuam bloqueadas até aprovação específica.
 
 ---
 
@@ -192,7 +195,7 @@ Integrar sistemas assistidos por IA a ERPs frequentemente exige código específ
 
 1. Cliente MCP envia termo com tamanho válido.
 2. Tool valida o termo, escopo e limite máximo.
-3. Cliente HTTP realiza apenas chamadas GET allowlisted comprovadas.
+3. Cliente HTTP realiza apenas operações read-only comprovadas, por método e rota literais allowlisted e body de consulta validado.
 4. O servidor normaliza e limita os resultados.
 5. A resposta diferencia `found`, `not_found`, `partial` e `error` sem inventar dados.
 
@@ -221,7 +224,7 @@ Integrar sistemas assistidos por IA a ERPs frequentemente exige código específ
 
 ## 5. Regras Gerais do Sistema
 
-1. **Read-only é inegociável.** Só executar requisições GET comerciais explicitamente allowlisted e verificadas; GET por si só não comprova ausência de efeito colateral.
+1. **Read-only é inegociável.** Só executar operações comerciais sem mutação, explicitamente verificadas e allowlisted por método + rota + schema. POST de consulta é admitido apenas conforme seção 10.5; nem GET nem POST comprovam segurança isoladamente.
 2. **Autenticação não é ferramenta MCP.** O cliente HTTP é responsável por credenciais e headers.
 3. **Nunca inventar resposta.** Ausência de campo, `null`, zero e produto não encontrado são estados diferentes.
 4. **Valores monetários como `Decimal`.** Não calcular preços com `float`.
@@ -232,7 +235,7 @@ Integrar sistemas assistidos por IA a ERPs frequentemente exige código específ
 9. **Independência de modelo.** Ferramentas funcionam mesmo sem provider LLM.
 10. **Observabilidade sem vazamento.** Em stdio, stdout é reservado exclusivamente a mensagens MCP e diagnósticos vão para stderr.
 11. **Fiel ao SCSI no que se aplica.** Modularidade por responsabilidade, configuração central, domínio protegido, orquestração fina, documentação de decisões e sprints verificáveis.
-12. **Resiliência proporcional.** Retries limitados apenas para leituras idempotentes com evidência de segurança; obedecer `Retry-After` se aplicável.
+12. **Resiliência proporcional.** Retries limitados apenas para leituras com segurança de repetição comprovada; obedecer `Retry-After` se aplicável. POST de consulta usa **zero retries por padrão**, inclusive em timeout/resposta ambígua; sem fallback GET↔POST. Ativar retries exige evidência específica de repetição sem efeito comercial e limite total documentado.
 13. **Publicação genérica.** Arquivos versionáveis não contêm URLs comerciais privadas, nomes de instalações, dados reais, tokens ou segredos.
 14. **Cliente/tenant sob controle do operador.** Configuração por processo; não criar seleção de tenant por argumentos da tool.
 15. **Sem operações Git.** O assistente de desenvolvimento não executa comandos Git; versionamento é ação do responsável.
@@ -254,7 +257,7 @@ flowchart TB
     A --> D
     C[config.py — Validated Environment] --> S
     C --> D
-    D -->|GET verified allowlist only| N[NetOne ERP API]
+    D -->|Verified read-only method + literal route + query schema| N[NetOne ERP API]
     D -.-> E[Safe errors and stderr diagnostics]
     T -.-> E
 ```
@@ -283,8 +286,8 @@ sequenceDiagram
     M->>S: Call allowed tool
     S->>T: Validated arguments
     T->>C: Typed catalog request
-    C->>C: Verify GET allowlist + base URL
-    C->>N: Authorized GET (only if verified)
+    C->>C: Verify method + route + query schema + base URL
+    C->>N: Authorized read-only request (only if verified)
     alt Successful validated response
         N-->>C: JSON
         C-->>T: Normalized data + completeness
@@ -301,7 +304,7 @@ sequenceDiagram
 ### 6.4 Fronteiras de confiança
 
 - **Cliente MCP → servidor:** argumentos não confiáveis; validar schema, limites e escopo.
-- **Servidor → ERP:** somente domínio aprovado, HTTPS, método GET aprovado, rotas literais allowlisted e autenticação protegida.
+- **Servidor → ERP:** somente domínio aprovado, HTTPS, método + rota literais aprovados, body/filtros de consulta tipados e autenticação protegida. Não seguir redirects comerciais automaticamente, inclusive 301/302/303/307/308, nem reescrever método ou repetir POST por redirecionamento.
 - **ERP → servidor:** JSON não confiável; validar forma/tipos, tamanho e conteúdo, sem execução de instruções.
 - **Servidor → logs:** mensagens resumidas, sem headers de autenticação, corpo bruto sensível, URL com query secreta ou produto comercial completo por padrão.
 
@@ -310,6 +313,8 @@ sequenceDiagram
 ## 7. Adaptação dos Padrões do SCSI
 
 **Referência inspecionada:** [`pycodebr/scsi`, branch `main`](https://github.com/pycodebr/scsi/tree/main), incluindo `PRD.md`, `docs/architecture.md`, `docs/ai-agents.md`, `docs/local-dev.md`, `docs/env-vars.md`, `core/settings.py`, `ai_agents/tools.py`, `ai_agents/agents.py`, `requirements.txt` e a árvore de arquivos do repositório.
+
+**Reinspeção da Sprint 0:** revisão `aaddb90e88987ea2d2bca114e4cdd7c0a0f36ae3`, obtida por HTTP da branch `main`; árvore não truncada, 34 arquivos recuperados nos caminhos solicitados. Matriz com fontes por arquivo/linha em `docs/scsi-reference.md`. O código inspecionado não sustenta copiar o grafo de resumo como fluxo funcional: há nós que apenas retornam estado e o caminho `run_summary_agent` chama LLM diretamente; também existem divergências entre tools documentadas e retornadas. Aproveitar princípios, não scaffolds, infraestrutura ou promessas não executadas do upstream.
 
 | Padrão do SCSI | Decisão no NetOne MCP | Motivo |
 |---|---|---|
@@ -408,19 +413,22 @@ netone-mcp/
 
 ### 10.1 Fontes e limites da investigação
 
-A inspeção do projeto legado fornecido mostrou chamadas HTTP e estruturas efetivamente **usadas pelo código**, mas isso não equivale à confirmação oficial da API. A [documentação pública de referência da API v2](https://net1ti.stoplight.io/docs/erp-api-v2/ZG9jOjQ3ODQzMw-guia-rapido) deve ser verificada durante Sprint 0, preferencialmente com materiais acessíveis ao mantenedor e confirmação do fornecedor. Nesta elaboração, seu conteúdo interativo **não permitiu verificar com segurança as assinaturas completas**; nenhuma chamada autenticada foi realizada.
+A Sprint 0 reinspecionou o legado local por leitura e a [documentação oficial API v2](https://net1ti.stoplight.io/docs/erp-api-v2/ZG9jOjQ3ODQzMw-guia-rapido) no navegador, após renderização. O extrator de URLs estava indisponível, mas o acesso anônimo às páginas oficiais funcionou. Foram inspecionadas as dez consultas do grupo Produto, o login, artigos e schemas relevantes. Não foram usados botões de envio, credenciais nem chamadas ao ERP. Contratos publicados, observação de código e validação remota são evidências distintas; esta última não foi realizada. O inventário detalhado e sanitizado está em `docs/api-capabilities.md`.
 
 ### 10.2 Matriz de evidências iniciais
 
-| Capacidade | Evidência de código legado | Método observado | GET seguro verificado? | Status V1 |
+| Capacidade | Evidência legada/oficial | Método observado | Segurança/execução validada? | Status V1 |
 |---|---|---|---|---|
-| Buscar produtos reduzidos | URL variável `REDUCED_PRODUCTS_URL`; corpo com `page`, `limit`; resposta `totalPages`, `result` | **POST** | **Não** | **BLOQUEADO** |
-| Consultar estoque em lote | URL variável `STOCK_URL`; corpo com `idsReduzidos`; resposta `result` com `idReduzido`, `quantidade` | **POST** | **Não** | **BLOQUEADO** |
-| Buscar produto por ID | Dados locais derivados de resposta de produtos; sem endpoint GET observado | Não verificado | **Não** | **PENDENTE** |
-| Consultar preço por ID | Campo `valor` em produto; sem endpoint GET dedicado observado | Não verificado | **Não** | **PENDENTE** |
+| Buscar produtos reduzidos | Legado e referência oficial `/app-web/api/v2/produto/reduzidos`; paginação publicada | **POST** | **Não** | **BLOQUEADO** |
+| Consultar estoque em lote | Legado e referência oficial `/app-web/api/v2/produto/estoque`; conflito schema/exemplo de `idsReduzidos` | **POST** | **Não** | **BLOQUEADO** |
+| Buscar produto por ID | POST de reduzidos documenta filtros de IDs; endpoint de detalhes dedicado não comprovado | **POST de consulta candidato** | **Não** | **PENDENTE** |
+| Consultar preço por ID | Referência oficial `/app-web/api/v2/produto/precos`, filtros de IDs; varejo/atacado distintos | **POST** | **Não** | **BLOQUEADO** |
 | Buscar por SKU/EAN | Campos observados no catálogo; busca local do protótipo | Não verificado | **Não** | **PENDENTE** |
-| Listagem paginada GET | Protocolo de paginação legado POST | Não verificado | **Não** | **PENDENTE** |
-| OAuth / renovação de token | Não observado; legado usa header com token | Não verificado | **Não** | **PENDENTE — não presumir** |
+| Listagem paginada | POST de reduzidos/estoque/preços documenta page/limit; tetos pendentes | **POST de consulta candidato** | **Não** | **PENDENTE** |
+| Autenticação por token de usuário | Artigo oficial confirma `netone-auth-token`; login `/app-web/api/v2/auth/login`, body `usuario`, `senha` | **POST somente para login** | Não se aplica | **DOCUMENTADO; execução não validada** |
+| OAuth / renovação de token | Não comprovados nas fontes inspecionadas; regeneração no ERP invalida token anterior | Não verificado | Não se aplica | **PENDENTE — não presumir** |
+
+**Resultado G0 vigente em 27/10/2026: BLOCKED — validação de segurança/execução pendente.** A revisão 1.1.0 admite os três POSTs centrais como candidatos de consulta; não exige GET equivalente nem libera requisições reais. Os sete POSTs auxiliares continuam apenas inventariados, fora da admissão restrita desta revisão. Nenhuma rota comercial está liberada. S0.11 permanece pendente, agora avaliando ausência de mutação comercial independentemente de GET ou POST.
 
 ### 10.3 Inventário obrigatório por endpoint, para `docs/api-capabilities.md`
 
@@ -439,15 +447,24 @@ Para cada endpoint a liberar, documentar:
 
 ### 10.4 Política de desbloqueio
 
-Um endpoint só passa a **LIBERADO** quando: método **GET** confirmado; ausência de mutação comprovada; rota literal adicionada à allowlist; autenticação e limites conhecidos; resultado de consulta autorizada verificado; e o critério registrado no documento. **Nunca adivinhar rotas `GET` por analogia com `POST`.**
+Um endpoint só passa a **LIBERADO** quando: método exato documentado e enquadrado na política; ausência de mutação comercial tecnicamente sustentada; par método + rota literal e schema/filtros revisados; autenticação e escopo conhecidos; limites oficiais conhecidos ou limites locais conservadores explicitamente registrados, sem alegar quotas do fornecedor; resultado de validação autorizada verificado; e critérios registrados no inventário. **Nunca adivinhar rotas, trocar GET por POST ou liberar uma operação somente porque outra usa o mesmo método.** A autorização de uma chamada manual delimitada de validação é separada da liberação de tool e depende da revisão prévia de segurança, configuração protegida e transporte seguro; não exige uma tool já registrada. Um HTTP 200 isolado não comprova ausência de mutação.
 
-### 10.5 Comportamento caso o fornecedor use POST para consulta
+### 10.5 POSTs de consulta admitidos por autorização restrita
 
-- **Não** chamar POST a partir do MCP para consultar recursos comerciais.
-- **Não** disfarçar POST sob GET ou usar proxy que faça POST ocultamente.
-- **Não** marcar tools como funcionais com respostas falsas.
-- Documentar o bloqueio e deixar as ferramentas dependentes indisponíveis até decisão de escopo futura e explícita; eventual revisão da regra exigirá nova versão deste PRD.
-- Uma exceção eventual e estritamente técnica para POST **somente de obtenção/renovação de token**, se comprovadamente necessária, permanece limitada à autenticação; não habilita POST comercial.
+Em 27/10/2026 o responsável autorizou revisar a política GET-only para reutilizar, com controles, a lógica de consulta do legado. **Admitidos como candidatos de planejamento, não liberados para execução:**
+
+| Método | Path literal completo | Finalidade e fonte oficial |
+|---|---|---|
+| POST | `/app-web/api/v2/produto/reduzidos` | Consulta de reduzidos, filtros/paginação — O3 no inventário |
+| POST | `/app-web/api/v2/produto/precos` | Consulta de preços, filtros/paginação — O5 no inventário |
+| POST | `/app-web/api/v2/produto/estoque` | Consulta de saldo, filtros/paginação — O4 no inventário |
+
+- O método POST transporta o body de consulta, não autoriza payload de cadastro/atualização. O futuro cliente escolhe operação/método/rota internamente, aceita apenas filtros tipados documentados, rejeita campos desconhecidos e nunca encaminha body arbitrário da tool.
+- O reaproveitamento é da lógica de token, filtros, paginação e associação por reduzido; não copiar hosts, credenciais, loops ilimitados, floats monetários, `print()` no stdout, tratamento de erro cru ou lote 100 como suposto limite oficial.
+- PUT, PATCH, DELETE, POSTs fora desta tabela e qualquer operação de escrita, reserva, movimentação ou sincronização mutável continuam proibidos. Os sete endpoints auxiliares inventariados não são liberados por associação; exigem nova decisão explícita de escopo e revisão individual. GET também exige evidência e allowlist antes de uso.
+- POST de consulta começa com **zero retries**, sem redirects automáticos e sem fallback de método/rota. Repetição automática só após comprovar segurança específica de repetição; timeout é erro, não autorização para reenviar.
+- A futura allowlist operacional fica vazia até revisão/validação por operação; ferramentas não verificadas permanecem ausentes. Não usar respostas falsas nem ocultar POST sob proxy GET.
+- Autenticação `/app-web/api/v2/auth/login` permanece separada, sem ferramenta MCP; não integra esta tabela comercial. A autorização atual não permite login, token rotation, chamadas reais ou início de outra sprint.
 
 ---
 
@@ -499,7 +516,8 @@ classDiagram
 |---|---|---|
 | `idProduto` | `product_id` | Preservar identidade e tipo original compatível; serializar de modo consistente |
 | `idReduzido` | `reduced_id` | Chave de união com estoque; preservar sem perda |
-| `mascara` | `sku` | Tratar como código textual; validar sem remover zeros |
+| `mascara` | `product_mask` (proposta revisada na Sprint 0) | Código textual do produto; não confundir com `codigoSku`; preservar zeros |
+| `codigoSku` | `sku` (proposto, a validar) | Código textual do reduzido, oficialmente pode ser `null`; preservar identidade separada da máscara |
 | `descricao` | `description` | Preservar texto; normalizar espaços apenas onde seguro |
 | `grupoDescricao` | `group` | Opcional conforme resposta real |
 | `linhaDescricao` | `line` | Opcional conforme resposta real |
@@ -508,7 +526,7 @@ classDiagram
 | `quantidade` | `quantity` | Numérico ou `null`; não presumir filial/depósito |
 | `ultimaAlteracaoTimestamp` | `last_changed` | Parse seguro; timezone somente se comprovado |
 
-**Observação:** a relação entre `idProduto`, `idReduzido`, SKU, preço e estoque deve ser confirmada na documentação; a presença de chaves no legado não estabelece unicidade, campo obrigatório, granularidade de filial ou unidade de estoque.
+**Observação:** a documentação descreve IDs inteiros, `valor` de varejo e `valorAtacado` de atacado; estoque físico menos reservas, por depósito informado ou parametrizado. Isso não comprova unicidade, moeda, unidade, nulidade completa, depósito efetivo ou permissões da instalação. `mascara` e `codigoSku` são distintos; o modelo conceitual ainda depende de validação antes de implementação.
 
 ### 11.3 Estados de presença de dados
 
@@ -530,14 +548,14 @@ classDiagram
 |---|---|---|---|
 | RF01 | Iniciar servidor MCP stdio e expor tools liberadas | Must | SDK compatível |
 | RF02 | Validar URL, configuração e token sem vazamento | Must | `config.py` |
-| RF03 | Permitir exclusivamente rotas GET comerciais allowlisted | Must | Inventário verificado |
-| RF04 | Pesquisar produtos com termo e limite | Should, condicionado | GET de catálogo validado |
-| RF05 | Consultar produto pelo identificador | Should, condicionado | GET validado |
-| RF06 | Consultar preço pelo identificador | Should, condicionado | Campo e GET validados |
-| RF07 | Consultar estoque pelo identificador | Should, condicionado | GET validado |
+| RF03 | Permitir exclusivamente operações read-only allowlisted por método + rota + schema | Must | Inventário verificado; POST restrito à seção 10.5 |
+| RF04 | Pesquisar produtos com termo e limite | Should, condicionado | Consulta de catálogo validada; não presumir filtro textual |
+| RF05 | Consultar produto pelo identificador | Should, condicionado | Consulta/filtro de ID validado |
+| RF06 | Consultar preço pelo identificador | Should, condicionado | Campo e consulta de preço validados |
+| RF07 | Consultar estoque pelo identificador | Should, condicionado | Consulta de estoque validada |
 | RF08 | Consultar por SKU | Could, condicionado | Endpoint/campo suficiente |
 | RF09 | Consultar por EAN | Could, condicionado | Endpoint/campo suficiente |
-| RF10 | Listar produtos com filtros/limites | Could, condicionado | GET de paginação seguro |
+| RF10 | Listar produtos com filtros/limites | Could, condicionado | Consulta paginada read-only validada |
 | RF11 | Analisar estoque e catálogo sem escrita | Should, condicionado | Coleta válida e universo claro |
 | RF12 | Preservar campos monetários, IDs e nulidade | Must | Schemas |
 | RF13 | Sinalizar erros e dados parciais | Must | Cliente HTTP |
@@ -575,15 +593,15 @@ Todos os resultados comerciais devem usar estrutura coerente com MCP/SDK escolhi
 
 | Tool | Entradas propostas | Saída | Habilitar apenas quando |
 |---|---|---|---|
-| `search_products` | `query: str`, `max_results: int` | Produtos/IDs, completude | GET pesquisável validado |
-| `get_product_details` | `product_id: str` ou ID real comprovado | Produto detalhado | GET por ID validado |
-| `check_inventory` | `reduced_id: str` (ou chave real) | Quantidade, escopo, referência temporal | GET de estoque validado |
-| `get_product_price` | `product_id: str` (ou chave real) | Valor/código de tabela, se disponíveis | GET/campo preço validado |
-| `search_product_by_sku` | `sku: str` | Produtos com identificadores | GET/filtro validado |
-| `search_product_by_ean` | `ean: str` | Produto(s) compatível(is) | GET/filtro validado |
-| `list_products` | `page`, `page_size`, filtros admitidos | Página e metadados | GET/paginação validada |
-| `analyze_inventory` | `threshold`, `max_items` | Métricas e universo | GET + dados suficientes |
-| `analyze_product_catalog` | `max_items`, filtros | Qualidade e contagens | GET + dados suficientes |
+| `search_products` | `query: str`, `max_results: int` | Produtos/IDs, completude | Consulta pesquisável validada; filtro textual não presumido |
+| `get_product_details` | `product_id: str` ou ID real comprovado | Produto detalhado | Consulta por ID validada |
+| `check_inventory` | `reduced_id: str` (ou chave real) | Quantidade, escopo, referência temporal | Consulta de estoque validada |
+| `get_product_price` | `product_id: str` (ou chave real) | Valor/código de tabela, se disponíveis | Consulta/campo preço validados |
+| `search_product_by_sku` | `sku: str` | Produtos com identificadores | Consulta/filtro de SKU validado |
+| `search_product_by_ean` | `ean: str` | Produto(s) compatível(is) | Consulta/filtro de EAN validado |
+| `list_products` | `page`, `page_size`, filtros admitidos | Página e metadados | Consulta/paginação validada |
+| `analyze_inventory` | `threshold`, `max_items` | Métricas e universo | Consulta read-only + dados suficientes |
+| `analyze_product_catalog` | `max_items`, filtros | Qualidade e contagens | Consulta read-only + dados suficientes |
 
 **Não registrar ferramentas não liberadas.** Se operações distintas dependem de mesma consulta, evitar redundância superficial: pode-se manter preço e estoque dentro de `get_product_details` ou `search_products`, desde que a experiência MCP permaneça clara.
 
@@ -669,7 +687,7 @@ flowchart LR
 
 ### 15.1 Autenticação observada versus hipótese
 
-**Observado no código legado:** token enviado pelo cabeçalho `netone-auth-token`, carregado de variável `TOKEN_NETONE`. **Não há comprovação no material inspecionado de OAuth 2.0, refresh token ou endpoint de emissão de tokens.** A implementação da V1 deve seguir exclusivamente o método validado contra documentação oficial.
+**Observado no legado e confirmado pelo artigo oficial na Sprint 0:** token de usuário enviado em `netone-auth-token`, carregado no legado de `TOKEN_NETONE`. A documentação permite obtê-lo no cadastro de integração do ERP ou por **POST** `/app-web/api/v2/auth/login`, com strings obrigatórias `usuario` e `senha`; sucesso documentado retorna `token`, `mensagem`, `status`, com respostas 200/400/401. Regenerar o token invalida o anterior. **OAuth, refresh token, prazo de validade e execução autenticada não foram comprovados.** Exemplos gerados de algumas operações rotulam o header como `Token de Autenticação`, em conflito com o artigo e o legado; o inventário registra a divergência. Preferir token fornecido pelo operador na futura fundação; não implementar login nem acionar regeneração nesta sprint.
 
 ### 15.2 Política
 
@@ -683,7 +701,7 @@ flowchart LR
 
 ### 15.3 Exceção de autenticação POST
 
-Se a API **comprovadamente** exigir POST para obtenção ou renovação de token, o cliente HTTP poderá usá-lo **somente** para esse protocolo, em rota específica e sem payload comercial. Isso **não** permite consultas de negócio por POST.
+Se a API **comprovadamente** exigir POST para obtenção ou renovação de token, o cliente HTTP poderá usá-lo para esse protocolo em rota de autenticação específica e sem payload comercial. A permissão de autenticação **não** libera operações comerciais: os POSTs de consulta dependem separadamente da seção 10.5 e dos gates por operação. Renovação/OAuth não comprovados não serão implementados por analogia.
 
 ---
 
@@ -691,13 +709,13 @@ Se a API **comprovadamente** exigir POST para obtenção ou renovação de token
 
 ### 16.1 Controles mandatórios
 
-1. Allowlist explícita de **paths literais e métodos** autorizados, preenchida apenas após verificação.
-2. Bloqueio arquitetural de `POST`, `PUT`, `PATCH`, `DELETE` e outros métodos no transporte comercial.
+1. Allowlist explícita de **método + path literal + schema/filtros** autorizados, preenchida apenas após verificação por operação. Não usar prefixo amplo, wildcard, método livre ou body arbitrário.
+2. Bloqueio arquitetural de operações mutáveis por qualquer método; bloquear `PUT`, `PATCH`, `DELETE` e `POST` fora da seção 10.5. A presença de um POST aprovado não autoriza outros POSTs.
 3. Sem ferramenta HTTP genérica, sem proxy arbitrário, sem `eval` ou execução de comandos externos.
 4. Validar parâmetros, limites, paginação, tamanho máximo de resposta e estruturas JSON.
-5. Proteger contra SSRF: validar URL base de instalação; rejeitar URL construída pelo input e redirecionamentos para origens não aprovadas.
-6. Usar timeouts de conexão/leitura; retries limitados com backoff e respeito a `Retry-After` quando possível.
-7. `429` deve resultar em backoff e erro claro; não fazer retry ilimitado.
+5. Proteger contra SSRF: validar URL base de instalação; rejeitar URL construída pelo input e não seguir redirects comerciais automaticamente, mesmo na mesma origem; não converter nem repetir métodos por redirecionamento.
+6. Usar timeouts de conexão/leitura; retries limitados com backoff e respeito a `Retry-After` somente quando a segurança de repetição estiver comprovada. POST de consulta: zero retries por padrão; timeout/resposta ambígua não dispara reenvio.
+7. `429` deve resultar em erro claro com orientação de espera; backoff/reenvio somente se a política de repetição da operação permitir. `Retry-After` ou variável de ambiente não habilitam automaticamente retries de POST.
 8. Tratar 401/403 como autenticação/autorização falha, sem inventar “não encontrado”.
 9. Filtrar dados sensíveis dos logs, exceções e saída MCP; não imprimir headers e bodies completos.
 10. Guardar somente configuração necessária em memória; não registrar tokens em arquivos.
@@ -706,7 +724,7 @@ Se a API **comprovadamente** exigir POST para obtenção ou renovação de token
 
 ### 16.2 Proibição de efeitos colaterais
 
-- GET deve ter evidência de **semântica read-only**. Se uma rota GET dispara sincronização com atualização de negócio ou outra mutação, não permitir sua execução.
+- Toda operação, GET ou POST, deve ter evidência de **semântica read-only**. Se dispara atualização, reserva, movimentação, sincronização com escrita ou outra mutação comercial, não permitir sua execução. Documentação de consulta e legado sem escrita explícita são evidências iniciais, não prova completa dos efeitos no servidor.
 - No carregamento, o servidor valida os caminhos liberados e **não** cria tools de escrita, nem “ocultas” ou “desativadas”.
 - Nunca permitir que tool configure a URL final concatenando path externo fornecido pelo usuário.
 - Análise local em memória é permitida; nenhuma gravação comercial no NetOne é permitida.
@@ -815,8 +833,8 @@ Por determinação do projeto, o agente de desenvolvimento **não pode executar 
 | `NETONE_MAX_PAGES` | Teto de paginação | Proposta |
 | `NETONE_MAX_RETRIES` | Retentativas apenas permitidas | Proposta |
 | `NETONE_LOG_LEVEL` | Nível de log seguro | Proposta |
-| `REDUCED_PRODUCTS_URL` | URL completa usada no legado com **POST** | **Não ativar por padrão**; só consultar para investigação, não liberar operação |
-| `STOCK_URL` | URL completa usada no legado com **POST** | **Não ativar por padrão**; só consultar para investigação, não liberar operação |
+| `REDUCED_PRODUCTS_URL` | URL completa usada no legado com **POST de consulta** | Nome legado a preservar quando compatível; validar origem e rota literal; não ativar sem gate |
+| `STOCK_URL` | URL completa usada no legado com **POST de consulta** | Nome legado a preservar quando compatível; validar origem e rota literal; não ativar sem gate |
 
 **Não presumir OAuth:** não adicionar variáveis de `CLIENT_ID`/`CLIENT_SECRET`/`REFRESH_TOKEN` antes de confirmação documental.
 
@@ -825,6 +843,7 @@ Por determinação do projeto, o agente de desenvolvimento **não pode executar 
 - Rejeitar URL vazia, host inválido, credenciais embutidas e esquema inesperado.
 - Não aceitar `base_url` ou tokens como parâmetro de tool MCP.
 - `NETONE_MAX_RESULTS`, `NETONE_MAX_PAGES` e timeout devem ter mínimo/máximo seguros e erro se inválidos.
+- `NETONE_MAX_RETRIES` define apenas um teto global, não concede segurança de repetição por operação; POST de consulta permanece com zero retries sem evidência e aprovação específicas, mesmo se o teto configurado for maior.
 - Reutilizar `.venv` existente apenas se compatível; nunca instalar dependências globalmente de forma desnecessária.
 
 ---
@@ -883,7 +902,7 @@ python3.14 -m venv .venv
 | VM06 | Listar ferramentas do MCP | Somente ferramentas realmente aprovadas |
 | VM07 | Procurar write tools | Nenhuma operação de escrita |
 | VM08 | Validar entrada malformada | Rejeição sem requisição remota |
-| VM09 | Exercitar GET autorizado | Retorno fiel à API, somente após aprovação explícita |
+| VM09 | Exercitar consulta read-only autorizada, pelo método documentado | Retorno fiel à API; revisão de segurança e aprovação explícita antes da chamada; registrar método/rota/schema e evidência sem segredos |
 | VM10 | HTTP 401/403 | Erros corretamente classificados |
 | VM11 | HTTP 404/resultado vazio | Estado `not_found` sem falso erro de credencial |
 | VM12 | HTTP 429 | Retry respeita limite, sem avalanche |
@@ -906,18 +925,20 @@ Para cada VM executada, registrar em `docs/runbook.md`: data, comando/cenário, 
 
 | ID | Risco | Impacto | Probabilidade | Mitigação / gatilho |
 |---|---|---|---|---|
-| R01 | API disponibiliza apenas POST para catálogo/estoque | **Crítico** | **Evidência concreta no legado; GET desconhecido** | Gate G0: bloquear tools até GET seguro confirmado; avaliar revisão formal de escopo |
+| R01 | Confundir POST de consulta com permissão genérica de escrita | **Crítico** | **POST central documentado; segurança/execução ainda não validadas** | Seção 10.5 restrita a três candidatos; G0 permanece BLOCKED até evidência por operação; nenhum POST arbitrário |
 | R02 | Autenticação presumida incorretamente como OAuth | Alto | Indeterminada | Usar somente mecanismo documentado; token no header observado |
 | R03 | Dados de preço/estoque incompletos | Alto | Possível | Diferenciar `null` de zero e sinalizar origem |
-| R04 | GET com efeitos colaterais ocultos | Crítico | Desconhecida | Confirmar semântica antes de allowlist |
+| R04 | GET ou POST de consulta com efeitos colaterais ocultos | Crítico | Desconhecida | Confirmar ausência de mutação comercial antes de allowlist; 200 isolado não é prova |
 | R05 | Exposição de token no repositório/log | Crítico | Controlável | `.gitignore`, `.env` intacto, sanitização, revisão manual |
 | R06 | URL arbitrária ou SSRF via tool | Alto | Controlável | Base URL por processo, validação e allowlist |
 | R07 | Quebra de SDK no Python 3.14 | Alto | Desconhecida | Prova de instalação e execução, versões verificadas |
 | R08 | Paginação massiva/rate limit | Alto | Possível | Tetos, backoff e resposta parcial |
 | R09 | LangGraph acrescenta complexidade artificial | Médio | Possível | Usar somente num fluxo determinístico multietapas real |
-| R10 | Reutilização insegura do código legado | Alto | Possível | Não copiar POST comercial, secrets, DB, dados ou domínio |
+| R10 | Reutilização insegura do código legado | Alto | Possível | Adaptar só lógica de consulta; não copiar secrets, DB, dados, domínio, loops ilimitados ou logs inseguros; revisar método/rota/schema |
 | R11 | Cliente MCP confunde texto de produto com instruções | Alto | Possível | Tratar payloads como dados não confiáveis |
 | R12 | Exemplo público expõe nome de instalação real | Alto | Controlável | Placeholders genéricos, revisão final antes da publicação |
+| R13 | Contradições na documentação: header, array de IDs, timestamps e paginação | Alto | Observadas na Sprint 0 | Registrar conflitos no inventário; exigir esclarecimento e validação autorizada antes de implementar contratos |
+| R14 | Repetir POST de consulta após timeout ou redirect sem segurança comprovada | Crítico | Controlável | Zero retries e redirects automáticos por padrão; sem fallback de método; repetição só com evidência específica e limite total |
 
 ---
 
@@ -932,11 +953,15 @@ Para cada VM executada, registrar em `docs/runbook.md`: data, comando/cenário, 
 | ADR-05 | Código modular na raiz | Mantém princípio SCSI sem apps Django | Menos arquivos por enquanto |
 | ADR-06 | MCP independente de qualquer LLM | Portabilidade | Resumos de linguagem natural ficam com cliente |
 | ADR-07 | LangGraph determinístico somente quando necessário | Uso funcional sem autonomia | Análises condicionadas aos endpoints |
-| ADR-08 | Só GET comercial comprovado | Alinha política de origem | Pode bloquear principal recurso da API |
+| ADR-08 (substituída por ADR-15) | Política GET-only original, histórica | Foi aplicada até a versão 1.0.1 | Não é a regra vigente; ver seção 10.5 |
 | ADR-09 | Validação manual sem automação | Exigência expressa | Menor cobertura automatizada de regressão |
 | ADR-10 | Nenhuma execução Git pelo desenvolvedor | Respeita instruções do projeto | Versionamento manual pelo responsável |
 | ADR-11 | Docs Markdown em `docs/` sem build obrigatório | Adota disciplina do SCSI | Sem portal navegável MkDocs inicialmente |
 | ADR-12 | Erros estruturados, sem expor corpos | Segurança e interoperabilidade | Menos detalhes de diagnóstico público |
+| ADR-13 (atualizada) | G0 = BLOCKED por segurança/execução pendente; allowlist comercial operacional vazia | A revisão documental não comprova efeitos nem valida credenciais/respostas | POST não bloqueia por si só; S0.11 e chamadas reais continuam pendentes |
+| ADR-14 | Distinguir máscara de produto e SKU do reduzido | Documentação contém `mascara` e `codigoSku` distintos | Contrato normalizado permanece proposto até validar identidade e nulidade |
+| ADR-15 | Read-only por semântica; três POSTs centrais admitidos como candidatos | Autorização explícita do responsável em 27/10/2026 e contratos O3/O4/O5 | Não libera endpoints auxiliares, tools ou chamadas; exige revisão por método/rota/schema |
+| ADR-16 | POST de consulta sem retries e redirects automáticos por padrão | Evitar reenvio ou conversão de método sem segurança de repetição comprovada | Resiliência automática menor até obter evidência específica |
 
 ---
 
@@ -952,7 +977,7 @@ Para cada VM executada, registrar em `docs/runbook.md`: data, comando/cenário, 
 - [ ] O arquivo `.env` original foi preservado integralmente.
 - [ ] O servidor MCP inicia por stdio, sem LLM, e registra as tools permitidas.
 - [ ] Nenhuma ferramenta permite escrita, método de negócio não permitido, HTTP arbitrário, URL arbitrária ou seleção de tenant/segredo.
-- [ ] Os endpoints utilizados têm método, contrato e semântica GET read-only comprovados.
+- [ ] Os endpoints utilizados têm método exato, contrato e ausência de mutação comercial comprovados; POST comercial somente na admissão restrita da seção 10.5.
 - [ ] A autenticação utiliza somente fluxo efetivamente documentado.
 - [ ] Todas as consultas implementadas tratam paginação, timeouts, limites e erros relevantes.
 - [ ] Produtos, preços, IDs e estoque mantêm fidelidade, nulidade e fonte explícita.
@@ -965,7 +990,7 @@ Para cada VM executada, registrar em `docs/runbook.md`: data, comando/cenário, 
 
 ### 26.2 Política de aceite parcial
 
-Se **não houver GET comercial seguro verificável**, o produto pode alcançar somente o estado **`FOUNDATION_READY / COMMERCIAL_API_BLOCKED`** (estrutura, documentação, transporte MCP e validação local), **não** o estado `V1_COMPLETE`. As tools comerciais permanecem ausentes; não usar dados simulados para apresentar V1 como concluída.
+Se **não houver operação comercial read-only segura e validada**, o produto pode alcançar somente o estado **`FOUNDATION_READY / COMMERCIAL_API_BLOCKED`** (estrutura, documentação, transporte MCP e validação local), **não** o estado `V1_COMPLETE`. Ausência de GET não impõe esse bloqueio quando um POST de consulta satisfaz a política. As tools não verificadas permanecem ausentes; não usar dados simulados para apresentar V1 como concluída.
 
 ---
 
@@ -973,9 +998,9 @@ Se **não houver GET comercial seguro verificável**, o produto pode alcançar s
 
 | Fase | Sprints | Resultado esperado | Gate |
 |---|---|---|---|
-| **F1 — Investigação** | 0 | Evidências oficiais/legadas, matriz de capacidade, bloqueios | **G0** |
+| **F1 — Investigação** | 0 | Contratos POST e revisão autorizada registrados; S0.11 pendente de segurança | **G0 = BLOCKED por validação, não método** |
 | **F2 — Fundação** | 1–3 | Ambiente, configuração, autenticação e segurança básica | **G1** |
-| **F3 — Integração segura** | 4–6 | Cliente HTTP, normalização, consulta GET se liberada | **G2** |
+| **F3 — Integração segura** | 4–6 | Cliente HTTP, normalização, consulta read-only pelo método aprovado se liberada | **G2** |
 | **F4 — Ferramentas MCP** | 7–9 | Tools úteis, registro MCP, stdio, sem escrita | **G3** |
 | **F5 — Análises** | 10 | Análise determinística e LangGraph justificado | **G4** |
 | **F6 — Endurecimento** | 11–12 | Revisão segurança + documentação pública | **G5** |
@@ -993,7 +1018,7 @@ flowchart LR
 
 **Gates:**
 
-- **G0:** GET comercial seguro comprovado ou bloqueio formal registrado.
+- **G0:** operação comercial read-only segura comprovada e validada pelo método documentado, ou bloqueio formal registrado; POST candidato não equivale a operação liberada. Decisão atual: BLOCKED por validação pendente.
 - **G1:** Python, configuração, token e proteções de segredo validados.
 - **G2:** transporte não permite operações proibidas e produz erros consistentes.
 - **G3:** cliente MCP descobre somente tools liberadas e pode executá-las quando há endpoint comprovado.
@@ -1005,31 +1030,33 @@ flowchart LR
 
 ## 28. Sprints de Implementação em Checklist
 
-> **Como executar:** sprints curtas, sequenciais e verificáveis; uma subtarefa por commit **manual do mantenedor**, se ele desejar (o agente não deve executar Git). Após cada sprint, atualizar evidência em documentação e marcar **somente itens comprovados** com `[x]`. Tarefas condicionais à existência de GET permanecem desmarcadas e com nota `BLOCKED`, nunca simuladas. O responsável pode preparar fundações offline enquanto G0 permanece pendente, mas não avançar para chamadas comerciais.
+> **Como executar:** sprints curtas, sequenciais e verificáveis; uma subtarefa por commit **manual do mantenedor**, se ele desejar (o agente não deve executar Git). Após cada sprint, atualizar evidência em documentação e marcar **somente itens comprovados** com `[x]`. Tarefas condicionais à operação read-only validada permanecem desmarcadas e com nota `BLOCKED`, nunca simuladas. O responsável pode autorizar fundações/cliente offline enquanto G0 permanece pendente, mas chamadas de validação exigem revisão prévia de segurança e autorização explícita delimitada, antes de qualquer liberação de tool. A revisão 1.1.0 não inicia outra sprint.
 
-### Sprint 0 — Investigação do SCSI, NetOne e viabilidade GET
+### Sprint 0 — Investigação do SCSI, NetOne e viabilidade read-only
 
 **Objetivo:** produzir prova de viabilidade antes de implementar chamadas comerciais.
 
-- [ ] S0.01 — Ler o PRD do SCSI na branch `main` e registrar padrões arquiteturais aproveitáveis.
-- [ ] S0.02 — Inspecionar `core/`, `ai_agents/`, `docs/`, `.env.example` e `requirements.txt` do SCSI.
-- [ ] S0.03 — Registrar padrões descartados (Django, DB, Docker, UI, Celery) com justificativa.
-- [ ] S0.04 — Inspecionar o legado NetOne somente por leitura, sem executar operações Git.
-- [ ] S0.05 — Localizar pontos de autenticação sem registrar o valor do token.
-- [ ] S0.06 — Localizar chamadas comerciais, métodos HTTP, argumentos e status esperados.
-- [ ] S0.07 — Identificar explicitamente os POST de produtos e estoque no legado.
-- [ ] S0.08 — Consultar a documentação oficial e seus limites de acesso.
-- [ ] S0.09 — Documentar cada endpoint conhecido, distinguindo observado de oficialmente confirmado.
-- [ ] S0.10 — Investigar se **GET** equivalentes realmente existem, sem adivinhá-los.
-- [ ] S0.11 — Confirmar ausência de efeitos colaterais de cada GET candidato.
-- [ ] S0.12 — Documentar autenticação: token fixo, OAuth ou outro, conforme prova.
-- [ ] S0.13 — Levantar paginação, campos, erros e limites de requisições.
-- [ ] S0.14 — Redigir `docs/api-capabilities.md` com matriz de evidências sanitizadas.
-- [ ] S0.15 — Registrar decisões e dúvidas sem incluir instalação comercial identificável.
-- [ ] S0.16 — Decidir **G0 = PASS** (GET seguro comprovado) ou **G0 = BLOCKED** (nenhum comprovado).
+- [x] S0.01 — Ler o PRD do SCSI na branch `main` e registrar padrões arquiteturais aproveitáveis.
+- [x] S0.02 — Inspecionar `core/`, `ai_agents/`, `docs/`, `.env.example` e `requirements.txt` do SCSI.
+- [x] S0.03 — Registrar padrões descartados (Django, DB, Docker, UI, Celery) com justificativa.
+- [x] S0.04 — Inspecionar o legado NetOne somente por leitura, sem executar operações Git.
+- [x] S0.05 — Localizar pontos de autenticação sem registrar o valor do token.
+- [x] S0.06 — Localizar chamadas comerciais, métodos HTTP, argumentos e status esperados.
+- [x] S0.07 — Identificar explicitamente os POST de produtos e estoque no legado.
+- [x] S0.08 — Consultar a documentação oficial e seus limites de acesso.
+- [x] S0.09 — Documentar cada endpoint conhecido, distinguindo observado de oficialmente confirmado.
+- [x] S0.10 — Investigar se **GET** equivalentes realmente existem, sem adivinhá-los.
+- [ ] S0.11 — Confirmar ausência de mutação comercial de cada operação candidata, pelo método documentado (incluindo POST de consulta da seção 10.5), registrando evidência técnica e limites da confirmação.
+- [x] S0.12 — Documentar autenticação: token fixo, OAuth ou outro, conforme prova.
+- [x] S0.13 — Levantar paginação, campos, erros e limites de requisições.
+- [x] S0.14 — Redigir `docs/api-capabilities.md` com matriz de evidências sanitizadas.
+- [x] S0.15 — Registrar decisões e dúvidas sem incluir instalação comercial identificável.
+- [x] S0.16 — Decidir **G0 = PASS** (operação read-only segura e validada) ou **G0 = BLOCKED** (evidência/validação insuficiente).
+
+**Evidências vigentes em 27/10/2026:** `docs/scsi-reference.md`, `docs/api-capabilities.md` e `docs/runbook.md`. **15 tarefas verificadas; S0.11 = BLOCKED** pela confirmação de ausência de mutação comercial ainda pendente, não pela ausência de GET. A S0.10 preserva o levantamento histórico de GET, que não é mais condição de aceite; S0.13 registra contratos e limites desconhecidos, não quotas inventadas. S0.11 e S0.16 foram reformuladas na 1.1.0; o resultado BLOCKED de S0.16 continua válido, sem nova execução remota e sem novo [x]. Autorização de revisão documental não conclui S0.11. Nenhuma outra sprint iniciada/marcada, módulo/manifesto criado ou chamada ao ERP realizada. `.env` e `.venv` não foram abertos nem modificados. Estado: **NOT_READY / COMMERCIAL_API_BLOCKED**.
 
 **Entrega:** inventário validado da API, matriz SCSI→NetOne, decisão G0 explícita.  
-**Aceite:** nenhuma operação comercial é inventada ou tratada como GET sem evidência.
+**Aceite:** nenhuma operação comercial é inventada, tratada como read-only só pelo método, ou liberada sem evidência; POST restrito à seção 10.5.
 
 ### Sprint 1 — Setup inicial e projeto Python
 
@@ -1082,7 +1109,7 @@ flowchart LR
 - [ ] S3.04 — Construir sessão/cliente HTTP único no `client.py`.
 - [ ] S3.05 — Configurar timeout total ou connect/read conforme biblioteca escolhida.
 - [ ] S3.06 — Garantir TLS com validação de certificado.
-- [ ] S3.07 — Bloquear redirects a origens externas não aprovadas.
+- [ ] S3.07 — Desabilitar redirects comerciais automáticos, sem replay de POST ou conversão de método, inclusive na mesma origem.
 - [ ] S3.08 — Implementar exceções seguras sem detalhes sensíveis.
 - [ ] S3.09 — Proibir headers de autenticação em debug/trace.
 - [ ] S3.10 — Garantir fechamento adequado da conexão HTTP na saída.
@@ -1092,19 +1119,19 @@ flowchart LR
 **Entrega:** cliente autenticável por configuração, ainda sem permitir endpoints comerciais não verificados.  
 **Aceite:** caminho de autenticação existe sem ferramenta MCP que exponha token.
 
-### Sprint 4 — Allowlist GET e resiliência HTTP
+### Sprint 4 — Allowlist read-only e resiliência HTTP
 
 **Objetivo:** garantir read-only por construção.
 
 - [ ] S4.01 — Conferir G0 antes de adicionar qualquer rota comercial.
-- [ ] S4.02 — Criar allowlist explícita de métodos e paths GET aprovados, inicialmente vazia se G0 bloqueado.
-- [ ] S4.03 — Bloquear métodos comerciais diferentes de GET no nível do cliente.
+- [ ] S4.02 — Criar allowlist explícita de método + path literal + schema/filtros read-only aprovados, inicialmente vazia se G0 bloqueado; POST restrito à seção 10.5.
+- [ ] S4.03 — Bloquear operações mutáveis, PUT/PATCH/DELETE e POST fora dos candidatos aprovados; rejeitar campos de body desconhecidos e método/rota arbitrários no cliente.
 - [ ] S4.04 — Rejeitar paths arbitrários e parâmetros de URL capazes de alterar origem/rota.
-- [ ] S4.05 — Proteger contra redirects que mudem domínio ou esquema.
+- [ ] S4.05 — Desabilitar redirects comerciais automáticos, inclusive na mesma origem; impedir replay de POST, troca de método, domínio ou esquema.
 - [ ] S4.06 — Definir limites de tamanho do JSON de resposta.
 - [ ] S4.07 — Implementar tratamento de status 401, 403, 404, 429 e 5xx.
 - [ ] S4.08 — Implementar timeouts e erros de conexão.
-- [ ] S4.09 — Implementar retries limitados apenas em GET efetivamente seguros.
+- [ ] S4.09 — Implementar retries limitados apenas com segurança específica de repetição comprovada; POST de consulta com zero retries por padrão, inclusive em timeout/resposta ambígua.
 - [ ] S4.10 — Respeitar `Retry-After` quando aplicável e impor limite total.
 - [ ] S4.11 — Implementar parse JSON validado com erros sanitizados.
 - [ ] S4.12 — Proibir fallback silencioso de rota/método ao receber erro.
@@ -1126,7 +1153,7 @@ flowchart LR
 - [ ] S5.06 — Interpretar estoque como número ou `null`, nunca zero por ausência.
 - [ ] S5.07 — Tratar `ultimaAlteracaoTimestamp` somente conforme semântica confirmada.
 - [ ] S5.08 — Definir contrato do retorno com `status`, `partial`, `warnings` e `source`.
-- [ ] S5.09 — Implementar paginação **somente** conforme GET documentado.
+- [ ] S5.09 — Implementar paginação **somente** conforme consulta read-only documentada, preservando método e filtros/body aprovados.
 - [ ] S5.10 — Impor teto de páginas e resultados por consulta.
 - [ ] S5.11 — Marcar paginação incompleta como `partial`.
 - [ ] S5.12 — Tratar produtos duplicados sem perder reduzidos distintos.
@@ -1138,12 +1165,12 @@ flowchart LR
 
 ### Sprint 6 — Pesquisa de produtos autorizada
 
-**Objetivo:** primeira capacidade comercial end-to-end, **apenas com GET liberado**.
+**Objetivo:** primeira capacidade comercial end-to-end, **apenas com operação read-only liberada pelo método documentado**.
 
-- [ ] S6.01 — Verificar se há GET de catálogo/documentação e marcar bloqueio se não houver.
+- [ ] S6.01 — Verificar contrato de consulta de catálogo, semântica read-only e gates por operação; marcar bloqueio se evidência insuficiente, não apenas por ser POST.
 - [ ] S6.02 — Descrever o contrato real da operação de pesquisa.
 - [ ] S6.03 — Implementar validação de termo não vazio e tamanho máximo.
-- [ ] S6.04 — Implementar limite de resultados aceito pelo GET real.
+- [ ] S6.04 — Implementar limite de resultados aceito pela consulta real, sem presumir quota oficial.
 - [ ] S6.05 — Mapear filtros que existam na API, sem inventar busca semântica.
 - [ ] S6.06 — Implementar recuperação de primeira página autorizada.
 - [ ] S6.07 — Implementar paginação limitada quando comprovada.
@@ -1153,16 +1180,16 @@ flowchart LR
 - [ ] S6.11 — Garantir `partial` quando limite interromper a consulta.
 - [ ] S6.12 — Definir saída JSON-serializável e documentação da tool.
 - [ ] S6.13 — Realizar consulta manual autorizada, se permitido, sem logging de payload.
-- [ ] S6.14 — Registrar origem e evidência do método GET usado.
+- [ ] S6.14 — Registrar origem, método + rota + schema de consulta e evidência de segurança/validação usados.
 
 **Entrega:** `search_products` utilizável, ou bloqueio documentado.  
-**Aceite:** busca nunca usa POST comercial, dados sintéticos não contam como execução real.
+**Aceite:** busca nunca altera dados comerciais nem usa operação fora da allowlist; POST somente conforme seção 10.5; dados sintéticos não contam como execução real.
 
 ### Sprint 7 — Detalhes, SKU e EAN
 
 **Objetivo:** pesquisas específicas sem funcionalidades redundantes.
 
-- [ ] S7.01 — Verificar existência de GET por ID em fonte oficial.
+- [ ] S7.01 — Verificar consulta/filtro por ID em fonte oficial, sem presumir endpoint dedicado ou alterar método.
 - [ ] S7.02 — Validar identificador do produto no input.
 - [ ] S7.03 — Implementar `get_product_details` somente quando suportado.
 - [ ] S7.04 — Inspecionar suporte documentado à busca por SKU.
@@ -1182,16 +1209,16 @@ flowchart LR
 
 **Objetivo:** permitir decisões comerciais confiáveis sem escrita.
 
-- [ ] S8.01 — Investigar GET de preço real, moeda e tabela de preço.
+- [ ] S8.01 — Investigar consulta read-only de preço real, moeda e tabela de preço pelo método documentado.
 - [ ] S8.02 — Definir identificador necessário para preço.
 - [ ] S8.03 — Implementar `get_product_price` somente se justificado e autorizado.
 - [ ] S8.04 — Preservar valor decimal exato e `null` quando ausente.
-- [ ] S8.05 — Investigar GET de estoque e granularidade por reduzido/filial.
+- [ ] S8.05 — Investigar consulta read-only de estoque e granularidade por reduzido/depósito/filial.
 - [ ] S8.06 — Confirmar que leitura não reserva nem movimenta estoque.
-- [ ] S8.07 — Implementar `check_inventory` somente com fonte GET comprovada.
+- [ ] S8.07 — Implementar `check_inventory` somente com operação read-only comprovada e liberada.
 - [ ] S8.08 — Tratar `quantity=0` e `quantity=null` separadamente.
 - [ ] S8.09 — Retornar escopo e referência temporal se informados pela API.
-- [ ] S8.10 — Investigar GET de listagem e metadados de paginação.
+- [ ] S8.10 — Investigar consulta read-only de listagem e metadados de paginação.
 - [ ] S8.11 — Implementar `list_products` com teto de páginas e itens, se suportado.
 - [ ] S8.12 — Não consultar todas as páginas como comportamento padrão.
 - [ ] S8.13 — Classificar dados incompletos/limite como `partial`.
@@ -1210,7 +1237,7 @@ flowchart LR
 - [ ] S9.03 — Configurar transporte stdio como único transporte padrão.
 - [ ] S9.04 — Garantir stdout exclusivamente para envelopes MCP.
 - [ ] S9.05 — Enviar logs seguros somente para stderr.
-- [ ] S9.06 — Registrar tools somente após validação de capacidades GET.
+- [ ] S9.06 — Registrar tools somente após validação de capacidades read-only por método + rota + schema.
 - [ ] S9.07 — Definir nomes e descrições em inglês sem ambiguidade.
 - [ ] S9.08 — Definir schemas MCP para inputs com tipos/limites.
 - [ ] S9.09 — Garantir retorno estruturado/erro compatível com SDK.
@@ -1227,7 +1254,7 @@ flowchart LR
 
 **Objetivo:** oferecer análises comerciais derivadas, sem LLM obrigatório.
 
-- [ ] S10.01 — Confirmar que dados suficientes podem ser obtidos por GET permitido.
+- [ ] S10.01 — Confirmar que dados suficientes podem ser obtidos por operação read-only permitida.
 - [ ] S10.02 — Definir métricas calculáveis sem inferência de campos ausentes.
 - [ ] S10.03 — Definir regra configurável de “low stock” sem alterar ERP.
 - [ ] S10.04 — Definir estado tipado do fluxo e tamanho máximo do universo.
@@ -1238,8 +1265,8 @@ flowchart LR
 - [ ] S10.09 — Calcular contagens e indicadores com atenção a reduzidos duplicados.
 - [ ] S10.10 — Registrar `records_analyzed`, `complete_dataset` e critérios de cálculo.
 - [ ] S10.11 — Impedir conclusões globais quando a consulta for parcial.
-- [ ] S10.12 — Implementar `analyze_inventory` se estoque GET estiver liberado.
-- [ ] S10.13 — Implementar `analyze_product_catalog` se catálogo GET estiver liberado.
+- [ ] S10.12 — Implementar `analyze_inventory` se consulta de estoque read-only estiver liberada.
+- [ ] S10.13 — Implementar `analyze_product_catalog` se consulta de catálogo read-only estiver liberada.
 - [ ] S10.14 — Executar verificação manual com dados autorizados ou sintéticos claramente rotulados.
 - [ ] S10.15 — Comprovar execução sem chave de LLM; se bloqueado, documentar requisito pendente.
 
@@ -1250,7 +1277,7 @@ flowchart LR
 
 **Objetivo:** endurecimento antes de documentação final.
 
-- [ ] S11.01 — Revisar a allowlist de métodos/paths e a ausência de HTTP comercial POST.
+- [ ] S11.01 — Revisar allowlist de método/rota/schema; POST somente nos candidatos aprovados e validados; nenhuma operação de escrita ou body arbitrário; retries/redirects seguros.
 - [ ] S11.02 — Inspecionar registro de ferramentas: nenhum CRUD ou HTTP arbitrário.
 - [ ] S11.03 — Rever origem de `base_url` e credenciais por processo.
 - [ ] S11.04 — Verificar sanitização de logs e exceções.
@@ -1303,7 +1330,7 @@ flowchart LR
 - [ ] S13.08 — Listar ferramentas e conferir allowlist.
 - [ ] S13.09 — Verificar inexistência de tools de escrita e URL arbitrária.
 - [ ] S13.10 — Confirmar que entrada inválida é rejeitada antes de HTTP.
-- [ ] S13.11 — Validar uma consulta GET comercial real autorizada, somente se G0 passou.
+- [ ] S13.11 — Validar uma consulta comercial read-only real autorizada, pelo método documentado, somente se a operação estiver liberada e G0 passou.
 - [ ] S13.12 — Validar ausência de resultado e erro de permissão separadamente.
 - [ ] S13.13 — Validar comportamento manual diante de rate limit/timeout sem stress test agressivo.
 - [ ] S13.14 — Conferir IDs, preços e estoque sem arredondamento indevido.
@@ -1322,7 +1349,7 @@ flowchart LR
 **Objetivo:** fechar o escopo da V1 sem confundir fundação pronta com API desbloqueada.
 
 - [ ] S14.01 — Reconciliar `README.md`, `PRD.md` e tools registradas.
-- [ ] S14.02 — Reconciliar status das operações GET no inventário.
+- [ ] S14.02 — Reconciliar status das operações read-only por método + rota + schema no inventário.
 - [ ] S14.03 — Auditar arquivos de exemplo para dados privados e tokens.
 - [ ] S14.04 — Revisar `requirements.txt` e remover dependências sem uso.
 - [ ] S14.05 — Confirmar estrutura mínima, sem infraestrutura proibida.
@@ -1343,20 +1370,24 @@ flowchart LR
 
 ## 29. Registro de Pendências e Decisões
 
-| Código | Questão | Estado inicial | Evidência necessária | Impacto |
+| Código | Questão | Estado vigente | Evidência necessária | Impacto |
 |---|---|---|---|---|
-| DEC-001 | Existem endpoints **GET** comerciais sem efeitos colaterais para catálogo/estoque? | **BLOQUEADO / a investigar** | Documentação e validação autorizada | Impede ferramentas centrais |
-| DEC-002 | Qual contrato oficial de autenticação? | **PENDENTE** | Guia NetOne ou fornecedor | Implementação de `client.py` |
-| DEC-003 | Os IDs são inteiros/strings e únicos em qual nível? | **PENDENTE** | Schema real sanitizado | Normalização e busca |
-| DEC-004 | `valor` pertence a qual tabela/moeda? | **PENDENTE** | Documentação/campo real | `get_product_price` |
-| DEC-005 | `quantidade` representa qual depósito/filial? | **PENDENTE** | Documentação e validação | `check_inventory` |
-| DEC-006 | API suporta paginação GET, limites e filtros? | **PENDENTE** | Contrato oficial | Busca e listagem |
+| DEC-001 | As consultas comerciais documentadas, inclusive POST da seção 10.5, estão comprovadas sem mutação de negócio? | **BLOQUEADO — segurança/execução pendentes; método não é bloqueio** | Revisão técnica por operação, evidência de ausência de escrita (contrato explícito ou confirmação técnica do fornecedor), configuração segura e validação delimitada autorizada | Impede liberar operações e concluir S0.11; não impede fundação offline autorizada |
+| DEC-002 | Qual contrato oficial de autenticação? | **DOCUMENTADO; validação remota pendente** | Token no header e POST login publicados; esclarecer header gerado e permissões | Implementação futura de `client.py`, sem OAuth presumido |
+| DEC-003 | Os IDs são inteiros/strings e únicos em qual nível? | **PARCIAL — IDs inteiros publicados; máscara e SKU distintos** | Unicidade, nulidade e schema de `idsReduzidos` | Normalização e busca |
+| DEC-004 | `valor` pertence a qual tabela/moeda? | **PARCIAL — varejo/atacado documentados; moeda não** | Moeda e seleção de tabela da instalação | `get_product_price` |
+| DEC-005 | `quantidade` representa qual depósito/filial? | **PARCIAL — físico menos reservas; depósito explícito ou do usuário** | Depósito efetivo, unidade, agregação e validação | `check_inventory` |
+| DEC-006 | Quais contratos de paginação, limites e filtros das consultas candidatas? | **PARCIAL — POST documenta page/limit; tetos e completude pendentes** | Schema do body por operação, obrigatoriedade dos metadados e limites oficiais ou locais explicitamente distinguidos | Busca e listagem |
 | DEC-007 | API possui rate limit, `Retry-After` ou limite de lotes? | **PENDENTE** | Doc/respostas autorizadas | Resiliência e performance |
 | DEC-008 | Quais versões MCP/LangChain/LangGraph instalam em Python 3.14? | **PENDENTE** | Instalação e verificação de imports | Fundação |
-| DEC-009 | Há fluxo de análise multietapas que justifique LangGraph? | **PENDENTE** | GET e casos de uso reais | `analysis.py` |
+| DEC-009 | Há fluxo de análise multietapas que justifique LangGraph? | **PENDENTE** | Consultas read-only liberadas e casos de uso reais | `analysis.py` |
 | DEC-010 | Existe licença permissiva aplicável a qualquer código reaproveitado? | **PENDENTE** | Revisão da licença na fonte | Publicação pública |
 
-**Protocolo de decisão:** decisões novas usam sequência `DEC-011...` e registram data, evidência, alternativa escolhida, justificativa, impacto nas sprints e versão do PRD; qualquer alteração da restrição comercial GET exige autorização explícita futura e atualização do documento antes do código.
+**Protocolo de decisão vigente:** decisões novas usam o próximo código sequencial após DEC-014 e registram data, evidência, alternativa escolhida, justificativa, impacto nas sprints e versão do PRD. Qualquer ampliação dos três POSTs da seção 10.5 ou relaxamento de segurança exige nova autorização explícita e atualização deste documento antes do código. A política GET-only foi substituída na versão 1.1.0; não deve ser reaplicada como requisito atual.
+
+**Registro histórico de 27/10/2026 — versão 1.0.1 (política substituída):** DEC-011 manteve G0 BLOCKED pela regra GET-only então vigente; DEC-012 separou máscara e SKU. A busca de contrato GET era necessária naquela versão, não na atual. Evidências de inspeção permanecem válidas, sem comprovação de execução remota.
+
+**Registro vigente de 27/10/2026 — versão 1.1.0:** DEC-013, autorizado pelo responsável após proposta explícita, admite somente os POSTs de consulta de reduzidos, preços e estoque como candidatos; substitui o bloqueio por método, sem permitir mutação comercial. Alternativas: manter GET-only (rejeitada por incompatibilidade com consultas documentadas) ou liberar POST genericamente (rejeitada por segurança/escopo). Impacto: seções 3, 5–6, 10, 12–13, 15–16, 21, 23–30 e critérios/sprints relacionados passam a usar método/rota/schema e semântica de consulta. ADR-15/16 e riscos R01/R04/R10/R14 registram limites e repetição. DEC-014 mantém G0 BLOCKED e S0.11 aberta: autorização de revisão não é evidência nova de ausência de efeitos nem autorização de chamada. A adaptação futura pode reutilizar filtros/paginação/associação do legado, mas precisa controles de segurança e autorização de sprint. Responsável: mantenedor revisa contrato/semântica e solicita esclarecimentos técnicos ao fornecedor quando faltarem, depois autoriza validação delimitada com cliente seguro. Nenhum módulo, dependência, tool, chamada real ou nova marcação [x] faz parte desta revisão.
 
 ---
 
@@ -1375,12 +1406,12 @@ Uma sprint só é concluída quando:
 
 A **V1** só é concluída quando, adicionalmente:
 
-- [ ] Existe ao menos uma capacidade comercial GET validada e consumida por tool MCP real.
+- [ ] Existe ao menos uma capacidade comercial read-only validada, pelo método documentado, consumida por tool MCP real; POST somente conforme seção 10.5.
 - [ ] Todas as ferramentas expostas têm contrato, autenticação, tratamento de erro e aprovação.
 - [ ] Os objetivos e critérios obrigatórios da seção 26 estão atendidos.
 - [ ] Todos os cenários manuais aplicáveis têm `PASS` documentado e não há bloqueios críticos.
 
-**Se falhar a condição GET, o resultado máximo é fundação pronta com integração comercial bloqueada**, nunca V1 concluída.
+**Se faltar operação comercial read-only comprovada e validada, o resultado máximo é fundação pronta com integração comercial bloqueada**, nunca V1 concluída. Ausência de GET, por si só, não é impedimento na política 1.1.0.
 
 ---
 
@@ -1405,7 +1436,7 @@ A **V1** só é concluída quando, adicionalmente:
 
 ### 31.3 Limitações desta análise
 
-A estrutura, o PRD e arquivos centrais do SCSI foram efetivamente inspecionados na branch `main`. O código legado de integração NetOne foi inspecionado para compreender chamadas e campos. A documentação interativa Stoplight não disponibilizou contratos completos verificáveis durante esta elaboração; **nenhum endpoint comercial GET foi confirmado e nenhuma credencial privada foi utilizada**. Qualquer decisão dependente desses elementos permanece pendente conforme seção 29.
+Na elaboração inicial, a documentação interativa Stoplight não havia permitido verificar contratos completos. **Atualização da Sprint 0 em 27/10/2026:** a renderização permitiu ler contratos de Produto, autenticação e schemas; POST confirmado, sem validação de efeitos/execução no ERP. O legado foi reinspecionado somente como texto. **Revisão autorizada 1.1.0:** GET deixou de ser pré-requisito; três POSTs de consulta são candidatos de planejamento, ainda não liberados. Não há comprovação nova de ausência de mutação ou execução autenticada. Nenhuma credencial privada foi utilizada nem chamada ao ERP realizada. Evidências, conflitos e limites estão em `docs/api-capabilities.md`; pendências na seção 29. Não há módulos de aplicação ou manifesto de dependências, nem MCP funcional para validar.
 
 ---
 
