@@ -1,8 +1,8 @@
 # PRD — NetOne MCP: Servidor de Consulta e Análise Read-Only
 
-> **Versão:** 1.1.2 — Sprint 3 autorizada: cliente HTTP autenticável offline e ciclo de vida MCP; política comercial 1.1.0 preservada  
+> **Versão:** 1.1.4 — allowlist restrita autorizada; validação remota pendente  
 > **Data:** 28/10/2026  
-> **Status:** NOT_READY — POSTs de consulta candidatos aprovados no planejamento; G0 = BLOCKED por validação de segurança/execução pendente, não pelo método HTTP; nenhuma operação comercial liberada  
+> **Status:** NOT_READY — finalidade de consulta documentada aceita para três POSTs; G0 = BLOCKED por validação operacional pendente; nenhuma operação comercial liberada  
 > **Produto:** `netone-mcp`  
 > **Distribuição prevista:** repositório público, instalação por operador autorizado  
 > **Stack central:** Python **3.14+** · SDK MCP mantido · LangChain **1.x+** · LangGraph · cliente HTTP · Pydantic · `.venv` · `requirements.txt`  
@@ -24,7 +24,7 @@ Este `PRD.md` é a **fonte única de verdade para planejamento e implementação
 - A especificação distingue **requisitos**, **evidências externas**, **hipóteses** e **entregas futuras**. Nenhum exemplo de JSON, endpoint ou fluxo proposto comprova suporte real da API.
 - Qualquer alteração de escopo deve atualizar a versão do PRD, o registro de decisões, os riscos, o roadmap e as sprints afetadas; nunca marcar tarefas retroativamente sem evidência.
 
-> **Política vigente — autorização explícita do responsável em 27/10/2026:** read-only significa **ausência de mutação comercial**, não obrigatoriedade de GET. A versão 1.1.0 substitui a proibição geral de POST comercial pela admissão restrita dos POSTs documentados de consulta de reduzidos, preços e estoque, identificados literalmente na seção 10.5. Isso permite planejar/adaptar a lógica legada; não autoriza copiar código inseguro, iniciar outras sprints, executar chamadas reais, liberar tools ou presumir segurança só pelo método HTTP. Cadastro, alteração, exclusão, reserva, movimentação e sincronização com escrita permanecem proibidos. S0.11 e G0 continuam bloqueados pela evidência de segurança e validação ainda pendentes. A antiga política GET-only é histórica e não rege novas implementações.
+> **Política vigente — versão 1.1.3:** read-only significa ausência de mutação comercial, não obrigatoriedade de GET. O responsável aceita a descrição oficial de consulta como evidência suficiente da finalidade de leitura para os três POSTs da seção 10.5, com risco residual documentado: a documentação não garante explicitamente ausência de efeitos internos. Isso não comprova comportamento remoto nem autoriza chamada real ou tools; continuam exigidos schema fechado, transporte seguro, autorização delimitada e validação operacional. Cadastro, alteração, exclusão, reserva, movimentação e sincronização com escrita no ERP continuam proibidos. A autorização desta versão inclui a Sprint 4 offline, não outras sprints. G0 permanece BLOCKED pela validação operacional; GET-only é histórico.
 
 ## Índice
 
@@ -164,12 +164,12 @@ Integrar sistemas assistidos por IA a ERPs frequentemente exige código específ
 **G0 — Condição para liberar as Sprints 4 a 10 com operações reais:**
 
 1. Obter documentação e evidências dos métodos, rotas e formatos dos recursos pretendidos.
-2. Comprovar pelo menos uma operação comercial de consulta efetivamente sem mutação de negócio, pelo método exato documentado; POST só nos candidatos da seção 10.5. Descrever evidência, limites e como efeitos colaterais foram descartados; uma resposta 200 ou o nome «Busca» não bastam.
+2. Revisar pelo menos uma operação comercial de consulta pelo método exato documentado; POST só nos candidatos da seção 10.5. Para esses três candidatos, a descrição oficial de consulta constitui evidência aceita de finalidade read-only, com risco residual registrado; não equivale a prova dos efeitos internos. Uma resposta 200 isolada não basta.
 3. Comprovar autenticação autorizada e ausência de exposição de segredos.
 4. Registrar o catálogo de endpoints e suas evidências no inventário de capacidades.
 5. Se nenhuma operação satisfizer contrato, revisão de segurança e validação autorizada, classificar o núcleo comercial como **BLOQUEADO**. A inexistência de GET não bloqueia por si só. Fundação offline pode ser preparada em outra sprint expressamente autorizada, sem contornar a política READ-ONLY.
 
-**Situação atual:** os três POSTs centrais são candidatos documentados e aceitos para planejamento, não rotas liberadas. A autorização desta revisão cobre documentos; não cobre login, chamadas reais ou início da Sprint 1. G0 = BLOCKED enquanto S0.11 e validação operacional segura não tiverem evidência. Implementar um cliente seguro para posterior validação em sprint autorizada não exige fingir G0 = PASS; chamadas comerciais continuam bloqueadas até aprovação específica.
+**Situação atual:** os três POSTs centrais são candidatos documentados, não rotas liberadas. Conforme DEC-017, a finalidade de consulta está documentada e aceita, com risco residual de efeitos internos não comprovados. G0 = BLOCKED pela validação operacional segura ainda não realizada. A Sprint 4 offline foi autorizada; login, chamadas reais e liberação de ferramentas exigem autorização própria.
 
 ---
 
@@ -429,7 +429,7 @@ A Sprint 0 reinspecionou o legado local por leitura e a [documentação oficial 
 | Autenticação por token de usuário | Artigo oficial confirma `netone-auth-token`; login `/app-web/api/v2/auth/login`, body `usuario`, `senha` | **POST somente para login** | Não se aplica | **DOCUMENTADO; execução não validada** |
 | OAuth / renovação de token | Não comprovados nas fontes inspecionadas; regeneração no ERP invalida token anterior | Não verificado | Não se aplica | **PENDENTE — não presumir** |
 
-**Resultado G0 vigente em 27/10/2026: BLOCKED — validação de segurança/execução pendente.** A revisão 1.1.0 admite os três POSTs centrais como candidatos de consulta; não exige GET equivalente nem libera requisições reais. Os sete POSTs auxiliares continuam apenas inventariados, fora da admissão restrita desta revisão. Nenhuma rota comercial está liberada. S0.11 permanece pendente, agora avaliando ausência de mutação comercial independentemente de GET ou POST.
+**Resultado G0 vigente: BLOCKED — validação operacional pendente.** A revisão 1.1.3 aceita a finalidade de consulta documentada para os três POSTs centrais, sem afirmar prova de ausência de efeitos internos; não libera requisições reais. Os sete POSTs auxiliares continuam apenas inventariados, fora da admissão restrita. Nenhuma rota comercial está liberada.
 
 ### 10.3 Inventário obrigatório por endpoint, para `docs/api-capabilities.md`
 
@@ -437,7 +437,7 @@ Para cada endpoint a liberar, documentar:
 
 1. Identificador interno neutro, nome da capacidade e origem da evidência.
 2. Método HTTP exato e path relativo **sanitizado**, sem domínio privado.
-3. Semântica read-only: confirmação de que não altera dados comerciais.
+3. Semântica read-only: evidência aceita de finalidade de consulta e limites da confirmação, conforme DEC-017 para os três candidatos.
 4. Autenticação exigida, em **nomes de variáveis**, nunca valores.
 5. Parâmetros, filtros, tipos, limites, paginação e exemplos sintéticos.
 6. Campos JSON obrigatórios/opcionais e validações de formato.
@@ -448,7 +448,7 @@ Para cada endpoint a liberar, documentar:
 
 ### 10.4 Política de desbloqueio
 
-Um endpoint só passa a **LIBERADO** quando: método exato documentado e enquadrado na política; ausência de mutação comercial tecnicamente sustentada; par método + rota literal e schema/filtros revisados; autenticação e escopo conhecidos; limites oficiais conhecidos ou limites locais conservadores explicitamente registrados, sem alegar quotas do fornecedor; resultado de validação autorizada verificado; e critérios registrados no inventário. **Nunca adivinhar rotas, trocar GET por POST ou liberar uma operação somente porque outra usa o mesmo método.** A autorização de uma chamada manual delimitada de validação é separada da liberação de tool e depende da revisão prévia de segurança, configuração protegida e transporte seguro; não exige uma tool já registrada. Um HTTP 200 isolado não comprova ausência de mutação.
+Um endpoint só passa a **LIBERADO** quando: método exato documentado e enquadrado na política; finalidade read-only sustentada conforme DEC-017; par método + rota literal e schema/filtros revisados; autenticação e escopo conhecidos; limites oficiais conhecidos ou limites locais conservadores explicitamente registrados, sem alegar quotas do fornecedor; resultado de validação autorizada verificado; e critérios registrados no inventário. **Nunca adivinhar rotas, trocar GET por POST ou liberar uma operação somente porque outra usa o mesmo método.** A autorização de uma chamada manual delimitada de validação é separada da liberação de tool e depende da revisão prévia de segurança, configuração protegida e transporte seguro; não exige uma tool já registrada. Um HTTP 200 isolado não comprova ausência de mutação.
 
 ### 10.5 POSTs de consulta admitidos por autorização restrita
 
@@ -464,7 +464,7 @@ Em 27/10/2026 o responsável autorizou revisar a política GET-only para reutili
 - O reaproveitamento é da lógica de token, filtros, paginação e associação por reduzido; não copiar hosts, credenciais, loops ilimitados, floats monetários, `print()` no stdout, tratamento de erro cru ou lote 100 como suposto limite oficial.
 - PUT, PATCH, DELETE, POSTs fora desta tabela e qualquer operação de escrita, reserva, movimentação ou sincronização mutável continuam proibidos. Os sete endpoints auxiliares inventariados não são liberados por associação; exigem nova decisão explícita de escopo e revisão individual. GET também exige evidência e allowlist antes de uso.
 - POST de consulta começa com **zero retries**, sem redirects automáticos e sem fallback de método/rota. Repetição automática só após comprovar segurança específica de repetição; timeout é erro, não autorização para reenviar.
-- A futura allowlist operacional fica vazia até revisão/validação por operação; ferramentas não verificadas permanecem ausentes. Não usar respostas falsas nem ocultar POST sob proxy GET.
+- DEC-018 autoriza allowlist interna restrita aos três candidatos antes da validação remota, não uma chamada real nem tool; ferramentas não verificadas permanecem ausentes. Não usar respostas falsas nem ocultar POST sob proxy GET.
 - Autenticação `/app-web/api/v2/auth/login` permanece separada, sem ferramenta MCP; não integra esta tabela comercial. A autorização atual não permite login, token rotation, chamadas reais ou início de outra sprint.
 
 ---
@@ -725,7 +725,7 @@ Se a API **comprovadamente** exigir POST para obtenção ou renovação de token
 
 ### 16.2 Proibição de efeitos colaterais
 
-- Toda operação, GET ou POST, deve ter evidência de **semântica read-only**. Se dispara atualização, reserva, movimentação, sincronização com escrita ou outra mutação comercial, não permitir sua execução. Documentação de consulta e legado sem escrita explícita são evidências iniciais, não prova completa dos efeitos no servidor.
+- Toda operação, GET ou POST, deve ter evidência de **semântica read-only**. Se dispara atualização, reserva, movimentação, sincronização com escrita ou outra mutação comercial, não permitir sua execução. Para os três candidatos, a documentação de consulta é evidência aceita conforme DEC-017, não prova completa dos efeitos internos no servidor.
 - No carregamento, o servidor valida os caminhos liberados e **não** cria tools de escrita, nem “ocultas” ou “desativadas”.
 - Nunca permitir que tool configure a URL final concatenando path externo fornecido pelo usuário.
 - Análise local em memória é permitida; nenhuma gravação comercial no NetOne é permitida.
@@ -932,7 +932,7 @@ Para cada VM executada, registrar em `docs/runbook.md`: data, comando/cenário, 
 | R01 | Confundir POST de consulta com permissão genérica de escrita | **Crítico** | **POST central documentado; segurança/execução ainda não validadas** | Seção 10.5 restrita a três candidatos; G0 permanece BLOCKED até evidência por operação; nenhum POST arbitrário |
 | R02 | Autenticação presumida incorretamente como OAuth | Alto | Indeterminada | Usar somente mecanismo documentado; token no header observado |
 | R03 | Dados de preço/estoque incompletos | Alto | Possível | Diferenciar `null` de zero e sinalizar origem |
-| R04 | GET ou POST de consulta com efeitos colaterais ocultos | Crítico | Desconhecida | Confirmar ausência de mutação comercial antes de allowlist; 200 isolado não é prova |
+| R04 | GET ou POST de consulta com efeitos colaterais ocultos | Crítico | Desconhecida | DEC-017 aceita documentação de consulta dos três candidatos, com risco residual registrado; 200 isolado não é prova e validação operacional continua exigida |
 | R05 | Exposição de token no repositório/log | Crítico | Controlável | `.gitignore`, `.env` intacto, sanitização, revisão manual |
 | R06 | URL arbitrária ou SSRF via tool | Alto | Controlável | Base URL por processo, validação e allowlist |
 | R07 | Quebra de SDK no Python 3.14 | Alto | Desconhecida | Prova de instalação e execução, versões verificadas |
@@ -963,13 +963,14 @@ Para cada VM executada, registrar em `docs/runbook.md`: data, comando/cenário, 
 | ADR-10 | Nenhuma execução Git pelo desenvolvedor | Respeita instruções do projeto | Versionamento manual pelo responsável |
 | ADR-11 | Docs Markdown em `docs/` sem build obrigatório | Adota disciplina do SCSI | Sem portal navegável MkDocs inicialmente |
 | ADR-12 | Erros estruturados, sem expor corpos | Segurança e interoperabilidade | Menos detalhes de diagnóstico público |
-| ADR-13 (atualizada) | G0 = BLOCKED por segurança/execução pendente; allowlist comercial operacional vazia | A revisão documental não comprova efeitos nem valida credenciais/respostas | POST não bloqueia por si só; S0.11 e chamadas reais continuam pendentes |
+| ADR-13 (atualizada por DEC-018) | G0 = BLOCKED por execução remota pendente; allowlist interna restrita admitida antes dessa validação | Documentação aceita como evidência de finalidade de consulta, não de execução ou efeitos internos | Tools e chamadas reais não são autorizadas por esta decisão |
 | ADR-14 | Distinguir máscara de produto e SKU do reduzido | Documentação contém `mascara` e `codigoSku` distintos | Contrato normalizado permanece proposto até validar identidade e nulidade |
 | ADR-15 | Read-only por semântica; três POSTs centrais admitidos como candidatos | Autorização explícita do responsável em 27/10/2026 e contratos O3/O4/O5 | Não libera endpoints auxiliares, tools ou chamadas; exige revisão por método/rota/schema |
 | ADR-16 | POST de consulta sem retries e redirects automáticos por padrão | Evitar reenvio ou conversão de método sem segurança de repetição comprovada | Resiliência automática menor até obter evidência específica |
 | ADR-17 | Configuração explícita e imutável; compatibilidade por origem derivada de URLs legadas validadas | Desenho aprovado pelo mantenedor para executar Sprint 2 sem reescrever `.env` | Apenas validação estrutural; destinos legados incompatíveis falham; autenticação/transporte permanecem pendentes |
 | ADR-18 | Um cliente HTTPX assíncrono privado por ciclo de vida MCP, com token fornecido pelo operador e fechamento protegido por cancel scope AnyIO | Desenho da Sprint 3 aprovado pelo mantenedor; injeção de contexto controlado e fechamento do recurso; cancelamento reproduzido interrompia cleanup sem proteção | AnyIO já instalado passa a dependência direta declarada; sem login/OAuth/refresh, interface HTTP genérica, operações comerciais ou chamada no startup; trava de envio total até revisão de operações em sprint própria |
 | ADR-19 | TLS verificado, timeout por fase, zero retries/redirects e `trust_env=False`; suprimir logs brutos HTTPX/httpcore e renderizar logs SDK/raiz como diagnóstico fixo em stderr | Não herdar proxies/CA/autenticação implícitos nem expor headers/origem; revisão reproduziu SDK logando conteúdo MCP inválido no logger raiz | Diagnóstico SDK sem payload/traceback e controle explícito do logging do processo dedicado; sem deadline total ou prova de handshake remoto; instalação com proxy/CA privada exige decisão futura explícita, nunca bypass TLS |
+| ADR-20 | Aceitar O3/O4/O5 como evidência documental de finalidade de consulta para os três candidatos literais | DEC-017 autorizada pelo mantenedor; documentação descreve buscas e legado corrobora produtos/estoque | Sem garantia explícita de efeitos internos; validação operacional, schema e aprovação de execução permanecem separados |
 
 ---
 
@@ -985,7 +986,7 @@ Para cada VM executada, registrar em `docs/runbook.md`: data, comando/cenário, 
 - [ ] O arquivo `.env` original foi preservado integralmente.
 - [ ] O servidor MCP inicia por stdio, sem LLM, e registra as tools permitidas.
 - [ ] Nenhuma ferramenta permite escrita, método de negócio não permitido, HTTP arbitrário, URL arbitrária ou seleção de tenant/segredo.
-- [ ] Os endpoints utilizados têm método exato, contrato e ausência de mutação comercial comprovados; POST comercial somente na admissão restrita da seção 10.5.
+- [ ] Os endpoints utilizados têm método exato, contrato e evidência de finalidade read-only revisados conforme DEC-017; POST comercial somente na admissão restrita da seção 10.5.
 - [ ] A autenticação utiliza somente fluxo efetivamente documentado.
 - [ ] Todas as consultas implementadas tratam paginação, timeouts, limites e erros relevantes.
 - [ ] Produtos, preços, IDs e estoque mantêm fidelidade, nulidade e fonte explícita.
@@ -1006,7 +1007,7 @@ Se **não houver operação comercial read-only segura e validada**, o produto p
 
 | Fase | Sprints | Resultado esperado | Gate |
 |---|---|---|---|
-| **F1 — Investigação** | 0 | Contratos POST e revisão autorizada registrados; S0.11 pendente de segurança | **G0 = BLOCKED por validação, não método** |
+| **F1 — Investigação** | 0 | Contratos POST e evidência documental de consulta registrados conforme DEC-017 | **G0 = BLOCKED por validação operacional, não método** |
 | **F2 — Fundação** | 1–3 | Ambiente/configuração e cliente autenticável com ciclo de vida MCP implementados offline | **G1 completo BLOCKED; verificação offline não valida credencial nem instalação remota** |
 | **F3 — Integração segura** | 4–6 | Cliente HTTP, normalização, consulta read-only pelo método aprovado se liberada | **G2** |
 | **F4 — Ferramentas MCP** | 7–9 | Tools úteis, registro MCP, stdio, sem escrita | **G3** |
@@ -1054,14 +1055,14 @@ flowchart LR
 - [x] S0.08 — Consultar a documentação oficial e seus limites de acesso.
 - [x] S0.09 — Documentar cada endpoint conhecido, distinguindo observado de oficialmente confirmado.
 - [x] S0.10 — Investigar se **GET** equivalentes realmente existem, sem adivinhá-los.
-- [ ] S0.11 — Confirmar ausência de mutação comercial de cada operação candidata, pelo método documentado (incluindo POST de consulta da seção 10.5), registrando evidência técnica e limites da confirmação.
+- [x] S0.11 — Revisar a finalidade de consulta documentada de cada operação candidata pelo método documentado, registrando evidência técnica e limites, incluindo risco residual de efeitos internos.
 - [x] S0.12 — Documentar autenticação: token fixo, OAuth ou outro, conforme prova.
 - [x] S0.13 — Levantar paginação, campos, erros e limites de requisições.
 - [x] S0.14 — Redigir `docs/api-capabilities.md` com matriz de evidências sanitizadas.
 - [x] S0.15 — Registrar decisões e dúvidas sem incluir instalação comercial identificável.
 - [x] S0.16 — Decidir **G0 = PASS** (operação read-only segura e validada) ou **G0 = BLOCKED** (evidência/validação insuficiente).
 
-**Evidências vigentes em 27/10/2026:** `docs/scsi-reference.md`, `docs/api-capabilities.md` e `docs/runbook.md`. **15 tarefas verificadas; S0.11 = BLOCKED** pela confirmação de ausência de mutação comercial ainda pendente, não pela ausência de GET. A S0.10 preserva o levantamento histórico de GET, que não é mais condição de aceite; S0.13 registra contratos e limites desconhecidos, não quotas inventadas. S0.11 e S0.16 foram reformuladas na 1.1.0; o resultado BLOCKED de S0.16 continua válido, sem nova execução remota e sem novo [x]. Autorização de revisão documental não conclui S0.11. Nenhuma outra sprint iniciada/marcada, módulo/manifesto criado ou chamada ao ERP realizada. `.env` e `.venv` não foram abertos nem modificados. Estado: **NOT_READY / COMMERCIAL_API_BLOCKED**.
+**Evidências históricas em 27/10/2026:** `docs/scsi-reference.md`, `docs/api-capabilities.md` e `docs/runbook.md`; na época 15 tarefas verificadas e S0.11 bloqueada. **Revisão 1.1.3:** S0.11 reformulada e verificada pela leitura oficial de O3/O4/O5 e análise do legado; os limites e o risco residual constam em DEC-017 e no inventário. O novo [x] registra revisão documental, não comprovação dos efeitos internos nem execução remota. S0.16 permanece com G0 BLOCKED por validação operacional pendente. Estado: **NOT_READY / COMMERCIAL_API_BLOCKED**.
 
 **Entrega:** inventário validado da API, matriz SCSI→NetOne, decisão G0 explícita.  
 **Aceite:** nenhuma operação comercial é inventada, tratada como read-only só pelo método, ou liberada sem evidência; POST restrito à seção 10.5.
@@ -1139,23 +1140,33 @@ flowchart LR
 
 **Objetivo:** garantir read-only por construção.
 
-- [ ] S4.01 — Conferir G0 antes de adicionar qualquer rota comercial.
-- [ ] S4.02 — Criar allowlist explícita de método + path literal + schema/filtros read-only aprovados, inicialmente vazia se G0 bloqueado; POST restrito à seção 10.5.
-- [ ] S4.03 — Bloquear operações mutáveis, PUT/PATCH/DELETE e POST fora dos candidatos aprovados; rejeitar campos de body desconhecidos e método/rota arbitrários no cliente.
-- [ ] S4.04 — Rejeitar paths arbitrários e parâmetros de URL capazes de alterar origem/rota.
-- [ ] S4.05 — Desabilitar redirects comerciais automáticos, inclusive na mesma origem; impedir replay de POST, troca de método, domínio ou esquema.
-- [ ] S4.06 — Definir limites de tamanho do JSON de resposta.
-- [ ] S4.07 — Implementar tratamento de status 401, 403, 404, 429 e 5xx.
-- [ ] S4.08 — Implementar timeouts e erros de conexão.
-- [ ] S4.09 — Implementar retries limitados apenas com segurança específica de repetição comprovada; POST de consulta com zero retries por padrão, inclusive em timeout/resposta ambígua.
-- [ ] S4.10 — Respeitar `Retry-After` quando aplicável e impor limite total.
-- [ ] S4.11 — Implementar parse JSON validado com erros sanitizados.
-- [ ] S4.12 — Proibir fallback silencioso de rota/método ao receber erro.
-- [ ] S4.13 — Inspecionar manualmente a allowlist e as saídas de erro.
-- [ ] S4.14 — Registrar G2 e pendências reais.
+**Execução autorizada:** implementar a infraestrutura de allowlist e resiliência localmente sem depender de uma resposta real para desenvolver ou verificar controles. O aceite documental de DEC-017 não valida credencial, TLS remoto ou comportamento interno. Não realizar chamadas reais durante esta execução; não tratar o bloqueio de validação remota como impedimento para implementar e exercitar código offline. Manter a negação de envios não aprovados e não expor HTTP arbitrário, ferramentas de escrita ou acesso a outra origem.
+
+**Autorização posterior do mantenedor:** substituir a negação total por allowlist interna restrita aos três POSTs da seção 10.5, com método e rota escolhidos no código, filtros tipados fechados, origem fixa, sem retries ou redirects e verificação offline. A implementação não registra tools nem exige contato com fornecedor; nenhuma chamada real foi autorizada por esta decisão. G0 permanece sem validação operacional real, não como impeditivo de implementar este transporte restrito. Começar com filtros `page` e `limit` documentados; divergências de outros filtros ficam pendentes, não inventadas. Não apresentar validação sintética como evidência remota.
+
+**DEC-018 / ADR-21:** o mantenedor autorizou implementar e ativar a allowlist restrita antes de validação remota, em lugar da negação total. Esse é um desvio controlado do antigo requisito de validação prévia para allowlisting: aplicação e tools continuam sem operações públicas, o próprio cliente seleciona método e rota, e não se autoriza executar chamada real. Risco residual de efeitos não documentados, permissões e configuração não validada permanece. A aceitação de uma operação interna pela guarda é distinta de validação remota e da liberação de ferramentas MCP.
+
+**Decisão de transporte offline:** solicitar `Accept-Encoding: identity` e rejeitar respostas comerciais comprimidas, evitando descompressão automática antes da verificação do teto de bytes. O leitor opera em stream HTTPX ainda não consumido, conta bytes brutos e rejeita resposta acima do limite antes de armazenar o chunk; o limite não é garantia sobre buffers internos da biblioteca. Compatibilidade do fornecedor com esta restrição é desconhecida e exige validação futura; não remover a proteção por conveniência.
+
+- [x] S4.01 — Conferir G0 antes de adicionar qualquer rota comercial.
+- [x] S4.02 — Criar allowlist explícita de método + path literal + schema/filtros read-only aprovados, inicialmente vazia se G0 bloqueado; POST restrito à seção 10.5.
+- [x] S4.03 — Bloquear operações mutáveis, PUT/PATCH/DELETE e POST fora dos candidatos aprovados; rejeitar campos de body desconhecidos e método/rota arbitrários no cliente.
+- [x] S4.04 — Rejeitar paths arbitrários e parâmetros de URL capazes de alterar origem/rota.
+- [x] S4.05 — Desabilitar redirects comerciais automáticos, inclusive na mesma origem; impedir replay de POST, troca de método, domínio ou esquema.
+- [x] S4.06 — Definir limites de tamanho do JSON de resposta.
+- [x] S4.07 — Implementar tratamento de status 401, 403, 404, 429 e 5xx.
+- [x] S4.08 — Implementar timeouts e erros de conexão.
+- [x] S4.09 — Implementar retries limitados apenas com segurança específica de repetição comprovada; POST de consulta com zero retries por padrão, inclusive em timeout/resposta ambígua.
+- [x] S4.10 — Respeitar `Retry-After` quando aplicável e impor limite total.
+- [x] S4.11 — Implementar parse JSON validado com erros sanitizados.
+- [x] S4.12 — Proibir fallback silencioso de rota/método ao receber erro.
+- [x] S4.13 — Inspecionar manualmente a allowlist e as saídas de erro.
+- [x] S4.14 — Registrar G2 e pendências reais.
 
 **Entrega:** transporte que não pode executar requisição comercial fora da política.  
 **Aceite:** uma operação não allowlisted é rejeitada antes do HTTP.
+
+**Registro 1.1.4:** DEC-018 substitui a trava total por allowlist interna restrita a três POSTs e filtros `page`/`limit`, com origem e Host fixos; tools continuam ausentes. A resposta em streaming aceita apenas `identity`, limita o corpo a 1.048.576 bytes, rejeita JSON inválido/chaves duplicadas e exige `result` como lista. Timeouts por fase e prazo total são limitados; limpeza pode acrescentar até um segundo. Zero retries, inclusive em 429/`Retry-After` e timeout: nenhum reenvio é aplicável enquanto não houver evidência de repetição segura. Validações sintéticas com transporte em memória são evidência offline, não resultado NetOne. G0 e G1 remotos não foram validados; G2 é aceite offline dos controles, não aprovação de uso real. Detalhes e limites em `docs/runbook.md`.
 
 ### Sprint 5 — Normalização de dados e paginação
 
@@ -1388,7 +1399,7 @@ flowchart LR
 
 | Código | Questão | Estado vigente | Evidência necessária | Impacto |
 |---|---|---|---|---|
-| DEC-001 | As consultas comerciais documentadas, inclusive POST da seção 10.5, estão comprovadas sem mutação de negócio? | **BLOQUEADO — segurança/execução pendentes; método não é bloqueio** | Revisão técnica por operação, evidência de ausência de escrita (contrato explícito ou confirmação técnica do fornecedor), configuração segura e validação delimitada autorizada | Impede liberar operações e concluir S0.11; não impede fundação offline autorizada |
+| DEC-001 | Qual evidência de leitura se aceita para consultas POST da seção 10.5? | **FINALIDADE DE CONSULTA DOCUMENTADA E ACEITA; execução pendente** | O3/O4/O5 descrevem buscas; ausência de efeitos internos não é explicitamente garantida; schema, configuração e validação delimitada continuam necessários | G0 e liberação operacional permanecem bloqueados até validação autorizada |
 | DEC-002 | Qual contrato oficial de autenticação? | **DOCUMENTADO; validação remota pendente** | Token no header e POST login publicados; esclarecer header gerado e permissões | Sprint 3 autorizada somente para token fornecido ao cliente; sem OAuth presumido ou login |
 | DEC-003 | Os IDs são inteiros/strings e únicos em qual nível? | **PARCIAL — IDs inteiros publicados; máscara e SKU distintos** | Unicidade, nulidade e schema de `idsReduzidos` | Normalização e busca |
 | DEC-004 | `valor` pertence a qual tabela/moeda? | **PARCIAL — varejo/atacado documentados; moeda não** | Moeda e seleção de tabela da instalação | `get_product_price` |
@@ -1399,15 +1410,17 @@ flowchart LR
 | DEC-009 | Há fluxo de análise multietapas que justifique LangGraph? | **PENDENTE** | Consultas read-only liberadas e casos de uso reais | `analysis.py` |
 | DEC-010 | Existe licença permissiva aplicável a qualquer código reaproveitado? | **PENDENTE** | Revisão da licença na fonte | Publicação pública |
 
-**Protocolo de decisão vigente:** decisões novas usam o próximo código sequencial após DEC-016 e registram data, evidência, alternativa escolhida, justificativa, impacto nas sprints e versão do PRD. Qualquer ampliação dos três POSTs da seção 10.5 ou relaxamento de segurança exige nova autorização explícita e atualização deste documento antes do código. A política GET-only foi substituída na versão 1.1.0; não deve ser reaplicada como requisito atual.
+**Protocolo de decisão vigente:** decisões novas usam o próximo código sequencial após DEC-017 e registram data, evidência, alternativa escolhida, justificativa, impacto nas sprints e versão do PRD. Qualquer ampliação dos três POSTs da seção 10.5 ou relaxamento de segurança exige nova autorização explícita e atualização deste documento antes do código. A política GET-only foi substituída na versão 1.1.0; não deve ser reaplicada como requisito atual.
 
 **Registro histórico de 27/10/2026 — versão 1.0.1 (política substituída):** DEC-011 manteve G0 BLOCKED pela regra GET-only então vigente; DEC-012 separou máscara e SKU. A busca de contrato GET era necessária naquela versão, não na atual. Evidências de inspeção permanecem válidas, sem comprovação de execução remota.
 
-**Registro vigente de 27/10/2026 — versão 1.1.0:** DEC-013, autorizado pelo responsável após proposta explícita, admite somente os POSTs de consulta de reduzidos, preços e estoque como candidatos; substitui o bloqueio por método, sem permitir mutação comercial. Alternativas: manter GET-only (rejeitada por incompatibilidade com consultas documentadas) ou liberar POST genericamente (rejeitada por segurança/escopo). Impacto: seções 3, 5–6, 10, 12–13, 15–16, 21, 23–30 e critérios/sprints relacionados passam a usar método/rota/schema e semântica de consulta. ADR-15/16 e riscos R01/R04/R10/R14 registram limites e repetição. DEC-014 mantém G0 BLOCKED e S0.11 aberta: autorização de revisão não é evidência nova de ausência de efeitos nem autorização de chamada. A adaptação futura pode reutilizar filtros/paginação/associação do legado, mas precisa controles de segurança e autorização de sprint. Responsável: mantenedor revisa contrato/semântica e solicita esclarecimentos técnicos ao fornecedor quando faltarem, depois autoriza validação delimitada com cliente seguro. Nenhum módulo, dependência, tool, chamada real ou nova marcação [x] faz parte desta revisão.
+**Registro histórico de 27/10/2026 — versão 1.1.0:** DEC-013 admitiu somente os três POSTs de consulta como candidatos; DEC-014 manteve G0 BLOCKED e S0.11 aberta sob o critério então vigente. A versão 1.1.3 substitui o critério documental por DEC-017; não libera execução nem ferramentas. POST genérico e mutação comercial continuam proibidos.
 
 **Registro da Sprint 2 — versão 1.1.1:** DEC-015 registra a opção recomendada aprovada pelo mantenedor: derivar origem de URLs legadas estritamente validadas em vez de exigir nova variável no arquivo existente. Preservar nomes e `.env`, priorizar ambiente do processo, sem interpolação, sem login/HTTP. ADR-17 e seção 21 detalham os limites. Impacto limitado à configuração e falha segura de startup; sem alterar G0, S0.11, admissão comercial ou tarefas de outras sprints. R05/R06 são mitigados por erros sem valores, `SecretStr`, origem única e validação lexical; resolução DNS, transporte/TLS e validade remota do token permanecem riscos não encerrados. A instalação local requer decisão do operador sobre sua URL rejeitada, sem exibir o valor nem reescrever o arquivo. G1 completo permanece pendente da Sprint 3 autorizada e respectivas evidências.
 
 **Autorização da Sprint 3 — versão 1.1.2, 28/10/2026:** DEC-016 registra aprovação do desenho/execução pelo mantenedor após comparação com SCSI (contexto injetado nas tools/ORM, sem cliente ERP equivalente) e legado Dias Moto (`requests.post` por chamada, sem sessão compartilhada). Escolhida gestão do cliente assíncrono pelo ciclo de vida MCP; rejeitados cliente isolado sem consumidor e cópia literal do legado. ADR-18/19, R15, roadmap e escopo da Sprint 3 atualizados antes do código. A fonte oficial O2 foi relida anonimamente e confirma `netone-auth-token`; OAuth/refresh/expiração seguem não comprovados. A autorização cobre somente Sprint 3 offline; não cobre login, requisição ERP, correção de `.env`, Sprint 4 ou liberação de ferramentas. G0/S0.11 e validação remota de G1 permanecem bloqueados. Checkboxes dependem da evidência executada.
+
+**Decisão DEC-017 — versão 1.1.3:** o mantenedor autoriza aceitar O3/O4/O5 como evidência suficiente de finalidade de consulta para os três POSTs literais da seção 10.5; os relatos de uso e o cliente legado corroboram produtos/estoque, não a operação separada de preços. Alternativa rejeitada: exigir declaração explícita adicional do fornecedor como pré-condição absoluta. Limitação: essas fontes não demonstram ausência de efeitos internos nem validade de credenciais; risco residual aceito somente para a classificação documental, não para ignorar a política read-only. A Sprint 4 offline é autorizada; não há autorização para login, execução remota, alteração de `.env`, ferramenta comercial ou outra sprint. G0 continua BLOCKED até validação operacional autorizada. S0.11 foi reformulada e marcada após a revisão documental das três fontes, não como prova dos efeitos internos.
 
 ---
 

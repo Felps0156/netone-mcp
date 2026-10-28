@@ -4,7 +4,7 @@ NetOne MCP is a planned read-only MCP server for authorized NetOne ERP queries. 
 
 ## Current status
 
-The stdio server validates process-owned configuration before starting with an empty tool registry. Sprint 2 added typed configuration, validated HTTPS origins, legacy URL compatibility, bounded settings and sanitized startup errors. Sprint 3 adds a private, token-configured HTTPX client managed by the MCP lifespan, with verified-certificate TLS configuration, phase timeouts, disabled redirects/retries and cancellation-protected cleanup. Every HTTP request is blocked before transport: there are no approved commercial operations or tools. G0 and full G1 remain BLOCKED; offline checks do not validate a real token, TLS handshake or operator installation. See [the capability inventory](docs/api-capabilities.md) for the evidence and outstanding safety gates.
+The stdio server validates process-owned configuration before starting with an empty tool registry. The private HTTPX client uses an internal allowlist for three documented POST queries with closed page/limit filters, fixed origin and bounded response handling. It does not register commercial tools or make a request at startup. G0 and full G1 remain BLOCKED pending real-world validation; offline checks do not validate a real token, TLS handshake or operator installation. No real query is authorized merely by the internal implementation. See [the capability inventory](docs/api-capabilities.md) for the evidence and outstanding safety gates.
 
 ## Requirements and security
 
