@@ -1,6 +1,6 @@
 # NetOne MCP — Agent Instructions
 
-NetOne MCP is a Python MCP stdio foundation for authorized, strictly read-only NetOne ERP queries and deterministic catalog/inventory analysis. Sprint 1 added an empty MCP server, a dependency manifest and README; `client.py`, `config.py` and `tools.py` are documentation-only boundaries, not implemented integrations. No commercial tool or operation is released. PRD 1.1.0 records the maintainer-authorized admission of three documented query POST candidates; commercial mutation remains prohibited. Sprint 0 has 15 verified tasks and S0.11 blocked pending semantic-safety evidence; G0 = BLOCKED pending safety/runtime validation, not because GET is missing. See `docs/api-capabilities.md`, `docs/scsi-reference.md`, and `docs/runbook.md`.
+NetOne MCP is a Python MCP stdio foundation for authorized, strictly read-only NetOne ERP queries and deterministic catalog/inventory analysis. Sprint 2 implements explicit typed configuration and sanitized startup validation; `client.py` and `tools.py` remain documentation-only boundaries. No commercial tool or operation is released. PRD 1.1.1 retains the maintainer-authorized admission of three documented query POST candidates; commercial mutation remains prohibited. Sprint 0 has 15 verified tasks and S0.11 blocked pending semantic-safety evidence; G0 = BLOCKED pending safety/runtime validation, not because GET is missing. See `docs/configuration.md`, `docs/api-capabilities.md`, `docs/scsi-reference.md`, and `docs/runbook.md`.
 
 ## Source of truth and scope
 
@@ -38,7 +38,7 @@ python3.14 -m venv .venv
 
 ## Planned boundaries and prescribed conventions
 
-The only executable application code currently initializes an empty MCP server. The following are explicit PRD requirements:
+Executable application code validates configuration and initializes an empty MCP server. The following are explicit PRD requirements:
 
 - Root `config.py`: sole configuration loader/validator; `client.py`: HTTP, authentication, literal endpoint allowlist, pagination, limits, and sanitized errors.
 - Root `tools.py`: typed MCP contracts and query orchestration; `server.py`: thin stdio initialization and approved tool registration.
@@ -54,7 +54,7 @@ The only executable application code currently initializes an empty MCP server. 
 - Official documentation describes the user token in `netone-auth-token`, obtainable from ERP settings or POST `/app-web/api/v2/auth/login` with `usuario` and `senha`. No authentication call was made. Token-only authentication is separate from commercial query admission and does not permit arbitrary POST. OAuth/refresh/expiry support is unconfirmed. Header rendering conflicts and other contract ambiguities are recorded in `docs/api-capabilities.md`. The policy revision authorizes documentation only, not login, real API calls or another sprint.
 - Preserve any existing `.env` exactly; never display, rewrite, move, or replace it with `.env.example`. `.gitignore` excludes `.venv/`, environment variants, logs and common local Python artifacts.
 - `.env.example` must contain only empty credentials and neutral placeholder hosts. Its `example.invalid` URLs are deliberately non-operational. Removing an exposed credential from a file does not revoke it; rotation belongs to the authorized operator.
-- Example keys are `TOKEN_NETONE`, `REDUCED_PRODUCTS_URL`, `STOCK_URL`, `LOGIN_NETONE`, and `SENHA_NETONE`; their presence does not prove supported authentication or safe endpoints. `NETONE_BASE_URL` and timeout/limit settings are proposals, not implemented configuration.
+- `config.load_config()` reads only recognized configuration from the root `.env`, then overlays process variables without interpolation or environment mutation. `TOKEN_NETONE` is required; `LOGIN_NETONE` and `SENHA_NETONE` are ignored. A validated HTTPS base can be derived from exact legacy routes, with all origins required to agree. Defaults/ranges and migration are in `docs/configuration.md`. Settings omit URL/token from repr and store the token as `SecretStr`; never serialize settings. The existing local reduced-products URL fails validation and remains unchanged; offline synthetic acceptance does not mean installation readiness or G1 completion.
 - Base URL and credentials belong to process configuration, never MCP arguments. Keep HTTP/authentication inside `client.py`; tools must not accept arbitrary paths, methods, URLs, or tenant selection.
 - Reserve stdout exclusively for MCP messages; send sanitized diagnostics to stderr. Bound pages/results/retries, label incomplete analyses as partial, and never fabricate missing records or global metrics.
 - Without a proven-safe and validated commercial query operation, tools remain absent, regardless of method. A completed foundation would be `FOUNDATION_READY / COMMERCIAL_API_BLOCKED`, not `V1_COMPLETE`; Sprint 1 alone does not complete the broader foundation. No checklist status was changed by the PRD 1.1.0 policy revision.

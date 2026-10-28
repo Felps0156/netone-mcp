@@ -6,7 +6,7 @@ Investigation and authorized policy revision date: 2026-10-27. PRD version: 1.1.
 
 G0 = BLOCKED because business-side-effect assurance and authorized runtime validation remain pending, not because the documented queries use POST. The maintainer explicitly authorized the PRD 1.1.0 revision to allow narrowly scoped, documented query POST candidates while prohibiting all commercial mutation. GET is no longer a prerequisite. Neither an HTTP verb, an operation's name nor a successful response alone proves absence of business side effects.
 
-Operationally approved commercial method/path pairs: none. Approved MCP commercial tools: none. Three method/path pairs are policy candidates for future review/implementation, not authorized requests or registered tools; see the table below. No ERP call, login, token regeneration, credential lookup, or Stoplight "Send API Request" action was performed. Documentation was read anonymously. This checkout is planning-only / NOT_READY, not FOUNDATION_READY or V1_COMPLETE.
+Operationally approved commercial method/path pairs: none. Approved MCP commercial tools: none. Three method/path pairs are policy candidates for future review/implementation, not authorized requests or registered tools; see the table below. No ERP call, login, token regeneration, credential lookup, or Stoplight "Send API Request" action was performed. Documentation was read anonymously. This checkout is NOT_READY, not FOUNDATION_READY or V1_COMPLETE. Sprints 1–2 subsequently added an empty stdio server and offline configuration validation; they did not release commercial operations or change this inventory's remote evidence.
 
 | Candidate method | Literal path | Evidence | Policy status |
 |---|---|---|---|

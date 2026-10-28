@@ -1,7 +1,7 @@
 # PRD — NetOne MCP: Servidor de Consulta e Análise Read-Only
 
-> **Versão:** 1.1.0 — revisão autorizada: POST de consulta com allowlist e sem mutação comercial  
-> **Data:** 27/10/2026  
+> **Versão:** 1.1.1 — Sprint 2: configuração central offline; política comercial 1.1.0 preservada  
+> **Data:** 28/10/2026  
 > **Status:** NOT_READY — POSTs de consulta candidatos aprovados no planejamento; G0 = BLOCKED por validação de segurança/execução pendente, não pelo método HTTP; nenhuma operação comercial liberada  
 > **Produto:** `netone-mcp`  
 > **Distribuição prevista:** repositório público, instalação por operador autorizado  
@@ -821,26 +821,29 @@ Por determinação do projeto, o agente de desenvolvimento **não pode executar 
 
 - `config.py` **deve preservar** nomes existentes no `.env` do ambiente quando razoável.
 - O `.env` existente **não será alterado, movido, reescrito ou exibido**.
-- Os nomes abaixo são **candidatos para configuração genérica**, a verificar e documentar na Sprint 2. Não os incluir como chaves duplicadas silenciosamente quando a instalação já usar nomes equivalentes.
+- Os nomes abaixo foram implementados na Sprint 2. Ambiente do processo prevalece sobre o `.env` da raiz, sem interpolação nem alteração de `os.environ`. Nenhuma importação carrega configuração. A chamada explícita `load_config()` valida antes de iniciar stdio; não realiza HTTP. Detalhes e migração: `docs/configuration.md`.
 - O `.env.example` conterá **apenas nomes e placeholders inofensivos**; nenhum dado de empresa, domínio de cliente ou credencial real.
 
 | Variável | Propósito | Status |
 |---|---|---|
-| `NETONE_BASE_URL` | Base URL configurável, sem host fixo | Proposta — confirmar nome existente |
-| `TOKEN_NETONE` | Token API, **observado no legado** | Candidato a preservar |
-| `NETONE_TIMEOUT_SECONDS` | Timeout HTTP, default documentado | Proposta |
-| `NETONE_MAX_RESULTS` | Teto para tools comerciais | Proposta |
-| `NETONE_MAX_PAGES` | Teto de paginação | Proposta |
-| `NETONE_MAX_RETRIES` | Retentativas apenas permitidas | Proposta |
-| `NETONE_LOG_LEVEL` | Nível de log seguro | Proposta |
-| `REDUCED_PRODUCTS_URL` | URL completa usada no legado com **POST de consulta** | Nome legado a preservar quando compatível; validar origem e rota literal; não ativar sem gate |
-| `STOCK_URL` | URL completa usada no legado com **POST de consulta** | Nome legado a preservar quando compatível; validar origem e rota literal; não ativar sem gate |
+| `NETONE_BASE_URL` | Origem HTTPS configurável, sem host fixo | Implementada; opcional se derivável de URL legada válida; sem path de API |
+| `TOKEN_NETONE` | Token API, **observado no legado** | Nome preservado; presença/formato validados, sem autenticação remota |
+| `NETONE_TIMEOUT_SECONDS` | Futuro timeout HTTP | Default 15 segundos; inteiro 1–120 |
+| `NETONE_MAX_RESULTS` | Futuro teto para tools comerciais | Default 100; inteiro 1–1000 |
+| `NETONE_MAX_PAGES` | Futuro teto de paginação | Default 5; inteiro 1–100 |
+| `NETONE_MAX_RETRIES` | Futuro teto global de retentativas | Default 0; inteiro 0–3; não permite retry de POST por si só |
+| `NETONE_LOG_LEVEL` | Futuro nível de diagnóstico | Default WARNING; WARNING/INFO/ERROR/CRITICAL; DEBUG rejeitado |
+| `REDUCED_PRODUCTS_URL` | URL completa usada no legado com **POST de consulta** | Nome preservado; origem HTTPS e rota literal validadas; não ativa operação |
+| `STOCK_URL` | URL completa usada no legado com **POST de consulta** | Nome preservado; origem HTTPS e rota literal validadas; não ativa operação |
 
 **Não presumir OAuth:** não adicionar variáveis de `CLIENT_ID`/`CLIENT_SECRET`/`REFRESH_TOKEN` antes de confirmação documental.
+
+`LOGIN_NETONE` e `SENHA_NETONE` são nomes existentes, ignorados pelo carregador; não habilitam login. Configuração é imutável e omite URL/token de `repr`; token usa `SecretStr`. Ausência de `.env` é permitida quando o processo fornece os valores necessários. Valores explicitamente vazios, sintaxe inválida e chaves reconhecidas duplicadas falham; não corrigir silenciosamente.
 
 ### 21.2 Regras de validação
 
 - Rejeitar URL vazia, host inválido, credenciais embutidas e esquema inesperado.
+- Base aceita somente origem HTTPS; URLs legadas exigem paths literais de reduzidos/estoque e mesma origem normalizada, inclusive quando há base explícita. Rejeitar query/fragmento, encoding percentual, barras invertidas e caracteres não ASCII/controle. Hosts exigem DNS ASCII multilabel válido ou IP literal global; não resolver DNS nesta sprint. Isso não comprova proteção contra DNS rebinding, TLS ou destino operacional aprovado.
 - Não aceitar `base_url` ou tokens como parâmetro de tool MCP.
 - `NETONE_MAX_RESULTS`, `NETONE_MAX_PAGES` e timeout devem ter mínimo/máximo seguros e erro se inválidos.
 - `NETONE_MAX_RETRIES` define apenas um teto global, não concede segurança de repetição por operação; POST de consulta permanece com zero retries sem evidência e aprovação específicas, mesmo se o teto configurado for maior.
@@ -962,6 +965,7 @@ Para cada VM executada, registrar em `docs/runbook.md`: data, comando/cenário, 
 | ADR-14 | Distinguir máscara de produto e SKU do reduzido | Documentação contém `mascara` e `codigoSku` distintos | Contrato normalizado permanece proposto até validar identidade e nulidade |
 | ADR-15 | Read-only por semântica; três POSTs centrais admitidos como candidatos | Autorização explícita do responsável em 27/10/2026 e contratos O3/O4/O5 | Não libera endpoints auxiliares, tools ou chamadas; exige revisão por método/rota/schema |
 | ADR-16 | POST de consulta sem retries e redirects automáticos por padrão | Evitar reenvio ou conversão de método sem segurança de repetição comprovada | Resiliência automática menor até obter evidência específica |
+| ADR-17 | Configuração explícita e imutável; compatibilidade por origem derivada de URLs legadas validadas | Desenho aprovado pelo mantenedor para executar Sprint 2 sem reescrever `.env` | Apenas validação estrutural; destinos legados incompatíveis falham; autenticação/transporte permanecem pendentes |
 
 ---
 
@@ -999,7 +1003,7 @@ Se **não houver operação comercial read-only segura e validada**, o produto p
 | Fase | Sprints | Resultado esperado | Gate |
 |---|---|---|---|
 | **F1 — Investigação** | 0 | Contratos POST e revisão autorizada registrados; S0.11 pendente de segurança | **G0 = BLOCKED por validação, não método** |
-| **F2 — Fundação** | 1–3 | Ambiente, configuração, autenticação e segurança básica | **G1** |
+| **F2 — Fundação** | 1–3 | Ambiente e configuração offline implementados; autenticação/transporte da Sprint 3 pendentes | **G1 pendente; segurança de configuração verificada offline, não credencial remota** |
 | **F3 — Integração segura** | 4–6 | Cliente HTTP, normalização, consulta read-only pelo método aprovado se liberada | **G2** |
 | **F4 — Ferramentas MCP** | 7–9 | Tools úteis, registro MCP, stdio, sem escrita | **G3** |
 | **F5 — Análises** | 10 | Análise determinística e LangGraph justificado | **G4** |
@@ -1085,21 +1089,23 @@ flowchart LR
 
 **Objetivo:** configuração segura e reutilizável.
 
-- [ ] S2.01 — Verificar **sem exibir valores** quais nomes de variáveis já existem no `.env`.
-- [ ] S2.02 — Preservar exatamente localização e conteúdo do `.env` existente.
-- [ ] S2.03 — Implementar `config.py` com carregamento de ambiente sem efeitos colaterais.
-- [ ] S2.04 — Implementar validação de URL base, scheme, host e ausência de credenciais embutidas.
-- [ ] S2.05 — Proibir base URL vinda da entrada de uma tool MCP.
-- [ ] S2.06 — Validar presença do mecanismo de autenticação confirmado.
-- [ ] S2.07 — Definir defaults conservadores para timeout, retries, páginas e resultados.
-- [ ] S2.08 — Validar limites mínimos/máximos e mensagens de erro seguras.
-- [ ] S2.09 — Criar `.env.example` **somente com placeholders neutros** se necessário.
-- [ ] S2.10 — Documentar variáveis e migração sem exigir reescrita do `.env`.
-- [ ] S2.11 — Verificar logs/erros de configuração sem tokens, passwords ou URLs privadas.
-- [ ] S2.12 — Registrar evidências e concluir gate de segurança de configuração.
+- [x] S2.01 — Verificar **sem exibir valores** quais nomes de variáveis já existem no `.env`.
+- [x] S2.02 — Preservar exatamente localização e conteúdo do `.env` existente.
+- [x] S2.03 — Implementar `config.py` com carregamento de ambiente sem efeitos colaterais.
+- [x] S2.04 — Implementar validação de URL base, scheme, host e ausência de credenciais embutidas.
+- [x] S2.05 — Proibir base URL vinda da entrada de uma tool MCP.
+- [x] S2.06 — Validar presença do mecanismo de autenticação confirmado.
+- [x] S2.07 — Definir defaults conservadores para timeout, retries, páginas e resultados.
+- [x] S2.08 — Validar limites mínimos/máximos e mensagens de erro seguras.
+- [x] S2.09 — Criar `.env.example` **somente com placeholders neutros** se necessário.
+- [x] S2.10 — Documentar variáveis e migração sem exigir reescrita do `.env`.
+- [x] S2.11 — Verificar logs/erros de configuração sem tokens, passwords ou URLs privadas.
+- [x] S2.12 — Registrar evidências e concluir gate de segurança de configuração.
 
 **Entrega:** `config.py` centralizado, tipado e seguro.  
 **Aceite:** configuração inválida falha antes de qualquer requisição comercial.
+
+**Execução autorizada — versão 1.1.1:** desenho de compatibilidade legada aprovado pelo mantenedor. `config.py` fornece `Settings`, `ConfigurationError` e `load_config()` sem rede, leitura de configuração na importação ou mutação de ambiente. `server.py` rejeita configuração inválida antes de iniciar stdio, com erro seguro e stdout vazio. Defaults e limites da seção 21 são escolhas locais, não quotas do fornecedor. Validação final em 28/10/2026: 73 rejeições sintéticas seguras, oito cenários de carregamento e MCP sem chave LLM com registry vazio; revisão independente encontrou IPvFuture reinterpretado como DNS, reproduzido e corrigido, com rejeição final verificada. `.env` preservado em localização e bytes; `REDUCED_PRODUCTS_URL` local tem divergência de rota literal, sem valor exibido nem chamada. **12 tarefas verificadas; gate de segurança de configuração = PASS offline.** Gate de configuração é distinto de prontidão operacional: falha segura não valida a instalação nem conclui G1. Evidências: `docs/runbook.md`; migração sem reescrita: `docs/configuration.md`. Nenhuma tarefa da Sprint 3 é iniciada por esta entrega.
 
 ### Sprint 3 — Autenticação comprovada e cliente HTTP básico
 
@@ -1385,11 +1391,13 @@ flowchart LR
 | DEC-009 | Há fluxo de análise multietapas que justifique LangGraph? | **PENDENTE** | Consultas read-only liberadas e casos de uso reais | `analysis.py` |
 | DEC-010 | Existe licença permissiva aplicável a qualquer código reaproveitado? | **PENDENTE** | Revisão da licença na fonte | Publicação pública |
 
-**Protocolo de decisão vigente:** decisões novas usam o próximo código sequencial após DEC-014 e registram data, evidência, alternativa escolhida, justificativa, impacto nas sprints e versão do PRD. Qualquer ampliação dos três POSTs da seção 10.5 ou relaxamento de segurança exige nova autorização explícita e atualização deste documento antes do código. A política GET-only foi substituída na versão 1.1.0; não deve ser reaplicada como requisito atual.
+**Protocolo de decisão vigente:** decisões novas usam o próximo código sequencial após DEC-015 e registram data, evidência, alternativa escolhida, justificativa, impacto nas sprints e versão do PRD. Qualquer ampliação dos três POSTs da seção 10.5 ou relaxamento de segurança exige nova autorização explícita e atualização deste documento antes do código. A política GET-only foi substituída na versão 1.1.0; não deve ser reaplicada como requisito atual.
 
 **Registro histórico de 27/10/2026 — versão 1.0.1 (política substituída):** DEC-011 manteve G0 BLOCKED pela regra GET-only então vigente; DEC-012 separou máscara e SKU. A busca de contrato GET era necessária naquela versão, não na atual. Evidências de inspeção permanecem válidas, sem comprovação de execução remota.
 
 **Registro vigente de 27/10/2026 — versão 1.1.0:** DEC-013, autorizado pelo responsável após proposta explícita, admite somente os POSTs de consulta de reduzidos, preços e estoque como candidatos; substitui o bloqueio por método, sem permitir mutação comercial. Alternativas: manter GET-only (rejeitada por incompatibilidade com consultas documentadas) ou liberar POST genericamente (rejeitada por segurança/escopo). Impacto: seções 3, 5–6, 10, 12–13, 15–16, 21, 23–30 e critérios/sprints relacionados passam a usar método/rota/schema e semântica de consulta. ADR-15/16 e riscos R01/R04/R10/R14 registram limites e repetição. DEC-014 mantém G0 BLOCKED e S0.11 aberta: autorização de revisão não é evidência nova de ausência de efeitos nem autorização de chamada. A adaptação futura pode reutilizar filtros/paginação/associação do legado, mas precisa controles de segurança e autorização de sprint. Responsável: mantenedor revisa contrato/semântica e solicita esclarecimentos técnicos ao fornecedor quando faltarem, depois autoriza validação delimitada com cliente seguro. Nenhum módulo, dependência, tool, chamada real ou nova marcação [x] faz parte desta revisão.
+
+**Registro da Sprint 2 — versão 1.1.1:** DEC-015 registra a opção recomendada aprovada pelo mantenedor: derivar origem de URLs legadas estritamente validadas em vez de exigir nova variável no arquivo existente. Preservar nomes e `.env`, priorizar ambiente do processo, sem interpolação, sem login/HTTP. ADR-17 e seção 21 detalham os limites. Impacto limitado à configuração e falha segura de startup; sem alterar G0, S0.11, admissão comercial ou tarefas de outras sprints. R05/R06 são mitigados por erros sem valores, `SecretStr`, origem única e validação lexical; resolução DNS, transporte/TLS e validade remota do token permanecem riscos não encerrados. A instalação local requer decisão do operador sobre sua URL rejeitada, sem exibir o valor nem reescrever o arquivo. G1 completo permanece pendente da Sprint 3 autorizada e respectivas evidências.
 
 ---
 
@@ -1438,7 +1446,7 @@ A **V1** só é concluída quando, adicionalmente:
 
 ### 31.3 Limitações desta análise
 
-Na elaboração inicial, a documentação interativa Stoplight não havia permitido verificar contratos completos. **Atualização da Sprint 0 em 27/10/2026:** a renderização permitiu ler contratos de Produto, autenticação e schemas; POST confirmado, sem validação de efeitos/execução no ERP. O legado foi reinspecionado somente como texto. **Revisão autorizada 1.1.0:** GET deixou de ser pré-requisito; três POSTs de consulta são candidatos de planejamento, ainda não liberados. Não há comprovação nova de ausência de mutação ou execução autenticada. Nenhuma credencial privada foi utilizada nem chamada ao ERP realizada. Evidências, conflitos e limites estão em `docs/api-capabilities.md`; pendências na seção 29. Não há módulos de aplicação ou manifesto de dependências, nem MCP funcional para validar.
+Na elaboração inicial, a documentação interativa Stoplight não havia permitido verificar contratos completos. **Atualização da Sprint 0 em 27/10/2026:** a renderização permitiu ler contratos de Produto, autenticação e schemas; POST confirmado, sem validação de efeitos/execução no ERP. O legado foi reinspecionado somente como texto. **Revisão autorizada 1.1.0:** GET deixou de ser pré-requisito; três POSTs de consulta são candidatos de planejamento, ainda não liberados. Não há comprovação nova de ausência de mutação ou execução autenticada. Nenhuma credencial privada foi utilizada em requisição nem chamada ao ERP realizada. Evidências, conflitos e limites estão em `docs/api-capabilities.md`; pendências na seção 29. **Sprints 1–2:** manifesto, servidor MCP vazio e configuração offline implementados; fronteiras de cliente e tools permanecem sem integração. A validação local de configuração não libera chamadas nem comprova G1/V1.
 
 ---
 
