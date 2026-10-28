@@ -1,6 +1,6 @@
 # PRD — NetOne MCP: Servidor de Consulta e Análise Read-Only
 
-> **Versão:** 1.1.1 — Sprint 2: configuração central offline; política comercial 1.1.0 preservada  
+> **Versão:** 1.1.2 — Sprint 3 autorizada: cliente HTTP autenticável offline e ciclo de vida MCP; política comercial 1.1.0 preservada  
 > **Data:** 28/10/2026  
 > **Status:** NOT_READY — POSTs de consulta candidatos aprovados no planejamento; G0 = BLOCKED por validação de segurança/execução pendente, não pelo método HTTP; nenhuma operação comercial liberada  
 > **Produto:** `netone-mcp`  
@@ -346,7 +346,8 @@ sequenceDiagram
 | Ambiente | `venv` | **`.venv` na raiz** | Sem ambientes adicionais |
 | Dependências | `requirements.txt` | **Único arquivo na raiz** | Facilidade de operação |
 | MCP | SDK Python oficial MCP ou SDK mantido compatível | Fixar versão compatível após verificação | Tools e stdio interoperáveis |
-| HTTP | `httpx` **ou** `requests` | Escolher **um** cliente | Sem duplicação de responsabilidades |
+| HTTP | `httpx==0.28.1` | Cliente único, assíncrono e privado na Sprint 3 | Sem duplicação de responsabilidades; requisições ainda bloqueadas |
+| Ciclo de vida assíncrono | `anyio==4.15.1` | Já instalado pelo SDK; pin direto na Sprint 3 | Proteção do fechamento contra cancel scopes do MCP |
 | Schemas | Pydantic 2.x | Dependência quando justificada | Inputs/outputs tipados |
 | Configuração | `python-dotenv` ou padrão já compatível | Não modificar `.env` existente | Carregamento seguro |
 | IA tools | `langchain>=1.0` | Mandatório; uso funcional justificado | Abstrações de ferramentas quando úteis |
@@ -828,11 +829,11 @@ Por determinação do projeto, o agente de desenvolvimento **não pode executar 
 |---|---|---|
 | `NETONE_BASE_URL` | Origem HTTPS configurável, sem host fixo | Implementada; opcional se derivável de URL legada válida; sem path de API |
 | `TOKEN_NETONE` | Token API, **observado no legado** | Nome preservado; presença/formato validados, sem autenticação remota |
-| `NETONE_TIMEOUT_SECONDS` | Futuro timeout HTTP | Default 15 segundos; inteiro 1–120 |
+| `NETONE_TIMEOUT_SECONDS` | Timeout HTTP por fase (connect/read/write/pool), não deadline total | Default 15 segundos; inteiro 1–120; consumido pelo cliente da Sprint 3 |
 | `NETONE_MAX_RESULTS` | Futuro teto para tools comerciais | Default 100; inteiro 1–1000 |
 | `NETONE_MAX_PAGES` | Futuro teto de paginação | Default 5; inteiro 1–100 |
-| `NETONE_MAX_RETRIES` | Futuro teto global de retentativas | Default 0; inteiro 0–3; não permite retry de POST por si só |
-| `NETONE_LOG_LEVEL` | Futuro nível de diagnóstico | Default WARNING; WARNING/INFO/ERROR/CRITICAL; DEBUG rejeitado |
+| `NETONE_MAX_RETRIES` | Teto global reservado a operações futuras revisadas | Default 0; inteiro 0–3; cliente da Sprint 3 usa zero retries independentemente do teto |
+| `NETONE_LOG_LEVEL` | Nível de diagnóstico MCP | Default WARNING; WARNING/INFO/ERROR/CRITICAL; DEBUG rejeitado; logs HTTPX/httpcore suprimidos |
 | `REDUCED_PRODUCTS_URL` | URL completa usada no legado com **POST de consulta** | Nome preservado; origem HTTPS e rota literal validadas; não ativa operação |
 | `STOCK_URL` | URL completa usada no legado com **POST de consulta** | Nome preservado; origem HTTPS e rota literal validadas; não ativa operação |
 
@@ -942,6 +943,7 @@ Para cada VM executada, registrar em `docs/runbook.md`: data, comando/cenário, 
 | R12 | Exemplo público expõe nome de instalação real | Alto | Controlável | Placeholders genéricos, revisão final antes da publicação |
 | R13 | Contradições na documentação: header, array de IDs, timestamps e paginação | Alto | Observadas na Sprint 0 | Registrar conflitos no inventário; exigir esclarecimento e validação autorizada antes de implementar contratos |
 | R14 | Repetir POST de consulta após timeout ou redirect sem segurança comprovada | Crítico | Controlável | Zero retries e redirects automáticos por padrão; sem fallback de método; repetição só com evidência específica e limite total |
+| R15 | Confundir cliente autenticável offline com credencial/transporte remoto validados | Alto | Controlável | Separar evidência local de G1 completo; sem chamadas, handshake TLS ou autenticação inferidos; configuração local rejeitada permanece bloqueada |
 
 ---
 
@@ -966,6 +968,8 @@ Para cada VM executada, registrar em `docs/runbook.md`: data, comando/cenário, 
 | ADR-15 | Read-only por semântica; três POSTs centrais admitidos como candidatos | Autorização explícita do responsável em 27/10/2026 e contratos O3/O4/O5 | Não libera endpoints auxiliares, tools ou chamadas; exige revisão por método/rota/schema |
 | ADR-16 | POST de consulta sem retries e redirects automáticos por padrão | Evitar reenvio ou conversão de método sem segurança de repetição comprovada | Resiliência automática menor até obter evidência específica |
 | ADR-17 | Configuração explícita e imutável; compatibilidade por origem derivada de URLs legadas validadas | Desenho aprovado pelo mantenedor para executar Sprint 2 sem reescrever `.env` | Apenas validação estrutural; destinos legados incompatíveis falham; autenticação/transporte permanecem pendentes |
+| ADR-18 | Um cliente HTTPX assíncrono privado por ciclo de vida MCP, com token fornecido pelo operador e fechamento protegido por cancel scope AnyIO | Desenho da Sprint 3 aprovado pelo mantenedor; injeção de contexto controlado e fechamento do recurso; cancelamento reproduzido interrompia cleanup sem proteção | AnyIO já instalado passa a dependência direta declarada; sem login/OAuth/refresh, interface HTTP genérica, operações comerciais ou chamada no startup; trava de envio total até revisão de operações em sprint própria |
+| ADR-19 | TLS verificado, timeout por fase, zero retries/redirects e `trust_env=False`; suprimir logs brutos HTTPX/httpcore e renderizar logs SDK/raiz como diagnóstico fixo em stderr | Não herdar proxies/CA/autenticação implícitos nem expor headers/origem; revisão reproduziu SDK logando conteúdo MCP inválido no logger raiz | Diagnóstico SDK sem payload/traceback e controle explícito do logging do processo dedicado; sem deadline total ou prova de handshake remoto; instalação com proxy/CA privada exige decisão futura explícita, nunca bypass TLS |
 
 ---
 
@@ -1003,7 +1007,7 @@ Se **não houver operação comercial read-only segura e validada**, o produto p
 | Fase | Sprints | Resultado esperado | Gate |
 |---|---|---|---|
 | **F1 — Investigação** | 0 | Contratos POST e revisão autorizada registrados; S0.11 pendente de segurança | **G0 = BLOCKED por validação, não método** |
-| **F2 — Fundação** | 1–3 | Ambiente e configuração offline implementados; autenticação/transporte da Sprint 3 pendentes | **G1 pendente; segurança de configuração verificada offline, não credencial remota** |
+| **F2 — Fundação** | 1–3 | Ambiente/configuração e cliente autenticável com ciclo de vida MCP implementados offline | **G1 completo BLOCKED; verificação offline não valida credencial nem instalação remota** |
 | **F3 — Integração segura** | 4–6 | Cliente HTTP, normalização, consulta read-only pelo método aprovado se liberada | **G2** |
 | **F4 — Ferramentas MCP** | 7–9 | Tools úteis, registro MCP, stdio, sem escrita | **G3** |
 | **F5 — Análises** | 10 | Análise determinística e LangGraph justificado | **G4** |
@@ -1111,21 +1115,25 @@ flowchart LR
 
 **Objetivo:** autenticação e transporte seguros, sem ferramentas comerciais liberadas por antecipação.
 
-- [ ] S3.01 — Revisar a evidência do método de autenticação da Sprint 0.
-- [ ] S3.02 — Implementar somente o header/token ou fluxo estritamente confirmado.
-- [ ] S3.03 — Se houver OAuth documentado, delimitar endpoint de token e renovação; caso contrário não implementar.
-- [ ] S3.04 — Construir sessão/cliente HTTP único no `client.py`.
-- [ ] S3.05 — Configurar timeout total ou connect/read conforme biblioteca escolhida.
-- [ ] S3.06 — Garantir TLS com validação de certificado.
-- [ ] S3.07 — Desabilitar redirects comerciais automáticos, sem replay de POST ou conversão de método, inclusive na mesma origem.
-- [ ] S3.08 — Implementar exceções seguras sem detalhes sensíveis.
-- [ ] S3.09 — Proibir headers de autenticação em debug/trace.
-- [ ] S3.10 — Garantir fechamento adequado da conexão HTTP na saída.
-- [ ] S3.11 — Exercitar imports e instância de cliente sem consultar o ERP.
-- [ ] S3.12 — Registrar evidência de G1 sem credencial nem resposta real.
+**Escopo aprovado em 28/10/2026 — versão 1.1.2:** cliente HTTPX assíncrono privado, token no header confirmado, timeouts por fase, TLS verificado, redirects/retries desativados, sem proxies/CA/autenticação herdados do ambiente, logs de transporte suprimidos e fechamento pelo lifespan MCP. Nenhum método público de requisição arbitrária nem operação liberada; trava total antes do transporte enquanto G0 permanece bloqueado. Não implementar contratos, resiliência ou allowlist operacional da Sprint 4. Plano: `docs/superpowers/plans/2026-10-28-sprint-3.md`. Validação exclusivamente local e sintética, sem sockets/ERP/login/OAuth/refresh e sem alterar `.env`. S3.12 registra evidência e bloqueios de G1; não exige declarar credencial válida sem validação remota autorizada.
+
+- [x] S3.01 — Revisar a evidência do método de autenticação da Sprint 0.
+- [x] S3.02 — Implementar somente o header/token ou fluxo estritamente confirmado.
+- [x] S3.03 — Se houver OAuth documentado, delimitar endpoint de token e renovação; caso contrário não implementar.
+- [x] S3.04 — Construir sessão/cliente HTTP único no `client.py`.
+- [x] S3.05 — Configurar timeout total ou connect/read conforme biblioteca escolhida.
+- [x] S3.06 — Garantir TLS com validação de certificado.
+- [x] S3.07 — Desabilitar redirects comerciais automáticos, sem replay de POST ou conversão de método, inclusive na mesma origem.
+- [x] S3.08 — Implementar exceções seguras sem detalhes sensíveis.
+- [x] S3.09 — Proibir headers de autenticação em debug/trace.
+- [x] S3.10 — Garantir fechamento adequado da conexão HTTP na saída.
+- [x] S3.11 — Exercitar imports e instância de cliente sem consultar o ERP.
+- [x] S3.12 — Registrar evidência de G1 sem credencial nem resposta real.
 
 **Entrega:** cliente autenticável por configuração, ainda sem permitir endpoints comerciais não verificados.  
 **Aceite:** caminho de autenticação existe sem ferramenta MCP que exponha token.
+
+**Evidência da Sprint 3 — versão 1.1.2, 28/10/2026:** doze tarefas verificadas no escopo offline aprovado. `client.py` implementa `NetOneClient`, header/token confirmado, HTTPX privado com TLS/certificado/hostname verificados por configuração efetiva, timeouts das quatro fases, redirects/proxies desativados, zero retries e trava total anterior ao transporte. `server.create_server(settings)` gerencia o recurso no lifespan, sem HTTP na importação/startup nem tools. Doze tentativas sintéticas rejeitadas, zero chamadas ao transporte; encerramento normal, por exceção e sob cancelamento AnyIO comprovado por conclusão do cleanup. AnyIO 4.15.1 já instalado foi declarado diretamente, sem instalação ou outro ambiente. Revisão independente encontrou um vazamento de conteúdo MCP inválido nos logs do SDK/raiz, reproduzido em WARNING/DEBUG e corrigido por logging stderr de mensagem fixa, sem payload/traceback; resposta protocolar preservada. MCP sem LLM retornou initialize/tools-list com zero tools, saída protocolar e falha segura de configuração. Imports, sete pins instalados e `pip check` verificados. Detalhes e limitações em `docs/runbook.md`. **S3.12 registra evidência local e G1 completo = BLOCKED**, não autenticação remota: a configuração atual rejeitada continua intacta; token/permissão/DNS/handshake TLS não foram validados. G0/S0.11 permanecem BLOCKED; nenhuma chamada ERP/login/OAuth/refresh, operação comercial, Sprint 4 ou comando Git autorizado/executado por esta entrega.
 
 ### Sprint 4 — Allowlist read-only e resiliência HTTP
 
@@ -1381,7 +1389,7 @@ flowchart LR
 | Código | Questão | Estado vigente | Evidência necessária | Impacto |
 |---|---|---|---|---|
 | DEC-001 | As consultas comerciais documentadas, inclusive POST da seção 10.5, estão comprovadas sem mutação de negócio? | **BLOQUEADO — segurança/execução pendentes; método não é bloqueio** | Revisão técnica por operação, evidência de ausência de escrita (contrato explícito ou confirmação técnica do fornecedor), configuração segura e validação delimitada autorizada | Impede liberar operações e concluir S0.11; não impede fundação offline autorizada |
-| DEC-002 | Qual contrato oficial de autenticação? | **DOCUMENTADO; validação remota pendente** | Token no header e POST login publicados; esclarecer header gerado e permissões | Implementação futura de `client.py`, sem OAuth presumido |
+| DEC-002 | Qual contrato oficial de autenticação? | **DOCUMENTADO; validação remota pendente** | Token no header e POST login publicados; esclarecer header gerado e permissões | Sprint 3 autorizada somente para token fornecido ao cliente; sem OAuth presumido ou login |
 | DEC-003 | Os IDs são inteiros/strings e únicos em qual nível? | **PARCIAL — IDs inteiros publicados; máscara e SKU distintos** | Unicidade, nulidade e schema de `idsReduzidos` | Normalização e busca |
 | DEC-004 | `valor` pertence a qual tabela/moeda? | **PARCIAL — varejo/atacado documentados; moeda não** | Moeda e seleção de tabela da instalação | `get_product_price` |
 | DEC-005 | `quantidade` representa qual depósito/filial? | **PARCIAL — físico menos reservas; depósito explícito ou do usuário** | Depósito efetivo, unidade, agregação e validação | `check_inventory` |
@@ -1391,13 +1399,15 @@ flowchart LR
 | DEC-009 | Há fluxo de análise multietapas que justifique LangGraph? | **PENDENTE** | Consultas read-only liberadas e casos de uso reais | `analysis.py` |
 | DEC-010 | Existe licença permissiva aplicável a qualquer código reaproveitado? | **PENDENTE** | Revisão da licença na fonte | Publicação pública |
 
-**Protocolo de decisão vigente:** decisões novas usam o próximo código sequencial após DEC-015 e registram data, evidência, alternativa escolhida, justificativa, impacto nas sprints e versão do PRD. Qualquer ampliação dos três POSTs da seção 10.5 ou relaxamento de segurança exige nova autorização explícita e atualização deste documento antes do código. A política GET-only foi substituída na versão 1.1.0; não deve ser reaplicada como requisito atual.
+**Protocolo de decisão vigente:** decisões novas usam o próximo código sequencial após DEC-016 e registram data, evidência, alternativa escolhida, justificativa, impacto nas sprints e versão do PRD. Qualquer ampliação dos três POSTs da seção 10.5 ou relaxamento de segurança exige nova autorização explícita e atualização deste documento antes do código. A política GET-only foi substituída na versão 1.1.0; não deve ser reaplicada como requisito atual.
 
 **Registro histórico de 27/10/2026 — versão 1.0.1 (política substituída):** DEC-011 manteve G0 BLOCKED pela regra GET-only então vigente; DEC-012 separou máscara e SKU. A busca de contrato GET era necessária naquela versão, não na atual. Evidências de inspeção permanecem válidas, sem comprovação de execução remota.
 
 **Registro vigente de 27/10/2026 — versão 1.1.0:** DEC-013, autorizado pelo responsável após proposta explícita, admite somente os POSTs de consulta de reduzidos, preços e estoque como candidatos; substitui o bloqueio por método, sem permitir mutação comercial. Alternativas: manter GET-only (rejeitada por incompatibilidade com consultas documentadas) ou liberar POST genericamente (rejeitada por segurança/escopo). Impacto: seções 3, 5–6, 10, 12–13, 15–16, 21, 23–30 e critérios/sprints relacionados passam a usar método/rota/schema e semântica de consulta. ADR-15/16 e riscos R01/R04/R10/R14 registram limites e repetição. DEC-014 mantém G0 BLOCKED e S0.11 aberta: autorização de revisão não é evidência nova de ausência de efeitos nem autorização de chamada. A adaptação futura pode reutilizar filtros/paginação/associação do legado, mas precisa controles de segurança e autorização de sprint. Responsável: mantenedor revisa contrato/semântica e solicita esclarecimentos técnicos ao fornecedor quando faltarem, depois autoriza validação delimitada com cliente seguro. Nenhum módulo, dependência, tool, chamada real ou nova marcação [x] faz parte desta revisão.
 
 **Registro da Sprint 2 — versão 1.1.1:** DEC-015 registra a opção recomendada aprovada pelo mantenedor: derivar origem de URLs legadas estritamente validadas em vez de exigir nova variável no arquivo existente. Preservar nomes e `.env`, priorizar ambiente do processo, sem interpolação, sem login/HTTP. ADR-17 e seção 21 detalham os limites. Impacto limitado à configuração e falha segura de startup; sem alterar G0, S0.11, admissão comercial ou tarefas de outras sprints. R05/R06 são mitigados por erros sem valores, `SecretStr`, origem única e validação lexical; resolução DNS, transporte/TLS e validade remota do token permanecem riscos não encerrados. A instalação local requer decisão do operador sobre sua URL rejeitada, sem exibir o valor nem reescrever o arquivo. G1 completo permanece pendente da Sprint 3 autorizada e respectivas evidências.
+
+**Autorização da Sprint 3 — versão 1.1.2, 28/10/2026:** DEC-016 registra aprovação do desenho/execução pelo mantenedor após comparação com SCSI (contexto injetado nas tools/ORM, sem cliente ERP equivalente) e legado Dias Moto (`requests.post` por chamada, sem sessão compartilhada). Escolhida gestão do cliente assíncrono pelo ciclo de vida MCP; rejeitados cliente isolado sem consumidor e cópia literal do legado. ADR-18/19, R15, roadmap e escopo da Sprint 3 atualizados antes do código. A fonte oficial O2 foi relida anonimamente e confirma `netone-auth-token`; OAuth/refresh/expiração seguem não comprovados. A autorização cobre somente Sprint 3 offline; não cobre login, requisição ERP, correção de `.env`, Sprint 4 ou liberação de ferramentas. G0/S0.11 e validação remota de G1 permanecem bloqueados. Checkboxes dependem da evidência executada.
 
 ---
 
@@ -1446,7 +1456,7 @@ A **V1** só é concluída quando, adicionalmente:
 
 ### 31.3 Limitações desta análise
 
-Na elaboração inicial, a documentação interativa Stoplight não havia permitido verificar contratos completos. **Atualização da Sprint 0 em 27/10/2026:** a renderização permitiu ler contratos de Produto, autenticação e schemas; POST confirmado, sem validação de efeitos/execução no ERP. O legado foi reinspecionado somente como texto. **Revisão autorizada 1.1.0:** GET deixou de ser pré-requisito; três POSTs de consulta são candidatos de planejamento, ainda não liberados. Não há comprovação nova de ausência de mutação ou execução autenticada. Nenhuma credencial privada foi utilizada em requisição nem chamada ao ERP realizada. Evidências, conflitos e limites estão em `docs/api-capabilities.md`; pendências na seção 29. **Sprints 1–2:** manifesto, servidor MCP vazio e configuração offline implementados; fronteiras de cliente e tools permanecem sem integração. A validação local de configuração não libera chamadas nem comprova G1/V1.
+Na elaboração inicial, a documentação interativa Stoplight não havia permitido verificar contratos completos. **Atualização da Sprint 0 em 27/10/2026:** a renderização permitiu ler contratos de Produto, autenticação e schemas; POST confirmado, sem validação de efeitos/execução no ERP. O legado foi reinspecionado somente como texto. **Revisão autorizada 1.1.0:** GET deixou de ser pré-requisito; três POSTs de consulta são candidatos de planejamento, ainda não liberados. Não há comprovação nova de ausência de mutação ou execução autenticada. Nenhuma credencial privada foi utilizada em requisição nem chamada ao ERP realizada. Evidências, conflitos e limites estão em `docs/api-capabilities.md`; pendências na seção 29. **Sprints 1–3:** manifesto, servidor MCP vazio, configuração e cliente HTTP privado gerenciado pelo lifespan implementados offline; todos os envios bloqueados antes do transporte, tools sem integração comercial. A validação local não libera chamadas nem comprova G1/V1. Header O2 reconfirmado anonimamente na Sprint 3; sem login/OAuth/refresh.
 
 ---
 
