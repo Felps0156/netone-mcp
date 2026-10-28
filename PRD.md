@@ -1062,19 +1062,21 @@ flowchart LR
 
 **Objetivo:** fundação executável, sem consulta comercial.
 
-- [ ] S1.01 — Verificar Python `>=3.14` instalado, sem trocar a exigência.
-- [ ] S1.02 — Inspecionar se `.venv` já existe e verificar compatibilidade.
-- [ ] S1.03 — Criar `.venv` somente se ausente; não criar ambientes adicionais.
-- [ ] S1.04 — Inspecionar a árvore atual preservando arquivos do usuário.
-- [ ] S1.05 — Criar ou consolidar o único `requirements.txt` da raiz.
-- [ ] S1.06 — Verificar versões compatíveis do SDK MCP, LangChain e LangGraph com 3.14.
-- [ ] S1.07 — Registrar apenas as dependências realmente necessárias.
-- [ ] S1.08 — Criar módulos mínimos `server.py`, `client.py`, `tools.py`, `config.py` sem código funcional fictício.
-- [ ] S1.09 — Preparar `README.md` inicial em inglês.
-- [ ] S1.10 — Verificar `.gitignore` para `.env`, `.venv`, segredos, logs e artefatos locais; ajustar texto sem executar Git.
-- [ ] S1.11 — Garantir padrão PEP 8, aspas simples e nomes técnicos em inglês.
-- [ ] S1.12 — Executar apenas verificação pontual de imports, sem framework de testes.
-- [ ] S1.13 — Registrar configurações/problemas do ambiente local sem segredos.
+- [x] S1.01 — Verificar Python `>=3.14` instalado, sem trocar a exigência.
+- [x] S1.02 — Inspecionar se `.venv` já existe e verificar compatibilidade.
+- [x] S1.03 — Criar `.venv` somente se ausente; não criar ambientes adicionais.
+- [x] S1.04 — Inspecionar a árvore atual preservando arquivos do usuário.
+- [x] S1.05 — Criar ou consolidar o único `requirements.txt` da raiz.
+- [x] S1.06 — Verificar versões compatíveis do SDK MCP, LangChain e LangGraph com 3.14.
+- [x] S1.07 — Registrar apenas as dependências realmente necessárias.
+- [x] S1.08 — Criar módulos mínimos `server.py`, `client.py`, `tools.py`, `config.py` sem código funcional fictício.
+- [x] S1.09 — Preparar `README.md` inicial em inglês.
+- [x] S1.10 — Verificar `.gitignore` para `.env`, `.venv`, segredos, logs e artefatos locais; ajustar texto sem executar Git.
+- [x] S1.11 — Garantir padrão PEP 8, aspas simples e nomes técnicos em inglês.
+- [x] S1.12 — Executar apenas verificação pontual de imports, sem framework de testes.
+- [x] S1.13 — Registrar configurações/problemas do ambiente local sem segredos.
+
+**Evidência da Sprint 1:** mediante autorização específica, `.venv` foi substituída na mesma localização por Python 3.14.3. Instalação limpa diretamente de `requirements.txt`, imports, `pip check` e inicialização MCP com registry vazio foram verificados no Windows; detalhes e limites em `docs/runbook.md`. Nenhuma consulta ao ERP foi realizada. G0 e S0.11 permanecem bloqueados; configuração, cliente e ferramentas comerciais ainda não foram implementados.
 
 **Entrega:** projeto Python inicializável e documentação do setup.  
 **Aceite:** uma instalação limpa utiliza somente `.venv` e `requirements.txt`.
@@ -1379,7 +1381,7 @@ flowchart LR
 | DEC-005 | `quantidade` representa qual depósito/filial? | **PARCIAL — físico menos reservas; depósito explícito ou do usuário** | Depósito efetivo, unidade, agregação e validação | `check_inventory` |
 | DEC-006 | Quais contratos de paginação, limites e filtros das consultas candidatas? | **PARCIAL — POST documenta page/limit; tetos e completude pendentes** | Schema do body por operação, obrigatoriedade dos metadados e limites oficiais ou locais explicitamente distinguidos | Busca e listagem |
 | DEC-007 | API possui rate limit, `Retry-After` ou limite de lotes? | **PENDENTE** | Doc/respostas autorizadas | Resiliência e performance |
-| DEC-008 | Quais versões MCP/LangChain/LangGraph instalam em Python 3.14? | **PENDENTE** | Instalação e verificação de imports | Fundação |
+| DEC-008 | Quais versões MCP/LangChain/LangGraph instalam em Python 3.14? | **VERIFICADO NO WINDOWS — Python 3.14.3** | Instalação limpa, versões e imports registrados em `docs/runbook.md`; outras plataformas não verificadas | Fundação |
 | DEC-009 | Há fluxo de análise multietapas que justifique LangGraph? | **PENDENTE** | Consultas read-only liberadas e casos de uso reais | `analysis.py` |
 | DEC-010 | Existe licença permissiva aplicável a qualquer código reaproveitado? | **PENDENTE** | Revisão da licença na fonte | Publicação pública |
 

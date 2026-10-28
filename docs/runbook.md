@@ -1,6 +1,6 @@
 # Investigation runbook
 
-This is the Sprint 0 evidence log, not a completed installation or runtime runbook. No application modules or dependency manifest exist yet. Later authorized sprints must add setup, stdio/tool discovery, troubleshooting and VM01–VM20 execution evidence. No runtime scenario is marked PASS by inference from documentation.
+This runbook records Sprint 0 investigation and Sprint 1 foundation evidence. Later authorized sprints must add configuration, commercial integration troubleshooting and the remaining VM01–VM20 execution evidence. No runtime scenario is marked PASS by inference from documentation.
 
 ## Scope and rules
 
@@ -54,7 +54,7 @@ S0.10 is the preserved historical GET investigation, no longer a prerequisite fo
 
 The maintainer must review the exact documented POST query candidates for reduced products, prices and stock, establish no-business-mutation evidence through an explicit contract or technical provider confirmation, and resolve the relevant API-inventory conflicts. Safe configuration/transport and a separate bounded-call authorization are required before validation; tool release follows that evidence, not the documentation edit. Do not require a GET equivalent, request credentials in chat, regenerate a token, try the published test host, or treat query POST admission as arbitrary request permission.
 
-Sprint 1 was not started. If separately authorized, offline foundation work can proceed while G0 remains blocked, but `.venv` compatibility/replacement needs the maintainer's decision. Do not call this checkout FOUNDATION_READY until actual foundation/runtime acceptance has evidence.
+Sprint 1 was subsequently authorized and partially inspected; see the Sprint 1 record below. G0 remains blocked. Do not call this checkout FOUNDATION_READY until actual foundation/runtime acceptance has evidence.
 
 ## Documentary verification
 
@@ -71,3 +71,34 @@ Authorization: the maintainer explicitly approved revising the PRD after the pro
 Changes: planning requirements, diagrams, endpoint gates, security controls, risks, ADRs, decisions, acceptance criteria and affected future sprint wording; API inventory, reference note and agent context reconciled. POST query retries default to zero and commercial redirects are disabled; no body/method/route forwarding from MCP inputs. S0.11 and G0 remain blocked for missing semantic-safety/runtime evidence, rather than missing GET. All 16 Sprint 0 task IDs and their 15 checked/one unchecked statuses are preserved. No code, dependency manifest, remote call, Git operation or environment edit belongs to this revision.
 
 Policy revision verification, 2026-10-27: one-off read-only `python -c` inspection compared all sprint task IDs/order/statuses against a pre-edit snapshot of the five public documents, reconciled the Sprint 0 evidence ledger, compared exact candidate method/path pairs across PRD/API inventory/agent context, checked version references, expected safety controls, obsolete GET-only clauses and local Markdown links. Result: PASS, exit code 0; 212 sprint task IDs/statuses preserved, Sprint 0 still 15 checked and only S0.11 pending, exactly three matching commercial query POST candidates, zero broken local links, no application module or dependency manifest created. This is documentary verification only, not a safety assertion about the ERP or an authenticated validation. The author reviewed remaining GET references as historical investigation, superseded policy, prohibitions on guessing methods or statements that HTTP method alone is insufficient; none establishes an active GET-only gate.
+
+## Sprint 1 partial environment inspection
+
+Date: 2026-10-27. The maintainer requested Sprint 1; this does not authorize ERP requests or change G0.
+
+| Task | Scenario and evidence | Result |
+|---|---|---|
+| S1.01 / VM01 | `C:/Users/fstiz/AppData/Roaming/uv/python/cpython-3.14.3-windows-x86_64-none/python.exe --version` reported Python 3.14.3. `py -3.14 --version` did not select that runtime, although `py -0p` listed it. | PASS: a compatible interpreter is installed; the documented launcher command is not verified in this environment. |
+| S1.02 | `.venv/Scripts/python.exe --version` reported Python 3.12.10; `pyvenv.cfg` confirms the same version. | PASS inspection; existing environment is incompatible with the required Python >=3.14. |
+| S1.04 | Root names inspected with `pathlib`, excluding `.git`, `.env` and `.venv` contents; `.env` and `.venv` existence checked separately. | PASS: no root application modules or dependency manifest existed at inspection; user environment preserved. |
+| S1.13 | Interpreter, launcher, environment compatibility and project state recorded here without credential values. | PASS; replacement of the existing `.venv` requires the maintainer's specific authorization. |
+
+At that inspection, no environment was replaced, no dependencies were installed, and no ERP calls or Git operations were made. A Python 3.14 interpreter outside the existing `.venv` did not establish a clean installation.
+
+### Follow-up after maintainer environment replacement
+
+The maintainer subsequently recreated `.venv`. `.venv/Scripts/python.exe --version` reported Python 3.15.2; `.venv/Scripts/python.exe -m pip --version` reported pip 26.2.2 on Python 3.15. A dependency resolution attempt with `.venv/Scripts/python.exe -m pip install --dry-run mcp langchain langgraph pydantic httpx python-dotenv` failed while preparing `zstandard`: Microsoft Visual C++ 14.0 or greater was required. This was a dry run, not a successful dependency installation or proof that every version combination fails. Python 3.14.3 is separately available, but changing the maintainer's new `.venv` requires their decision.
+
+S1.09: initial English README created, explicitly describing the unimplemented state. S1.10: `.gitignore` reviewed and extended to cover environment variants, Python bytecode, common local caches and logs while retaining `.env.example`. S1.03 and remaining tasks stay unchecked. No ERP call or Git command was made.
+
+### Authorized replacement and foundation verification
+
+The maintainer specifically authorized replacing `.venv`; `uv venv --clear --python <installed Python 3.14.3> .venv` replaced it in the same location. The uv-created environment initially had no pip; `.venv/Scripts/python.exe -m ensurepip` installed pip 25.3. Python 3.15 dependency-resolution failure above is historical, not an active blocker.
+
+On Windows, Python 3.14.3 successfully installed MCP 1.30.0, LangChain 1.4.7, LangGraph 1.2.18, Pydantic 2.14.1, HTTPX 0.28.1 and python-dotenv 1.2.4. These are the direct planned stack requirements: only MCP is currently used by the foundation; the rest support later PRD-required layers. `pip install -r requirements.txt` subsequently reported requirements satisfied, and `pip check` reported no broken requirements. This was not a clean installation directly from the manifest: the exact versions were installed first by direct command. Transitive packages are not pinned; the direct pins do not constitute a lockfile.
+
+VM01 PASS: `.venv/Scripts/python.exe --version` returned Python 3.14.3. VM02 and S1.12 PASS: one-off imports of the four application modules and the six direct dependencies succeeded. VM05/VM06/VM07: a local one-off subprocess sent MCP initialize and tools/list messages over stdio; process exit 0, JSON protocol responses for both requests, empty tool list, and diagnostics on stderr. This checks the empty foundation only; it does not validate commercial operations. `client.py`, `config.py` and `tools.py` are explicit documentation-only boundaries, not implemented functions or released tools.
+
+S1.03 PASS: the existing environment was replaced only after explicit approval, at the same root path, without creating an additional environment. S1.05–S1.08 and S1.11–S1.12: manifest and minimal modules inspected; Python modules use English names and simple PEP 8 layout, and the only executable string literals use single quotes. No lint tool was run. No ERP call, Git command or `.env` edit was made.
+
+Clean-install acceptance, 2026-10-27: the same `.venv` was cleared and recreated with the authorized Python 3.14.3, `ensurepip` bootstrapped pip, and `.venv/Scripts/python.exe -m pip install -q -r requirements.txt` completed with exit 0. `pip check` found no broken requirements; application and direct dependency imports passed. The MCP initialize/tools-list subprocess check was repeated after the clean install and returned only JSON protocol output, exit 0 and zero tools. This verifies the Windows environment and current manifest, not other operating systems, commercial API access or V1 completeness.
