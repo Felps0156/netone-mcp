@@ -471,6 +471,23 @@ operacional de SKU técnico, nova autorização ERP ou avanço à Sprint8.
 Os registros DEC-024–026 preservam os critérios/estados de sua época;
 o fechamento atual é regido por esta decisão posterior explícita.
 
+DEC-028 — planejamento de pesquisa ampliada: o mantenedor aprovou estudar
+busca em páginas com limites de segurança e indicação de incompletude, usando
+sinônimos revisáveis e sugestões opcionais do modelo cliente. Preservar
+critérios como marca/modelo sem inferir campos ausentes; identificar termos
+e correspondências possíveis. Sugestões não entram automaticamente na lista.
+Completude do percurso visível não comprova snapshot nem cobertura semântica.
+O plano está em docs/superpowers/plans/2026-10-29-expanded-product-search.md.
+Esta decisão autoriza planejamento, não chamadas ERP, registro MCP ou início
+das Sprints 8+: esses passos continuam sujeitos a autorização específica.
+Após aprovação posterior de implementação offline no workspace atual, foi
+adicionada função de aplicação independente, não registrada em MCP. Ela
+usa o orçamento configurado existente, termos adicionais explícitos e uma
+lista inicial revisável; exige restrições textuais na descrição, podendo
+omitir produtos cujos cadastros não as mencionem. Sugestões do modelo
+cliente ainda dependem de integração futura e não são geradas pelo servidor.
+Teste sintético não prova cobertura ERP; nenhuma chamada real foi autorizada.
+
 ## 26. Critérios de Aceite
 
 ### 26.1 Critérios globais
