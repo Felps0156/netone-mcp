@@ -1,10 +1,10 @@
 # PRD — NetOne MCP: Consulta e Análise Read-Only
 
-> **Versão:** 1.2.0 — refatoração incremental autorizada em 28/10/2026  
-> **Estado:** NOT_READY / COMMERCIAL_API_BLOCKED; G0 e G1 completo BLOCKED. Sprint 5 parcial: S5.01 pendente; nenhuma tool comercial; Sprint 6 não iniciada.  
+> **Versão:** 1.2.1 — evidência operacional delimitada de S5.01 em 29/10/2026
+> **Estado:** NOT_READY / COMMERCIAL_API_BLOCKED; G0/G1 completos aguardam reaceite de liberação geral. Sprint 5 concluída; nenhuma tool comercial; Sprint 6 não iniciada.
 > **Regra fundamental:** nenhuma operação pode alterar dados comerciais do ERP.
 
-Este documento é a fonte de verdade para escopo, arquitetura, critérios e checklist. A revisão 1.2.0 substitui restrições históricas de testes, Git somente leitura e frameworks obrigatórios. Não autoriza ERP/login, acesso ao `.env`, novas tools ou avanço de sprint. A validação offline desta refatoração está registrada em docs/runbook.md: 51 testes passaram, sem alterar gates operacionais ou estados de sprint.
+Este documento é a fonte de verdade para escopo, arquitetura, critérios e checklist. A revisão 1.2.0 substituiu restrições históricas de testes, Git somente leitura e frameworks obrigatórios. A revisão 1.2.1 registra autorização posterior explícita para leitura em memória da configuração e até três consultas de S5.01, sem exposição de segredos. Produtos/preços/estoque responderam com page=1 e limit=1; normalização e metadados das amostras aceitos. S5.01 e Sprint 5 concluídas, com 51 testes offline novamente aprovados. Não houve login, renovação, alteração do `.env`, novas tools ou avanço para Sprint 6. A autorização pontual não libera chamadas contínuas; evidências e limites em docs/runbook.md.
 
 Histórico integral: [PRD 1.1.6](docs/history/PRD-1.1.6.md) e [runbook até 1.1.6](docs/history/runbook-through-1.1.6.md). Esses arquivos preservam decisões/evidências e regras da época, não políticas atuais. `AGENTS.md` foi reconciliado com esta versão após renovação da aprovação da edição protegida; o timeout anterior foi resolvido, conforme registro no runbook.
 
@@ -29,7 +29,7 @@ Fora do escopo: qualquer cadastro/alteração/exclusão/reserva/movimentação, 
 
 Testes unitários e integração simulada são permitidos; usar `unittest` e respostas sintéticas, sem `.env` ou ERP. Inspeção Git somente leitura é permitida pela política; comandos que alteram versão/branch ou publicam exigem autorização. Nesta execução delegada não executar Git nem editar `.git`.
 
-G0 separa finalidade documental aceita de validação operacional. A autorização offline das Sprints 0–5 não libera chamadas reais, ferramentas ou Sprint 6. G1 completo inclui instalação/token/permissões/TLS reais, ainda não verificados.
+G0 separa finalidade documental aceita de validação operacional. A autorização offline das Sprints 0–5 não libera chamadas reais, ferramentas ou Sprint 6. A exceção posterior de S5.01 forneceu evidência de acesso pelo token existente e TLS verificado para três amostras; não valida instalação limpa, permissões amplas ou libera operação geral. G0/G1 completos aguardam reaceite explícito com esse novo escopo de evidência.
 
 ## 4. Público-Alvo e Jornadas
 
@@ -95,7 +95,7 @@ A Sprint 0 reinspecionou o legado local por leitura e a [documentação oficial 
 | Autenticação por token de usuário | Artigo oficial confirma `netone-auth-token`; login `/app-web/api/v2/auth/login`, body `usuario`, `senha` | **POST somente para login** | Não se aplica | **DOCUMENTADO; execução não validada** |
 | OAuth / renovação de token | Não comprovados nas fontes inspecionadas; regeneração no ERP invalida token anterior | Não verificado | Não se aplica | **PENDENTE — não presumir** |
 
-**Resultado G0 vigente: BLOCKED — validação operacional pendente.** A revisão 1.1.3 aceita a finalidade de consulta documentada para os três POSTs centrais, sem afirmar prova de ausência de efeitos internos; não libera requisições reais. Os sete POSTs auxiliares continuam apenas inventariados, fora da admissão restrita. Nenhuma rota comercial está liberada.
+**Resultado G0 para liberação geral: reaceite pendente; decisão anterior BLOCKED não promovida automaticamente.** A revisão 1.1.3 aceita a finalidade de consulta documentada para os três POSTs centrais, sem afirmar prova de ausência de efeitos internos. Em 29/10/2026, S5.01 acrescentou três consultas reais delimitadas bem-sucedidas, não liberação contínua nem de tools. Os sete POSTs auxiliares continuam apenas inventariados, fora da admissão restrita.
 
 ### 10.3 Inventário obrigatório por endpoint, para `docs/api-capabilities.md`
 
@@ -131,7 +131,7 @@ Em 27/10/2026 o responsável autorizou revisar a política GET-only para reutili
 - PUT, PATCH, DELETE, POSTs fora desta tabela e qualquer operação de escrita, reserva, movimentação ou sincronização mutável continuam proibidos. Os sete endpoints auxiliares inventariados não são liberados por associação; exigem nova decisão explícita de escopo e revisão individual. GET também exige evidência e allowlist antes de uso.
 - POST de consulta começa com **zero retries**, sem redirects automáticos e sem fallback de método/rota. Repetição automática só após comprovar segurança específica de repetição; timeout é erro, não autorização para reenviar.
 - DEC-018 autoriza allowlist interna restrita aos três candidatos antes da validação remota, não uma chamada real nem tool; ferramentas não verificadas permanecem ausentes. Não usar respostas falsas nem ocultar POST sob proxy GET.
-- Autenticação `/app-web/api/v2/auth/login` permanece separada, sem ferramenta MCP; não integra esta tabela comercial. A autorização atual cobre a refatoração offline 0–5, não login, token rotation, chamadas reais ou Sprint 6.
+- Autenticação `/app-web/api/v2/auth/login` permanece separada, sem ferramenta MCP; não integra esta tabela comercial. A autorização da refatoração cobria apenas o recorte offline 0–5. A autorização posterior de S5.01 cobriu somente as três consultas delimitadas registradas, sem login, token rotation, ferramentas ou Sprint 6.
 
 ## 11. Modelo de Domínio e Dados
 
@@ -264,7 +264,7 @@ Coletar páginas autorizadas → validar universo → normalizar → agregar →
 
 ## 15. Autenticação, Autorização e Isolamento
 
-Token do operador exclusivamente em `netone-auth-token`, confirmado documentalmente e no legado; `TOKEN_NETONE` continua o nome configurável. Login documentado por POST `/app-web/api/v2/auth/login` com `usuario`/`senha` não está autorizado nem implementado. OAuth/refresh/expiração e permissões reais são desconhecidos. Cada processo tem origem/credencial fixas; argumentos MCP não as alteram. Configuração válida não comprova autenticação.
+Token do operador exclusivamente em `netone-auth-token`, confirmado documentalmente, no legado e nas três consultas delimitadas de S5.01; `TOKEN_NETONE` continua o nome configurável. O token existente foi suficiente; login documentado por POST `/app-web/api/v2/auth/login` com `usuario`/`senha` não foi executado nem implementado. OAuth/refresh/expiração e granularidade de permissões permanecem desconhecidos. Cada processo tem origem/credencial fixas; argumentos MCP não as alteram. Configuração válida sozinha não comprova autenticação; as respostas reais comprovam acesso apenas no escopo observado.
 
 ## 16. Segurança e Política Read-Only
 
@@ -342,13 +342,15 @@ Regressão offline via `.venv/Scripts/python.exe -B -m unittest discover -s test
 
 ## 24. Riscos e Mitigação
 
-Riscos mantidos: efeitos internos não documentados; credenciais/TLS/permissões não validados; header gerado conflitante; IDs/stock-array/timestamps/paginação ambíguos; moeda/tabela/depósito/unidades desconhecidos; SSRF/rebinding; compressão/buffers; cleanup travado; dados parciais ou conflitos interpretados como completos; vazamento em logs; dependências artificiais. Mitigações: allowlist e schema fechado, origem fixa/TLS, zero retries/redirects, limites, Decimal e parcialidade explícita, diagnóstico seguro e autorização operacional separada. Riscos históricos R01–R16 e fontes completas no PRD arquivado; nenhum foi encerrado por esta consolidação.
+Riscos mantidos: efeitos internos não documentados; permissões amplas e validade futura do token/TLS não estabelecidas por três amostras; header gerado conflitante apesar do header canônico funcionar nas amostras; IDs/stock-array/timestamps/paginação ambíguos; moeda/tabela/depósito/unidades desconhecidos; SSRF/rebinding; compressão/buffers; cleanup travado; dados parciais ou conflitos interpretados como completos; vazamento em logs; dependências artificiais. Mitigações: allowlist e schema fechado, origem fixa/TLS, zero retries/redirects, limites, Decimal e parcialidade explícita, diagnóstico seguro e autorização operacional separada. Riscos históricos R01–R16 e fontes completas no PRD arquivado; sucesso delimitado não prova segurança universal.
 
 ## 25. Decisões Técnicas
 
 DEC-017 aceita O3/O4/O5 como finalidade documental de consulta com risco residual; DEC-018 admite allowlist privada antes da validação remota; DEC-019 autoriza Sprint 5 offline; DEC-020 restringe projeção ao núcleo legado mais SKU e tabela. Evidência integral e trade-offs no histórico.
 
-DEC-021 — 1.2.0: refatoração incremental autorizada 0–5. Testes/mocks permitidos; Git somente leitura permitido em geral; frameworks sem consumidor removidos; parsing URL por biblioteca aceita hosts privados do operador; streaming por APIs públicas com shield e limites preservados; logging seguro com código/componente/nível sem desligar loggers indiscriminadamente. Alternativa rejeitada: recomeçar o projeto ou apenas reorganizar documentação deixando complexidade sem consumidor. Custo: diagnóstico terceiro reduzido e compatibilidade remota ainda pendente. Sem novos estados de sprint, tools ou chamadas reais. A edição protegida de AGENTS foi aplicada após renovação explícita da autorização; o timeout anterior não é bloqueio atual.
+DEC-021 — 1.2.0: refatoração incremental autorizada 0–5. Testes/mocks permitidos; Git somente leitura permitido em geral; frameworks sem consumidor removidos; parsing URL por biblioteca aceita hosts privados do operador; streaming por APIs públicas com shield e limites preservados; logging seguro com código/componente/nível sem desligar loggers indiscriminadamente. Alternativa rejeitada: recomeçar o projeto ou apenas reorganizar documentação deixando complexidade sem consumidor. Custo: diagnóstico terceiro reduzido e compatibilidade remota ainda pendente à época. Sem novos estados de sprint, tools ou chamadas reais nessa refatoração. A edição protegida de AGENTS foi aplicada após renovação explícita da autorização; o timeout anterior não é bloqueio atual.
+
+DEC-022 — 1.2.1: após autorização explícita, carregamento privado pelo loader e consulta única de produtos/preços/estoque com page=1 e limit=1, sem retries/redirects ou alteração de origem/rota. As três amostras reais confirmaram campos/presença/null/tipos e foram aceitas pelo normalizador e validador de metadados. Conclui apenas S5.01/Sprint 5; token existente suficiente, sem login/renovação, persistência de valores ou mudança do `.env` pelo agente. Custo/limite: uma amostra por operação não prova universo, snapshot, semântica temporal, depósito/moeda ou efeitos internos. G0/G1 geral dependem de reaceite explícito; tools e Sprint 6 não liberadas.
 
 ## 26. Critérios de Aceite
 
@@ -381,10 +383,10 @@ Se **não houver operação comercial read-only segura e validada**, o produto p
 
 | Fase | Sprints | Resultado esperado | Gate |
 |---|---|---|---|
-| **F1 — Investigação** | 0 | Contratos POST e evidência documental de consulta registrados conforme DEC-017 | **G0 = BLOCKED por validação operacional, não método** |
-| **F2 — Fundação** | 1–3 | Ambiente/configuração e cliente autenticável com ciclo de vida MCP implementados offline | **G1 completo BLOCKED; verificação offline não valida credencial nem instalação remota** |
+| **F1 — Investigação** | 0 | Contratos POST e evidência documental de consulta registrados conforme DEC-017 | **G0 geral aguarda reaceite após evidência delimitada S5.01, não por método** |
+| **F2 — Fundação** | 1–3 | Ambiente/configuração e cliente autenticável com ciclo de vida MCP implementados offline | **G1 completo aguarda reaceite; acesso real delimitado não comprova instalação limpa/permissões amplas** |
 | **F3 — Integração segura** | 4–6 | Cliente HTTP, normalização, consulta read-only pelo método aprovado se liberada | **G2** |
-| **F3 — recorte offline autorizado** | 5 | Normalização e paginação internas verificadas sinteticamente, sem resposta real ou tool | **S5.01 operacional permanece pendente; G0/G1 inalterados** |
+| **F3 — Sprint 5 concluída** | 5 | Normalização/paginação offline e campos reais observados em três consultas delimitadas | **S5.01 concluída; G0/G1 geral não promovidos, sem tool** |
 | **F4 — Ferramentas MCP** | 7–9 | Tools úteis, registro MCP, stdio, sem escrita | **G3** |
 | **F5 — Análises** | 10 | Análise determinística; framework apenas se justificado | **G4** |
 | **F6 — Endurecimento** | 11–12 | Revisão segurança + documentação pública | **G5** |
@@ -402,7 +404,7 @@ flowchart LR
 
 **Gates:**
 
-- **G0:** operação comercial read-only segura comprovada e validada pelo método documentado, ou bloqueio formal registrado; POST candidato não equivale a operação liberada. Decisão atual: BLOCKED por validação pendente.
+- **G0:** operação comercial read-only segura comprovada e validada pelo método documentado, ou bloqueio formal registrado; POST candidato não equivale a operação liberada. Após S5.01, há evidência real delimitada; reaceite para liberação geral ainda pendente, sem inferir aprovação de tools.
 - **G1:** Python, configuração, token e proteções de segredo validados.
 - **G2:** transporte não permite operações proibidas e produz erros consistentes.
 - **G3:** cliente MCP descobre somente tools liberadas e pode executá-las quando há endpoint comprovado.
@@ -412,7 +414,7 @@ flowchart LR
 
 ## 28. Sprints de Implementação em Checklist
 
-Estados/IDs/ordem são preservados da versão 1.1.6; texto ajustado apenas à política vigente. Sprints 0–4 têm entregas offline/documentais registradas; Sprint 5 tem S5.02–S5.14 verificadas e S5.01 BLOCKED. S0.11 é revisão documental, não prova remota. G2 aceito offline; G0/G1 completos continuam BLOCKED. Nenhuma etapa 6+ foi iniciada. Evidências/autorizações/achados anteriores completos estão nos arquivos históricos, sem revalidação nesta revisão.
+IDs/ordem e estados não relacionados são preservados da versão 1.1.6. Sprints 0–4 têm entregas offline/documentais registradas; Sprint 5 concluída em 29/10/2026, com S5.02–S5.14 offline e S5.01 real delimitada conforme DEC-022. S0.11 é revisão documental, não prova remota. G2 aceito offline; G0/G1 geral aguardam reaceite com a nova evidência. Nenhuma etapa 6+ foi iniciada. Evidências/autorizações/achados anteriores completos estão nos arquivos históricos.
 
 Executar sequencialmente dentro do escopo autorizado, comprovar antes de marcar e manter tarefas condicionais bloqueadas. Commits são opcionais e dependem de autorização do responsável; não são unidade obrigatória de trabalho. Autorização de teste offline não libera consulta real nem tool.
 
@@ -526,7 +528,7 @@ Executar sequencialmente dentro do escopo autorizado, comprovar antes de marcar 
 ### Sprint 5 — Normalização de dados e paginação
 
 **Objetivo:** dados comerciais exatos, confiáveis e limitados.
-- [ ] S5.01 — Confirmar fields reais e sua presença/ausência com evidência sanitizada.
+- [x] S5.01 — Confirmar fields reais e sua presença/ausência com evidência sanitizada.
 - [x] S5.02 — Definir conversão tipada para ID de produto e reduzido sem perda.
 - [x] S5.03 — Normalizar SKU e EAN como strings.
 - [x] S5.04 — Normalizar descrição, grupo e linha preservando informações.
@@ -544,6 +546,12 @@ Executar sequencialmente dentro do escopo autorizado, comprovar antes de marcar 
 **Entrega:** formato comercial normalizado, verificável e pronto para tools autorizadas.  
 
 **Aceite:** sem perda monetária e sem `null` convertido a zero.
+
+**Conclusão em 29/10/2026:** S5.01–S5.14 comprovadas no escopo da sprint.
+Três amostras reais (page=1, limit=1 por operação) aceitas, com distinção
+de ausência/null/tipos e parse Decimal exato; 51 testes offline aprovados.
+Resumo estrutural sem valores em `docs/api-capabilities.md` e execução em
+`docs/runbook.md`. Não equivale a catálogo completo, tool ou Sprint 6.
 
 ### Sprint 6 — Pesquisa de produtos autorizada
 
@@ -750,8 +758,8 @@ Executar sequencialmente dentro do escopo autorizado, comprovar antes de marcar 
 
 ## 29. Pendências e Próximas Decisões
 
-- S5.01: campos/presença/ausência reais da instalação, mediante autorização própria.
-- G0/G1: configuração operacional, token/permissões, TLS/DNS e consulta delimitada segura; nenhuma comprovação remota nova.
+- S5.01 concluída: após correção local pelo operador e renovação da autorização, produtos/preços/estoque responderam a três consultas delimitadas em 29/10/2026. Campos reais confirmados em amostras sanitizadas; normalização/metadados aceitos. Falha anterior de configuração é histórica, não bloqueio atual. `.env` não alterado pelo agente; evidência em `docs/runbook.md` e `docs/api-capabilities.md`.
+- G0/G1 geral: revisar e aceitar o escopo de liberação usando a nova evidência de token/header e TLS verificado. Continuam pendentes instalação limpa do manifesto atual, granularidade de permissões e validações das capacidades além das três amostras; sem autorização contínua ou Sprint 6.
 - Conflitos documentais: nome de header gerado, stock IDs array, nomes/semântica timestamp, metadados/limites de paginação.
 - Identidade/unicidade, moeda/tabela, unidade/depósito e snapshot/visibilidade comercial permanecem desconhecidos.
 - Análise futura e necessidade de framework dependem de consumidor real e dados suficientes.

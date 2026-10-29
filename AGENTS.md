@@ -2,7 +2,7 @@
 
 ## Scope and current status
 
-Read `PRD.md` before architectural/sprint work. NetOne MCP is a read-only stdio foundation: empty commercial tool registry, no ERP/login authorization, Sprint 5 partial with S5.01 pending, no Sprint 6. G0/full G1 and operator readiness remain BLOCKED. Offline evidence does not validate credentials, real TLS or provider behavior. History archives are evidence from their time, not current policy.
+Read `PRD.md` before architectural/sprint work. NetOne MCP is a read-only stdio foundation with an empty commercial tool registry. Sprint 5 is complete: explicitly authorized S5.01 observations on 2026-10-29 returned one record each for products/prices/stock through the existing token and verified TLS; only sanitized field shapes were retained. No login, token rotation or Sprint 6 was performed. The earlier configuration blocker is historical. G0/full G1 await explicit general-release acceptance; this bounded evidence is not ongoing ERP authorization, tool release or proof of complete pagination/permissions. Offline evidence alone never validates credentials or real TLS. History archives are evidence from their time, not current policy.
 
 ## Boundaries
 

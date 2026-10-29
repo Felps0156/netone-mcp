@@ -1,6 +1,6 @@
 # NetOne MCP agent instruction proposal — applied
 
-**Applied after renewed approval.** The maintainer explicitly authorized resubmitting the protected edit, and the normal patch tool accepted it. The sections below are now installed in root `AGENTS.md`; use that file as the authoritative agent context. The earlier timeout is historical, not an active blocker. This update does not authorize ERP calls or advance a sprint.
+**Historical proposal, applied after renewed approval.** The maintainer explicitly authorized resubmitting the protected edit, and the normal patch tool accepted it. The sections below preserve the original 1.2.0 proposal; they are not current status. Root `AGENTS.md` and PRD 1.2.1 supersede its Sprint 5/S5.01 statements after the separately authorized real observation. The earlier timeout is historical, not an active blocker. This proposal itself does not authorize ERP calls or advance a sprint.
 
 ## Scope and current status
 

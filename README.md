@@ -4,9 +4,9 @@ A Python MCP stdio foundation for authorized, strictly read-only NetOne ERP quer
 
 ## Current status
 
-**NOT_READY / COMMERCIAL_API_BLOCKED. No MCP commercial tools are registered.** Sprints 0–4 have documentary/offline implementation evidence; Sprint 5 is partial: S5.02–S5.14 have offline evidence, while S5.01 still needs installation-specific field confirmation. G0 and full G1 remain BLOCKED. Sprint 6 has not started.
+**NOT_READY / COMMERCIAL_API_BLOCKED. No MCP commercial tools are registered.** Sprints 0–4 have documentary/offline implementation evidence. Sprint 5 is complete: S5.02–S5.14 have offline evidence, and S5.01 has three explicitly authorized real field observations from 2026-10-29, one record per operation. G0/full G1 still need explicit acceptance for general release; the former configuration blocker is resolved. Sprint 6 has not started.
 
-The private client implements three documented query POSTs with fixed origin/Host and closed `page`/`limit` filters. Construction and startup make no ERP request. The internal implementation is not permission to call the ERP, log in or release a tool. See the [API evidence and contracts](docs/api-capabilities.md); synthetic checks do not validate a token, remote TLS, provider behavior or installation readiness.
+The private client implements three documented query POSTs with fixed origin/Host and closed `page`/`limit` filters. Construction and startup make no ERP request. The internal implementation is not permission to call the ERP, log in or release a tool. The one-shot S5.01 observation succeeded with the existing token and verified TLS, without login or environment-file modification by the agent. See the [sanitized field evidence and limits](docs/api-capabilities.md); three samples do not prove complete pagination, all permissions or general readiness.
 
 ## Architecture
 

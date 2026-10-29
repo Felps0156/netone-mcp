@@ -2,7 +2,7 @@
 
 ## Current boundary
 
-PRD 1.2.0 authorizes an incremental offline refactor of Sprints 0–5. No ERP request, login, environment-file access, commercial tool or Sprint 6 is authorized. The registry is empty. G0/full G1 and operator readiness remain BLOCKED; Sprint 5 remains partial with S5.01 pending. An internal callable allowlist is not a deny-all client and not permission for real use.
+PRD 1.2.1 records the completed Sprint 5. The original PRD 1.2.0 refactor authorization was offline only. The maintainer subsequently authorized configuration-loader access in memory and a bounded S5.01 observation; after the operator's local correction and renewed authorization, products/prices/stock each returned one record successfully. This supersedes the earlier configuration failure, not the limits of the original offline evidence. No login, token rotation, commercial tool or Sprint 6 was performed. The registry is empty. G0/full G1 require explicit acceptance for general release; three samples are not ongoing authorization or complete installation readiness.
 
 Current behavior and limits: [configuration](configuration.md). Endpoint contracts, field mapping and unresolved provider ambiguities: [API inventory](api-capabilities.md). Canonical sprint IDs/states/sequence: [PRD section 28](../PRD.md#28-sprints-de-implementação-em-checklist).
 
@@ -83,3 +83,78 @@ The baseline audit above preceded the final instruction update: `AGENTS.md` was 
 ## Operational unblock
 
 Maintainer owns safe configuration, account permissions and provider clarification of the API conflicts. Only after security review and explicit bounded-call authorization may a real documented-method validation be considered; it can precede tool release but is not permission for login, scanning or tool registration. Record sanitized schema/status/completeness without records/secrets; HTTP 200 alone does not prove absence of internal business effects. Do not require a GET equivalent or bypass TLS/guards.
+
+## Historical initial S5.01 observation attempt — 2026-10-29
+
+The maintainer explicitly authorized the existing loader to read the root
+environment file in memory, without modification or disclosure, for up to
+three queries: products, prices and stock, each with page=1 and limit=1.
+No retries, login, token rotation, tools or Sprint 6 were authorized.
+Only known field presence/nullability/types could be recorded; no private
+origin, credential, response body or commercial value could be persisted.
+
+Preflight: `.venv/Scripts/python.exe -B -m unittest discover -s tests -v`
+passed all 51 tests. A one-shot probe in the managed scratch directory
+used the existing loader, safe logging and guarded client path. Both
+configuration-only attempts stopped before constructing the client or
+sending a request. The second included the loader's fixed diagnostic:
+`REDUCED_PRODUCTS_URL must be a valid HTTPS URL with the expected path.`
+This does not identify which URL constraint failed; no private value was
+printed or retained. The environment file was not written or moved.
+
+Result at that checkpoint: BLOCKED before network activity, zero ERP
+requests, no real field evidence. S5.01 was open. This initial configuration
+blocker was superseded by the successful observation below. The operator
+needed to correct the configuration to an approved HTTPS origin and the exact
+documented legacy route, consistently across supplied URL variables,
+without sharing the values in chat. No automatic URL rewrite, ignored
+legacy variable, HTTP fallback or TLS bypass was attempted. Configuration
+changes and a renewed bounded attempt require an operator decision.
+
+## Successful S5.01 field observation — 2026-10-29
+
+The maintainer removed the optional legacy URL variables locally and
+renewed permission to load private configuration without disclosure and
+perform the bounded validation. No environment file was written, moved or
+displayed by the agent. The existing token was sufficient; login/password
+were not used for authentication, and no token was obtained or rotated.
+
+Command: `.venv/Scripts/python.exe -B <managed-scratch>/netone_s5_validation.py`.
+Observation began at 16:41:30 UTC. The probe used `load_config()`, existing
+safe logging and one `NetOneClient`; it called `_query(operation, 1, 1)`
+once for each operation, preserving the original guard and transport.
+
+| Method / literal route | Request body | Observed result |
+|---|---|---|
+| POST `/app-web/api/v2/produto/reduzidos` | page=1, limit=1 | Successful 2xx JSON envelope, one record, normalizer accepted |
+| POST `/app-web/api/v2/produto/precos` | page=1, limit=1 | Successful 2xx JSON envelope, one record, normalizer accepted |
+| POST `/app-web/api/v2/produto/estoque` | page=1, limit=1 | Successful 2xx JSON envelope, one record, normalizer accepted |
+
+All three had integer page/totalPages/totalElements/total fields; the
+first-page metadata validator accepted them. Only known field names and
+absent/null/type categories were retained; the complete sanitized matrix
+is in [the API inventory](api-capabilities.md#s501-real-field-evidence--2026-10-29).
+No raw response, private origin, credential, commercial value or arbitrary
+response key was persisted in the repository or scratch report.
+
+HTTPS certificate/hostname verification, fixed origin/Host/routes,
+identity encoding, 1 MiB response limit and existing deadlines remained
+enabled. Exactly three application queries, with zero retries or redirects,
+were performed. Response cleanup completed before each return and client
+cleanup completed before the probe reported completion.
+
+After the observation, `.venv/Scripts/python.exe -B -m unittest discover
+-s tests -v` passed all 51 offline tests, including actual stdio discovery
+with an empty registry and blocked HTTP sends. No application code or
+dependency was changed for this validation. PRD 1.2.1 marks only S5.01 as
+newly complete; the existing S5.02–S5.14 evidence and sprint-specific
+precision/nullability criteria complete Sprint 5.
+
+Limits: only one record per endpoint was inspected, without asserting a
+common identity. No real multi-page traversal, full-catalog completeness,
+snapshot stability, deposit identity, currency, timestamp semantics,
+least-privilege granularity or undisclosed internal effects were proved.
+The existing header/token and verified TLS worked for these requests;
+G0/full G1 still require an explicit general-release acceptance review,
+not a claim that access remains wholly unverified. Tools, login, ongoing
+calls and Sprint 6 are not released by this result.

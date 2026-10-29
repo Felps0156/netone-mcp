@@ -1,18 +1,18 @@
 # NetOne API capability evidence
 
-Initial investigation: 2026-10-27. Current policy: PRD 1.2.0, 2026-10-28. Contract investigation and Sprint 5 evidence are retained below; executed offline refactor validation and its limits are in the runbook.
+Initial investigation: 2026-10-27. Current policy: PRD 1.2.1, 2026-10-29. Contract investigation and Sprint 5 evidence are retained below; the bounded real S5.01 observation is recorded below and in the runbook.
 
 ## Decision and scope
 
-G0 = BLOCKED because authorized runtime validation remains pending, not because the documented queries use POST. Under PRD 1.1.3 / DEC-017, the maintainer accepts the official descriptions of O3/O4/O5 as sufficient evidence of their intended query semantics. The documentation does not explicitly guarantee absence of internal effects; that is a recorded residual risk, not proof of a write. GET is not a prerequisite and commercial mutation remains prohibited. The evidence decision does not authorize real calls or release tools.
+G0/full G1 have not been re-accepted for general operation; their prior BLOCKED decision is not automatically replaced by S5.01. Runtime access is no longer wholly unverified: the three bounded observations below succeeded. Under PRD 1.1.3 / DEC-017, the maintainer accepts the official descriptions of O3/O4/O5 as sufficient evidence of their intended query semantics. The documentation does not explicitly guarantee absence of internal effects; that is a recorded residual risk, not proof of a write. GET is not a prerequisite and commercial mutation remains prohibited. The completed field observation does not authorize ongoing calls or release tools.
 
-Remotely validated commercial method/path pairs: none. Approved MCP commercial tools: none. Under DEC-018 the three method/path pairs below are implemented in an internal allowlist with only page/limit filters; this is not authorization for a real request or tool registration. No ERP call, login, token regeneration, credential lookup, or Stoplight "Send API Request" action was performed during the investigation. Documentation was read anonymously. This checkout is NOT_READY, not FOUNDATION_READY or V1_COMPLETE. Synthetic mock checks do not change the inventory's remote evidence.
+Bounded remote field observations: all three method/path pairs below, each with page=1 and limit=1, on 2026-10-29. Approved MCP commercial tools: none. Under DEC-018 the three method/path pairs are implemented in an internal allowlist with only page/limit filters; this is not permission for ongoing requests or tool registration. The original investigation used anonymous documentation only; the subsequent explicitly authorized S5.01 observation used the existing token through the loader without displaying credentials or logging in. This checkout remains NOT_READY, not FOUNDATION_READY or V1_COMPLETE.
 
 | Candidate method | Literal path | Evidence | Policy status |
 |---|---|---|---|
-| POST | `/app-web/api/v2/produto/reduzidos` | L2 and O3 | ADMITTED_CANDIDATE; not operationally approved |
-| POST | `/app-web/api/v2/produto/precos` | O5 | ADMITTED_CANDIDATE; not operationally approved |
-| POST | `/app-web/api/v2/produto/estoque` | L2 and O4 | ADMITTED_CANDIDATE; not operationally approved |
+| POST | `/app-web/api/v2/produto/reduzidos` | L2, O3 and S5.01 observation | FIELD_OBSERVED; no general/tool release |
+| POST | `/app-web/api/v2/produto/precos` | O5 and S5.01 observation | FIELD_OBSERVED; no general/tool release |
+| POST | `/app-web/api/v2/produto/estoque` | L2, O4 and S5.01 observation | FIELD_OBSERVED; no general/tool release |
 
 The seven auxiliary Product queries remain INVENTORIED_ONLY, outside this narrow admission. Login remains AUTH_ONLY, separate from the commercial list. New routes require an explicit scope decision and individual review; no wildcard or product-prefix authorization is permitted.
 
@@ -65,7 +65,7 @@ No route was recovered from private environment values. The neutral `.env.exampl
 
 ## Endpoint inventory
 
-All commercial rows below are OFFICIALLY DOCUMENTED / NOT RELEASED FOR MCP. The first three rows are ADMITTED_CANDIDATE under PRD section 10.5, not proven safe or authorized for real calls; auxiliary rows are INVENTORIED_ONLY. "Documented" describes a published contract, not a successful call. Authentication header policy comes from O2 even where an operation page omits its security widget. No row is operationally allowlisted or remotely validated. No response examples from a commercial installation are included.
+All commercial rows below are OFFICIALLY DOCUMENTED / NOT RELEASED FOR MCP. The first three rows have the bounded S5.01 field observation below, not general operational release; auxiliary rows are INVENTORIED_ONLY. "Documented" alone describes a published contract, not a successful call. Authentication header policy comes from O2 even where an operation page omits its security widget. No raw response examples from a commercial installation are included.
 
 | ID / source | Method and literal path | Request body / documented response | Potential consumer (not registered) |
 |---|---|---|---|
@@ -85,11 +85,11 @@ No method/path for GET-by-ID, GET-by-EAN, GET-by-SKU, GET-price, GET-stock or GE
 
 ### Authentication boundary
 
-O2 documents a token per ERP user, usable from the user's ERP integration settings or obtained through O6. Regeneration invalidates the old token. This establishes reusable user-token authentication, not an everlasting token or a known expiry policy. Required integration permission is documented; actual account access was not checked.
+O2 documents a token per ERP user, usable from the user's ERP integration settings or obtained through O6. Regeneration invalidates the old token. This establishes reusable user-token authentication, not an everlasting token or a known expiry policy. The existing token obtained successful responses for the three bounded S5.01 queries; account permission granularity and token lifetime were not established.
 
 `TOKEN_NETONE` is the existing environment name observed in L1. `LOGIN_NETONE` and `SENHA_NETONE` exist in the local example but do not implement login. Sprint 3 configures the provided token in the private client's `netone-auth-token` header without sending a request. A future explicit token-login implementation must remain internal to `client.py`, use only the documented authentication route, and must not imply approval for commercial requests. Commercial query POST candidates have separate per-operation gates. No login, token rotation, OAuth grant or refresh is authorized by this document revision. OAuth, refresh tokens, token lifetime and least-privilege permission granularity remain unconfirmed.
 
-The authentication article specifies `netone-auth-token`; generated examples on O3/O5 instead label a header `Token de Autenticação`. Do not copy that generated label as a wire-header contract. O2 and legacy agree on `netone-auth-token`; provider clarification/runtime proof is still needed before declaring installation authentication validated. O4's displayed request sample omits an auth header; omission does not establish anonymous access.
+The authentication article specifies `netone-auth-token`; generated examples on O3/O5 instead label a header `Token de Autenticação`. Do not copy that generated label as a wire-header contract. O2 and legacy agree on `netone-auth-token`, which was used successfully for the three S5.01 queries. This establishes compatibility for those requests, not every account permission or anonymous access. O4's displayed request sample omits an auth header; omission does not establish anonymous access.
 
 Sprint 3 authentication review, 2026-10-28 (PRD 1.1.2): O2 was read again anonymously in the rendered browser after content hydration. It still states that the user token must be sent in `netone-auth-token`, can be retrieved from ERP user settings or obtained through `/auth/login`, requires an integration-enabled user, and is invalidated by regeneration. It does not establish OAuth, refresh or token lifetime. No Send action, login or ERP endpoint was invoked. Generic URL extraction was unavailable (search-only backend); browser reading supplied the actual article body. HTTPX SSL, timeout and logging documentation was also read through anonymous HTTPS; implementation options were checked against installed HTTPX 0.28.1. See the runbook for offline evidence, not authenticated provider responses.
 
@@ -111,7 +111,7 @@ O7 describes non-200 errors, generally 400/500; O8 defines `erros: [{codigo, men
 
 ## Sprint 5: internal normalized records and pagination (PRD 1.1.6)
 
-DEC-019 authorizes the complete offline Sprint 5 slice, not only pagination. It does not authorize real requests, MCP tools, new filters or Sprint 6. O3/O4/O5/O10 were reread anonymously in the rendered documentation on 2026-10-28 after hydration; no Send action was used. Published examples contain omitted paging fields, null EAN/retail price and null last-change timestamps. O5 publishes an offset-bearing timestamp example, but this does not establish every record's temporal semantics. S5.01's installation-specific field presence/absence remains BLOCKED, not inferred from these examples. G0/full G1 and operator readiness are unchanged.
+DEC-019 authorized the complete offline Sprint 5 slice, not only pagination. It did not authorize real requests, MCP tools, new filters or Sprint 6. O3/O4/O5/O10 were reread anonymously in the rendered documentation on 2026-10-28 after hydration; no Send action was used. Published examples contain omitted paging fields, null EAN/retail price and null last-change timestamps. O5 publishes an offset-bearing timestamp example, but this does not establish every record's temporal semantics. S5.01 was subsequently completed through a separate explicit authorization and the real observations below, not inferred from published examples.
 
 `catalog.py` defines frozen `CatalogRecord` and `QueryResult` models, consumed by `NetOneClient._collect()` in `client.py`. They are internal components, not registered tools. The existing `_query()` remains the only request path: the same three literal POST routes and closed integer page/limit body, fixed origin, TLS, identity encoding, response-byte bound, no redirects/retries/fallback. No source field is interpreted as an instruction.
 
@@ -144,7 +144,44 @@ Call `as_json()` to serialize: Decimal values become strings (scientific notatio
 - Error before usable data gives status=error; error after usable data gives partial with preserved records and a stable error code. HTTP 404 remains an endpoint error, not a valid empty product query. External cancellation propagates rather than returning fabricated completeness.
 - complete_dataset refers only to the endpoint pages traversed without known conflicts/interruption. It does not assert a stable snapshot or the entire ERP catalog: the provider's ecommerce-active/price-table visibility restrictions still apply. Stock scope remains the configured user's deposit, not a verified deposit identity. No price/stock join or global analysis is implemented.
 
-Provider compatibility with these conservative shape/metadata rules and real fields remains unverified. Offline verification exercises the actual internal collection/request path with in-memory transport, not only a standalone normalizer. See the runbook for executed scenarios.
+The bounded S5.01 samples below were accepted by the normalizer and first-page metadata validator. Whole-dataset compatibility, real multi-page traversal and all nullable/type variants remain unverified. Offline verification exercises the actual internal collection/request path with in-memory transport, not only a standalone normalizer. See the runbook for executed scenarios.
+
+### S5.01 real field evidence — 2026-10-29
+
+At 16:41:30 UTC, a one-shot managed-scratch probe loaded operator-approved
+configuration in memory and called `_query()` once per operation, with
+page=1 and limit=1. All three returned successful 2xx JSON envelopes and
+one record each. The existing fixed-origin guard, verified TLS, identity
+encoding, 1 MiB cap, deadlines and zero retries/redirects remained enabled.
+No login or token regeneration was needed. Client cleanup completed.
+
+Only the following allowlisted shape summary was retained. `absent` and
+`null` differ; no IDs, descriptions, prices, quantities, timestamps,
+origins, credentials or arbitrary response keys are reproduced.
+
+| Source field | Products | Prices | Stock |
+|---|---|---|---|
+| idProduto | integer | integer | absent |
+| idReduzido | integer | integer | integer |
+| mascara | string | string | string |
+| codigoSku | null | null | null |
+| ean | string | absent | absent |
+| descricao | string | string | string |
+| grupoDescricao | string | absent | absent |
+| linhaDescricao | string | absent | absent |
+| tabelaPreco | string | string | absent |
+| ultimaAlteracaoTimestamp | string | string | null |
+| valor | decimal | decimal | absent |
+| quantidade | absent | absent | integer |
+
+For each envelope, page/totalPages/totalElements/total were present integers;
+their values were not retained. `_page_metadata(envelope, 1)` and
+`normalize_record(operation, row)` accepted all three samples. Decimal
+describes exact JSON numeric parsing, not a string received from the ERP.
+This completes S5.01 and, with existing offline evidence, Sprint 5. It
+does not prove the full universe, snapshot consistency, cross-endpoint
+identity, monetary currency, stock deposit identity, timestamp semantics,
+or absence of undisclosed server effects. No joins or tools were added.
 
 ## Refactor transport and diagnostics (PRD 1.2.0)
 
@@ -158,14 +195,14 @@ The server formatter emits only `level=<...> component=mcp|httpx|httpcore|librar
 
 ## Gate record and unblock request
 
-Current decision: DEC-017 accepts O3/O4/O5 as evidence of query purpose, with the residual limitation described above. S0.11 records that documentary review, not proof of server internals. G0 remains BLOCKED pending authorized operational validation. DEC-018 allows the internal restricted allowlist before that validation; commercial MCP tools remain absent. Research and offline checks are not runtime acceptance.
+Current decision: DEC-017 accepts O3/O4/O5 as evidence of query purpose, with the residual limitation described above. S0.11 records that documentary review, not proof of server internals. The separately authorized S5.01 observation supplies bounded runtime field evidence. G0/full G1 still require an explicit acceptance review for general operation; no general release is inferred from completing Sprint 5. Commercial MCP tools remain absent.
 
 Owner: maintainer, with NetOne support where the contract is ambiguous. Required next evidence:
 
 1. Review O3/O4/O5 and legacy call paths against the admitted method/path pairs. Confirm exact version, closed filter schema, account permissions and paging/batch/payload limits; distinguish official limits from conservative local ceilings. Do not require GET equivalents or infer undisclosed routes.
 2. Record O3/O4/O5 and reviewed request paths as the accepted evidence of query intent, and the risk that server-internal effects are not explicitly guaranteed. The legacy has no explicit mutation request in the inspected functions, but cannot prove server behavior. Stop if evidence of commercial mutation appears; HTTP 200 alone is not evidence of semantic safety.
-3. Resolve auth-header rendering, stock ID-array shape, timestamp spelling, price currency/table semantics and pagination completeness conflicts above.
-4. Only after security review, safe configuration/transport and explicit bounded-call authorization are available, perform a small query using the documented method and record date, method/path, sanitized status/schema/completeness and any observed safety evidence without claiming proof of server internals. A validation call can precede tool release; it is not permission to expose a tool or scan the full catalog. No credential or real record belongs in this document.
+3. The observed header works for these three samples. Resolve remaining stock ID-array shape, timestamp spelling/semantics, price currency/table semantics and pagination completeness questions before consuming those unsupported capabilities.
+4. The S5.01 bounded queries and sanitized evidence above are complete. Any further request needs its own authorized scope and security/configuration review. A validation call can precede tool release; it is not permission to expose a tool or scan the full catalog. No credential or real record belongs in this document.
 5. Review the implemented internal literal allowlist and any future tool registration. Documentation alone does not release tools.
 
 Historical policy (PRD 1.0.1, superseded): all commercial POSTs were prohibited and G0 was blocked for lack of GET. The maintainer subsequently selected narrowly scoped query POST admission and authorized document revision. PRD 1.1.0 now records that decision (DEC-013, ADR-15/16); it is not a generic POST exception, completed security review, runtime authorization or permission to start another sprint. No new remote evidence was obtained by this revision.
