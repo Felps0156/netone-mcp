@@ -1,16 +1,16 @@
 # NetOne API capability evidence
 
-Initial investigation: 2026-10-27. Current policy: PRD 1.2.1, 2026-10-29. Contract investigation and Sprint 5 evidence are retained below; the bounded real S5.01 observation is recorded below and in the runbook.
+Initial investigation: 2026-10-27. Current policy: PRD 1.3.0, 2026-10-29. Sprint 5 evidence and Sprint 6's implemented bounded local-search contract are recorded below. Offline and real-call checks passed; final review is pending.
 
 ## Decision and scope
 
-G0/full G1 have not been re-accepted for general operation; their prior BLOCKED decision is not automatically replaced by S5.01. Runtime access is no longer wholly unverified: the three bounded observations below succeeded. Under PRD 1.1.3 / DEC-017, the maintainer accepts the official descriptions of O3/O4/O5 as sufficient evidence of their intended query semantics. The documentation does not explicitly guarantee absence of internal effects; that is a recorded residual risk, not proof of a write. GET is not a prerequisite and commercial mutation remains prohibited. The completed field observation does not authorize ongoing calls or release tools.
+G0/G1 PASS only for products/page-limit and the approved bounded local-search implementation of Sprint 6. This scoped review uses accepted query intent, verified offline safeguards and real S5.01 token/TLS evidence, not a new undefined general-release gate. Under DEC-017, the maintainer accepts O3/O4/O5 as sufficient evidence of intended query semantics. The documentation does not explicitly guarantee absence of internal effects; that remains a residual risk, not proof of a write. GET is not a prerequisite and commercial mutation remains prohibited. No MCP tool is approved or registered; price/stock consumers and additional filters are not released by this decision.
 
 Bounded remote field observations: all three method/path pairs below, each with page=1 and limit=1, on 2026-10-29. Approved MCP commercial tools: none. Under DEC-018 the three method/path pairs are implemented in an internal allowlist with only page/limit filters; this is not permission for ongoing requests or tool registration. The original investigation used anonymous documentation only; the subsequent explicitly authorized S5.01 observation used the existing token through the loader without displaying credentials or logging in. This checkout remains NOT_READY, not FOUNDATION_READY or V1_COMPLETE.
 
 | Candidate method | Literal path | Evidence | Policy status |
 |---|---|---|---|
-| POST | `/app-web/api/v2/produto/reduzidos` | L2, O3 and S5.01 observation | FIELD_OBSERVED; no general/tool release |
+| POST | `/app-web/api/v2/produto/reduzidos` | L2, O3, S5.01 and S6.13 observations | BOUNDED_LOCAL_SEARCH_VALIDATED; no MCP registration |
 | POST | `/app-web/api/v2/produto/precos` | O5 and S5.01 observation | FIELD_OBSERVED; no general/tool release |
 | POST | `/app-web/api/v2/produto/estoque` | L2, O4 and S5.01 observation | FIELD_OBSERVED; no general/tool release |
 
@@ -135,7 +135,7 @@ Call `as_json()` to serialize: Decimal values become strings (scientific notatio
 
 ### Pagination and data universe
 
-- `_collect(operation, *, page_size=None)` is private, starts at page 1, and uses one fixed limit throughout. Default page size is min(50, configured max_results), a local choice, not a provider quota. No arbitrary filters or resume cursor are accepted.
+- `_collect(operation, *, page_size=None, max_results=None)` is private, starts at page 1, and uses one fixed limit throughout. Sprint 6 adds an optional per-call row budget (strict integer 1–1000), capped by configuration without shared-state mutation. Default page size is min(50, effective row budget), a local choice, not a provider quota; omitted budget preserves the prior default. Explicit page_size must fit that budget. No arbitrary filters or resume cursor are accepted.
 - `NETONE_MAX_PAGES` and `NETONE_MAX_RESULTS` apply to the whole collection. The row budget counts received rows before deduplication. If the remaining budget cannot accommodate another full fixed-size page, stop partial instead of shrinking limit and potentially changing page offsets. This can leave unused row capacity. No page/result ceiling can be disabled by the caller.
 - A whole-collection deadline uses four configured phase-timeout seconds, as does each request; response cleanup may add at most the existing one-second shielded allowance. No automatic POST replay or wait/retry is added for Retry-After.
 - Require valid integer page/totalPages for a complete traversal; validate optional totalElements when present. Missing metadata stops as partial, even for a short or empty page. Explicit null/invalid/changing/contradictory metadata is invalid_response. No total is synthesized from `total`, whose semantics are not established, or from a page's length.
@@ -183,6 +183,92 @@ does not prove the full universe, snapshot consistency, cross-endpoint
 identity, monetary currency, stock deposit identity, timestamp semantics,
 or absence of undisclosed server effects. No joins or tools were added.
 
+## Sprint 6: approved bounded local search contract
+
+The maintainer approved local textual search, the implementation plan and
+delegated execution. This approval is limited to the product query path;
+it does not register an MCP tool or approve price/stock consumers. The
+function is implemented and verified offline and through the real guarded
+path below; final review is pending.
+
+The current rendered O3 article was reread anonymously on 2026-10-29.
+It documents POST `/app-web/api/v2/produto/reduzidos`, page (default 1),
+limit, ID arrays, mascara, timestamp and classification/category flags.
+It does not document a description/query text filter. Only page/limit
+will be sent by Sprint 6. Other published filters remain unsupported by
+the client; documentation is not an instruction to forward them.
+
+The selected application interface is
+`await tools.search_products(client, query, max_results=20)`, where client
+is the existing trusted process-owned NetOneClient, not a model argument.
+It returns JSON-compatible data without registering anything in MCP;
+registration remains Sprint 9. The input contract is:
+
+- query: a string of 1–200 characters before strip, nonempty after strip,
+  without Unicode C-category characters (Cc/Cf/Cs/Co/Cn). Leading/trailing input
+  whitespace is ignored for matching, not removed from source records.
+- Local literal substring matching with casefold over description,
+  product_mask and sku. No regex, accent folding, semantic search,
+  exact-code claim, or undocumented ERP text filter.
+- max_results: strict integer 1–1000, default 20, capped by configured
+  NETONE_MAX_RESULTS. This is a received-row inspection budget, including
+  nonmatches and duplicates, not a promise of that many matching items.
+- Page size min(50, effective row budget), kept fixed throughout traversal.
+  Existing page/deadline/response-size bounds still apply. These are local
+  conservative ceilings, not provider quotas.
+- Only POST `/app-web/api/v2/produto/reduzidos` with a closed JSON body
+  containing integer page and limit; same token header, origin, guard,
+  verified TLS, identity encoding, zero retries and no redirects/fallback.
+
+The output retains QueryResult's projection and collection metadata.
+items/returned_count describe matches; rows_received counts all inspected
+source rows. A fixed local_text_search warning discloses local matching.
+Completed collection gives found or not_found according to matches.
+Incomplete/conflicting collection remains partial even without matches;
+an initial collection error remains error. Errors after useful source rows
+remain partial even if none of those rows matches. Empty matching items
+never conceal authentication, permission, timeout or endpoint failures.
+complete_dataset describes only the traversed, provider-visible endpoint
+universe, not a full ERP catalog or consistent snapshot.
+
+Per-operation prerequisite review: DEC-017 already accepts the official
+query purpose with residual risk of undisclosed internal effects. S5.01
+establishes successful product page/limit responses through the token and
+verified TLS, accepted normalization and first-page metadata. Current
+Python 3.14.3, installed dependency consistency and the 51-test offline
+configuration/guard/secrecy/lifecycle suite were verified before Sprint 6.
+Those facts support the approved bounded product-search implementation;
+neither a clean install nor broad account permissions is a written G0/G1
+prerequisite for this narrow operation. New filters, remote multi-page
+behavior, the public search path and MCP registration are distinct checks.
+
+### S6.13 real application-search evidence — 2026-10-29
+
+After the controller independently reran all 74 offline tests and pip
+check successfully, the managed-scratch probe started at 17:25:28 UTC.
+It loaded private configuration in memory and issued exactly the two
+authorized product requests, both page=1/limit=1. Both returned HTTP 200.
+The first supplied a term in memory; the second was performed by the
+actual tools.search_products function with max_results=1. No term,
+identity, description, price, source timestamp, private origin, credential
+or raw response was retained. No login or token regeneration occurred.
+
+Observed application result: one fetched page, one received row, one
+matching item, status=partial, partial=true, complete_dataset=false and
+error=null. local_text_search was present, JSON serialization succeeded,
+and normalized identity matched the discovery sample in memory. This is
+the correct result for a budget-limited sample, not a full-catalog claim.
+Response cleanup completed through the existing query path; client
+cleanup completed before the probe reported success. Guard, TLS, identity,
+byte/deadline caps, zero retries and no redirects remained enabled.
+
+This validates the public application function on a real single-page
+sample. Remote multi-page traversal, all nullable variants, negative
+search results, error responses and snapshot consistency were not tested
+against the installation; relevant partial/error cases have offline
+transport-backed regression evidence. No remaining request budget or
+ongoing agent authorization is inferred from this completed observation.
+
 ## Refactor transport and diagnostics (PRD 1.2.0)
 
 The client builds a request with `build_request()` and sends it with `send(stream=True)`. It explicitly iterates the public `response.stream` AsyncByteStream protocol so the first `aclose()` starts inside its bounded AnyIO shield; it does not use `aiter_raw()` auto-close outside that shield or write `is_stream_consumed`/other HTTPX state. There is no new streaming abstraction. Identity encoding, the 1,048,576-byte raw body limit and exact JSON/Decimal parsing remain unchanged.
@@ -195,7 +281,7 @@ The server formatter emits only `level=<...> component=mcp|httpx|httpcore|librar
 
 ## Gate record and unblock request
 
-Current decision: DEC-017 accepts O3/O4/O5 as evidence of query purpose, with the residual limitation described above. S0.11 records that documentary review, not proof of server internals. The separately authorized S5.01 observation supplies bounded runtime field evidence. G0/full G1 still require an explicit acceptance review for general operation; no general release is inferred from completing Sprint 5. Commercial MCP tools remain absent.
+Current decision: DEC-017 accepts query purpose with the residual limitation above. S5.01 and S6.13 supply real field/token/TLS and public-search evidence. The approved Sprint 6 design/plan authorized implementation and the completed two-request observation. G0/G1 PASS for products/page-limit only; commercial MCP tools remain absent, and no price/stock consumer or additional remote filter is released. Final review is pending.
 
 Owner: maintainer, with NetOne support where the contract is ambiguous. Required next evidence:
 

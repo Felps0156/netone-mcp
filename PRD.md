@@ -1,12 +1,14 @@
 # PRD — NetOne MCP: Consulta e Análise Read-Only
 
-> **Versão:** 1.2.1 — evidência operacional delimitada de S5.01 em 29/10/2026
-> **Estado:** NOT_READY / COMMERCIAL_API_BLOCKED; G0/G1 completos aguardam reaceite de liberação geral. Sprint 5 concluída; nenhuma tool comercial; Sprint 6 não iniciada.
+> **Versão:** 1.3.0 — pesquisa textual local limitada autorizada em 29/10/2026
+> **Estado:** NOT_READY; Sprint 5 concluída; tarefas da Sprint 6 implementadas e verificadas, revisão final pendente. G0/G1 PASS no escopo produtos/page-limit conforme evidências registradas; nenhuma tool MCP comercial registrada.
 > **Regra fundamental:** nenhuma operação pode alterar dados comerciais do ERP.
 
 Este documento é a fonte de verdade para escopo, arquitetura, critérios e checklist. A revisão 1.2.0 substituiu restrições históricas de testes, Git somente leitura e frameworks obrigatórios. A revisão 1.2.1 registra autorização posterior explícita para leitura em memória da configuração e até três consultas de S5.01, sem exposição de segredos. Produtos/preços/estoque responderam com page=1 e limit=1; normalização e metadados das amostras aceitos. S5.01 e Sprint 5 concluídas, com 51 testes offline novamente aprovados. Não houve login, renovação, alteração do `.env`, novas tools ou avanço para Sprint 6. A autorização pontual não libera chamadas contínuas; evidências e limites em docs/runbook.md.
 
-Histórico integral: [PRD 1.1.6](docs/history/PRD-1.1.6.md) e [runbook até 1.1.6](docs/history/runbook-through-1.1.6.md). Esses arquivos preservam decisões/evidências e regras da época, não políticas atuais. `AGENTS.md` foi reconciliado com esta versão após renovação da aprovação da edição protegida; o timeout anterior foi resolvido, conforme registro no runbook.
+A revisão 1.3.0 registra a autorização explícita para executar somente a Sprint 6, com desenho/plano aprovados: pesquisa textual local e limitada sobre produtos, sem filtro textual remoto inventado, sem registro MCP e sem iniciar Sprints 7–9. Implementação verificada por 74 testes offline e duas consultas reais adicionais de produtos page=1/limit=1, ambas HTTP 200; a função retornou um match parcial corretamente. Valores privados permaneceram somente em memória. Os critérios escritos de G0/G1 são reavaliados por operação com a evidência existente, não por um novo requisito genérico de reaceite, instalação limpa ou permissões amplas. Revisão final pendente.
+
+Histórico integral: [PRD 1.1.6](docs/history/PRD-1.1.6.md) e [runbook até 1.1.6](docs/history/runbook-through-1.1.6.md). Esses arquivos preservam decisões/evidências e regras da época, não políticas atuais. O timeout anterior da edição protegida foi resolvido, conforme registro no runbook.
 
 ## 1. Visão Geral do Produto
 
@@ -29,7 +31,7 @@ Fora do escopo: qualquer cadastro/alteração/exclusão/reserva/movimentação, 
 
 Testes unitários e integração simulada são permitidos; usar `unittest` e respostas sintéticas, sem `.env` ou ERP. Inspeção Git somente leitura é permitida pela política; comandos que alteram versão/branch ou publicam exigem autorização. Nesta execução delegada não executar Git nem editar `.git`.
 
-G0 separa finalidade documental aceita de validação operacional. A autorização offline das Sprints 0–5 não libera chamadas reais, ferramentas ou Sprint 6. A exceção posterior de S5.01 forneceu evidência de acesso pelo token existente e TLS verificado para três amostras; não valida instalação limpa, permissões amplas ou libera operação geral. G0/G1 completos aguardam reaceite explícito com esse novo escopo de evidência.
+G0 separa finalidade documental aceita de validação operacional. A autorização offline das Sprints 0–5 não liberou chamadas reais ou ferramentas. S5.01 acrescentou evidência de acesso pelo token existente e TLS verificado. A autorização posterior da Sprint 6 libera a implementação de pesquisa local limitada e até duas consultas reais de validação, não login, varredura ampla ou registro MCP. G0/G1 PASS aplicam-se somente ao contrato produtos/page-limit já observado; não aprovam filtros adicionais, permissões amplas ou outras capacidades comerciais. Instalação limpa é aceite futuro de S13.02, não pré-requisito adicional inventado para este recorte.
 
 ## 4. Público-Alvo e Jornadas
 
@@ -61,7 +63,7 @@ flowchart LR
 - `server.py`: valida antes do stdio, `create_server(settings)` injeta um cliente privado por lifespan; não faz HTTP no startup. Registry vazio.
 - `client.py`: HTTPX único, autenticação, guarda de origem/método/rota/schema, streaming, limites, erros, paginação e fechamento.
 - `catalog.py`: modelos imutáveis e normalização consumida pela coleta privada; sem persistência ou join preço/estoque.
-- `tools.py`: somente fronteira documental; futuras tools exigem liberação própria.
+- `tools.py`: função assíncrona `search_products(client, query, max_results=20)` valida entrada e aplica substring casefold local à projeção normalizada; sem registro MCP nesta sprint. Não aceita configuração do operador como argumento do modelo.
 - `analysis.py`: futuro e opcional, somente para análise real que justifique módulo separado. Sem grafo/adapter fictício.
 
 ## 7. Adaptação dos Padrões do SCSI
@@ -95,7 +97,7 @@ A Sprint 0 reinspecionou o legado local por leitura e a [documentação oficial 
 | Autenticação por token de usuário | Artigo oficial confirma `netone-auth-token`; login `/app-web/api/v2/auth/login`, body `usuario`, `senha` | **POST somente para login** | Não se aplica | **DOCUMENTADO; execução não validada** |
 | OAuth / renovação de token | Não comprovados nas fontes inspecionadas; regeneração no ERP invalida token anterior | Não verificado | Não se aplica | **PENDENTE — não presumir** |
 
-**Resultado G0 para liberação geral: reaceite pendente; decisão anterior BLOCKED não promovida automaticamente.** A revisão 1.1.3 aceita a finalidade de consulta documentada para os três POSTs centrais, sem afirmar prova de ausência de efeitos internos. Em 29/10/2026, S5.01 acrescentou três consultas reais delimitadas bem-sucedidas, não liberação contínua nem de tools. Os sete POSTs auxiliares continuam apenas inventariados, fora da admissão restrita.
+**Resultado G0: PASS para produtos com body page/limit e pesquisa textual local limitada da Sprint 6.** Evidência: finalidade de consulta de O3 aceita em DEC-017, contrato literal revisado, transporte/limites locais verificados offline e amostra real S5.01 bem-sucedida com token e TLS verificado. A autorização explícita da Sprint 6 permite implementar esse consumidor e a validação delimitada, sem afirmar ausência comprovada de efeitos internos não documentados. Preços/estoque continuam apenas com evidência de campos; os sete POSTs auxiliares permanecem inventariados. Nenhuma tool MCP é liberada por associação.
 
 ### 10.3 Inventário obrigatório por endpoint, para `docs/api-capabilities.md`
 
@@ -131,7 +133,7 @@ Em 27/10/2026 o responsável autorizou revisar a política GET-only para reutili
 - PUT, PATCH, DELETE, POSTs fora desta tabela e qualquer operação de escrita, reserva, movimentação ou sincronização mutável continuam proibidos. Os sete endpoints auxiliares inventariados não são liberados por associação; exigem nova decisão explícita de escopo e revisão individual. GET também exige evidência e allowlist antes de uso.
 - POST de consulta começa com **zero retries**, sem redirects automáticos e sem fallback de método/rota. Repetição automática só após comprovar segurança específica de repetição; timeout é erro, não autorização para reenviar.
 - DEC-018 autoriza allowlist interna restrita aos três candidatos antes da validação remota, não uma chamada real nem tool; ferramentas não verificadas permanecem ausentes. Não usar respostas falsas nem ocultar POST sob proxy GET.
-- Autenticação `/app-web/api/v2/auth/login` permanece separada, sem ferramenta MCP; não integra esta tabela comercial. A autorização da refatoração cobria apenas o recorte offline 0–5. A autorização posterior de S5.01 cobriu somente as três consultas delimitadas registradas, sem login, token rotation, ferramentas ou Sprint 6.
+- Autenticação `/app-web/api/v2/auth/login` permanece separada, sem ferramenta MCP; não integra esta tabela comercial. A autorização da refatoração cobria apenas o recorte offline 0–5. S5.01 autorizou as três consultas delimitadas registradas. A autorização posterior de Sprint 6 abrange pesquisa local de produtos e até duas consultas de validação page=1/limit=1, sem login, token rotation, filtros novos, registro MCP ou Sprints 7+.
 
 ## 11. Modelo de Domínio e Dados
 
@@ -352,6 +354,8 @@ DEC-021 — 1.2.0: refatoração incremental autorizada 0–5. Testes/mocks perm
 
 DEC-022 — 1.2.1: após autorização explícita, carregamento privado pelo loader e consulta única de produtos/preços/estoque com page=1 e limit=1, sem retries/redirects ou alteração de origem/rota. As três amostras reais confirmaram campos/presença/null/tipos e foram aceitas pelo normalizador e validador de metadados. Conclui apenas S5.01/Sprint 5; token existente suficiente, sem login/renovação, persistência de valores ou mudança do `.env` pelo agente. Custo/limite: uma amostra por operação não prova universo, snapshot, semântica temporal, depósito/moeda ou efeitos internos. G0/G1 geral dependem de reaceite explícito; tools e Sprint 6 não liberadas.
 
+DEC-023 — 1.3.0: mantenedor aprovou pesquisa textual local em páginas limitadas, desenho e plano, execução delegada/revisada e até duas consultas reais de produtos page=1/limit=1. Alternativa não escolhida: filtro remoto mascara, que não pesquisa descrição e ampliaria o schema fechado. Busca usa substring casefold em description/product_mask/sku; termo 1–200 caracteres sem controles Unicode, max_results inteiro estrito 1–1000/default 20 limitado também pela configuração. O orçamento conta linhas recebidas, inclusive não correspondentes/duplicatas; não promete esse número de matches. G0 PASS para a finalidade de produtos/page-limit conforme DEC-017 e prova S5.01; G1 PASS para Python 3.14.3, configuração/token/proteções já verificados nesse escopo. O reaceite genérico da revisão anterior deixa de ser pendência independente: permissões amplas e instalação limpa não são seus critérios escritos. Custos: busca limitada pode omitir matches fora da amostra, não remove acentos e não comprova snapshot/efeitos internos. Sem cache, join, LLM, filtro remoto novo, login ou registro MCP. A função de aplicação não equivale a tool descoberta; Sprints 7–9 permanecem não iniciadas.
+
 ## 26. Critérios de Aceite
 
 ### 26.1 Critérios globais
@@ -383,8 +387,8 @@ Se **não houver operação comercial read-only segura e validada**, o produto p
 
 | Fase | Sprints | Resultado esperado | Gate |
 |---|---|---|---|
-| **F1 — Investigação** | 0 | Contratos POST e evidência documental de consulta registrados conforme DEC-017 | **G0 geral aguarda reaceite após evidência delimitada S5.01, não por método** |
-| **F2 — Fundação** | 1–3 | Ambiente/configuração e cliente autenticável com ciclo de vida MCP implementados offline | **G1 completo aguarda reaceite; acesso real delimitado não comprova instalação limpa/permissões amplas** |
+| **F1 — Investigação** | 0 | Contratos POST e evidência documental de consulta registrados conforme DEC-017 | **G0 PASS somente para produtos/page-limit da Sprint 6; sem tool MCP** |
+| **F2 — Fundação** | 1–3 | Python/configuração/token/proteções validados, com prova real delimitada S5.01 | **G1 PASS nesse escopo; instalação limpa futura não presumida** |
 | **F3 — Integração segura** | 4–6 | Cliente HTTP, normalização, consulta read-only pelo método aprovado se liberada | **G2** |
 | **F3 — Sprint 5 concluída** | 5 | Normalização/paginação offline e campos reais observados em três consultas delimitadas | **S5.01 concluída; G0/G1 geral não promovidos, sem tool** |
 | **F4 — Ferramentas MCP** | 7–9 | Tools úteis, registro MCP, stdio, sem escrita | **G3** |
@@ -404,8 +408,8 @@ flowchart LR
 
 **Gates:**
 
-- **G0:** operação comercial read-only segura comprovada e validada pelo método documentado, ou bloqueio formal registrado; POST candidato não equivale a operação liberada. Após S5.01, há evidência real delimitada; reaceite para liberação geral ainda pendente, sem inferir aprovação de tools.
-- **G1:** Python, configuração, token e proteções de segredo validados.
+- **G0:** operação comercial read-only segura comprovada e validada pelo método documentado, ou bloqueio formal registrado; POST candidato não equivale a operação liberada. PASS para produtos/page-limit da Sprint 6, pela finalidade aceita DEC-017, contrato revisado, limites/guarda e validação S5.01; sem estender a outras capacidades ou tools MCP.
+- **G1:** Python, configuração, token e proteções de segredo validados. PASS no escopo produtos/page-limit: Python 3.14.3, validações/secrecy offline e acesso real S5.01 por token/TLS verificado. Não significa instalação limpa ou granularidade ampla de permissões.
 - **G2:** transporte não permite operações proibidas e produz erros consistentes.
 - **G3:** cliente MCP descobre somente tools liberadas e pode executá-las quando há endpoint comprovado.
 - **G4:** métricas só usam dados suficientes e relatam parcialidade; framework opcional se justificado.
@@ -414,7 +418,7 @@ flowchart LR
 
 ## 28. Sprints de Implementação em Checklist
 
-IDs/ordem e estados não relacionados são preservados da versão 1.1.6. Sprints 0–4 têm entregas offline/documentais registradas; Sprint 5 concluída em 29/10/2026, com S5.02–S5.14 offline e S5.01 real delimitada conforme DEC-022. S0.11 é revisão documental, não prova remota. G2 aceito offline; G0/G1 geral aguardam reaceite com a nova evidência. Nenhuma etapa 6+ foi iniciada. Evidências/autorizações/achados anteriores completos estão nos arquivos históricos.
+IDs/ordem e estados não relacionados são preservados da versão 1.1.6. Sprints 0–4 têm entregas offline/documentais registradas; Sprint 5 concluída em 29/10/2026, com S5.02–S5.14 offline e S5.01 real delimitada conforme DEC-022. S0.11 é revisão documental, não prova remota. G2 aceito offline; G0/G1 PASS no recorte produtos/page-limit para a Sprint 6 autorizada e em execução conforme DEC-023. Nenhuma etapa 7+ foi iniciada. Evidências/autorizações/achados anteriores completos estão nos arquivos históricos.
 
 Executar sequencialmente dentro do escopo autorizado, comprovar antes de marcar e manter tarefas condicionais bloqueadas. Commits são opcionais e dependem de autorização do responsável; não são unidade obrigatória de trabalho. Autorização de teste offline não libera consulta real nem tool.
 
@@ -556,24 +560,44 @@ Resumo estrutural sem valores em `docs/api-capabilities.md` e execução em
 ### Sprint 6 — Pesquisa de produtos autorizada
 
 **Objetivo:** primeira capacidade comercial end-to-end, **apenas com operação read-only liberada pelo método documentado**.
-- [ ] S6.01 — Verificar contrato de consulta de catálogo, semântica read-only e gates por operação; marcar bloqueio se evidência insuficiente, não apenas por ser POST.
-- [ ] S6.02 — Descrever o contrato real da operação de pesquisa.
-- [ ] S6.03 — Implementar validação de termo não vazio e tamanho máximo.
-- [ ] S6.04 — Implementar limite de resultados aceito pela consulta real, sem presumir quota oficial.
-- [ ] S6.05 — Mapear filtros que existam na API, sem inventar busca semântica.
-- [ ] S6.06 — Implementar recuperação de primeira página autorizada.
-- [ ] S6.07 — Implementar paginação limitada quando comprovada.
-- [ ] S6.08 — Normalizar IDs, descrição, SKU e campos disponíveis.
-- [ ] S6.09 — Garantir `not_found` para resposta vazia válida.
-- [ ] S6.10 — Garantir `error` para 401/403/timeout/5xx.
-- [ ] S6.11 — Garantir `partial` quando limite interromper a consulta.
-- [ ] S6.12 — Definir saída JSON-serializável e documentação da tool.
-- [ ] S6.13 — Realizar consulta manual autorizada, se permitido, sem logging de payload.
-- [ ] S6.14 — Registrar origem, método + rota + schema de consulta e evidência de segurança/validação usados.
+- [x] S6.01 — Verificar contrato de consulta de catálogo, semântica read-only e gates por operação; marcar bloqueio se evidência insuficiente, não apenas por ser POST.
+- [x] S6.02 — Descrever o contrato real da operação de pesquisa.
+- [x] S6.03 — Implementar validação de termo não vazio e tamanho máximo.
+- [x] S6.04 — Implementar limite de resultados aceito pela consulta real, sem presumir quota oficial.
+- [x] S6.05 — Mapear filtros que existam na API, sem inventar busca semântica.
+- [x] S6.06 — Implementar recuperação de primeira página autorizada.
+- [x] S6.07 — Implementar paginação limitada quando comprovada.
+- [x] S6.08 — Normalizar IDs, descrição, SKU e campos disponíveis.
+- [x] S6.09 — Garantir `not_found` para resposta vazia válida.
+- [x] S6.10 — Garantir `error` para 401/403/timeout/5xx.
+- [x] S6.11 — Garantir `partial` quando limite interromper a consulta.
+- [x] S6.12 — Definir saída JSON-serializável e documentação da tool.
+- [x] S6.13 — Realizar consulta manual autorizada, se permitido, sem logging de payload.
+- [x] S6.14 — Registrar origem, método + rota + schema de consulta e evidência de segurança/validação usados.
 
 **Entrega:** `search_products` utilizável, ou bloqueio documentado.  
 
 **Aceite:** busca nunca altera dados comerciais nem usa operação fora da allowlist; POST somente conforme seção 10.5; dados sintéticos não contam como execução real.
+
+**Evidência documental de S6.01/S6.02/S6.05/S6.14:** O3 relida no navegador
+em 29/10/2026; contrato de pesquisa local e filtros publicados/suportados
+separados em `docs/api-capabilities.md`, seção Sprint 6. Origem somente da
+configuração privada do operador, nunca publicada; método/rota/body literais
+e prova S5.01 com limites de segurança registrados.
+
+**Evidência de S6.03/S6.04/S6.06–S6.13:** função `tools.search_products`
+consome o coletor guardado com orçamento isolado por chamada; 74 testes
+offline passaram na execução do coordenador, incluindo termo/limites sem
+envio, paginação fixa/limitada, precisão/nulidade, vazio válido, erros antes
+e após dados, parcialidade sem matches e JSON. Paginação é documentada por
+O3 e exercitada em transporte simulado; percurso real multi-page não foi
+realizado nem presumido. Às 17:25:28 UTC de 29/10/2026, duas consultas reais
+autorizadas page=1/limit=1 deram HTTP 200; a segunda passou pela função com
+max_results=1 e retornou um match, status=partial, complete_dataset=false,
+error=null, identidade compatível em memória e cleanup completo. Termo,
+valores privados e respostas brutas não foram retidos. Evidências/limites
+em `docs/api-capabilities.md` e `docs/runbook.md`. Revisão final pendente;
+nenhuma tool MCP registrada ou tarefa 7+ executada.
 
 ### Sprint 7 — Detalhes, SKU e EAN
 
@@ -759,7 +783,7 @@ Resumo estrutural sem valores em `docs/api-capabilities.md` e execução em
 ## 29. Pendências e Próximas Decisões
 
 - S5.01 concluída: após correção local pelo operador e renovação da autorização, produtos/preços/estoque responderam a três consultas delimitadas em 29/10/2026. Campos reais confirmados em amostras sanitizadas; normalização/metadados aceitos. Falha anterior de configuração é histórica, não bloqueio atual. `.env` não alterado pelo agente; evidência em `docs/runbook.md` e `docs/api-capabilities.md`.
-- G0/G1 geral: revisar e aceitar o escopo de liberação usando a nova evidência de token/header e TLS verificado. Continuam pendentes instalação limpa do manifesto atual, granularidade de permissões e validações das capacidades além das três amostras; sem autorização contínua ou Sprint 6.
+- G0/G1 PASS somente no recorte produtos/page-limit da Sprint 6 aprovada. Implementação, 74 testes e pesquisa real delimitada verificados; revisão final pendente. Não estender a preços/estoque, filtros novos ou tools MCP. Instalação limpa permanece futuro aceite S13.02, e granularidade ampla de permissões segue desconhecida sem impedir a leitura já comprovada.
 - Conflitos documentais: nome de header gerado, stock IDs array, nomes/semântica timestamp, metadados/limites de paginação.
 - Identidade/unicidade, moeda/tabela, unidade/depósito e snapshot/visibilidade comercial permanecem desconhecidos.
 - Análise futura e necessidade de framework dependem de consumidor real e dados suficientes.

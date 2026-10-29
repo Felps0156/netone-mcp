@@ -2,7 +2,7 @@
 
 ## Current boundary
 
-PRD 1.2.1 records the completed Sprint 5. The original PRD 1.2.0 refactor authorization was offline only. The maintainer subsequently authorized configuration-loader access in memory and a bounded S5.01 observation; after the operator's local correction and renewed authorization, products/prices/stock each returned one record successfully. This supersedes the earlier configuration failure, not the limits of the original offline evidence. No login, token rotation, commercial tool or Sprint 6 was performed. The registry is empty. G0/full G1 require explicit acceptance for general release; three samples are not ongoing authorization or complete installation readiness.
+PRD 1.3.0 records Sprint 5 complete and Sprint 6 implemented/verified with final review pending. Product query intent, offline safeguards and real token/TLS evidence satisfy G0/G1 for products/page-limit only; clean installation and broad permissions are not additional prerequisites for that narrow operation. The registry remains empty. The two specifically authorized page=1/limit=1 requests were completed with HTTP 200 and sanitized evidence below; that budget is exhausted. No login, token rotation, new remote filter, full-catalog scan, MCP registration or later sprint was performed or authorized.
 
 Current behavior and limits: [configuration](configuration.md). Endpoint contracts, field mapping and unresolved provider ambiguities: [API inventory](api-capabilities.md). Canonical sprint IDs/states/sequence: [PRD section 28](../PRD.md#28-sprints-de-implementação-em-checklist).
 
@@ -155,6 +155,60 @@ common identity. No real multi-page traversal, full-catalog completeness,
 snapshot stability, deposit identity, currency, timestamp semantics,
 least-privilege granularity or undisclosed internal effects were proved.
 The existing header/token and verified TLS worked for these requests;
-G0/full G1 still require an explicit general-release acceptance review,
-not a claim that access remains wholly unverified. Tools, login, ongoing
-calls and Sprint 6 are not released by this result.
+At this historical S5.01 checkpoint, tools, login, ongoing calls and
+Sprint 6 were not released by that result. The subsequent explicit
+Sprint 6 authorization and scoped G0/G1 review are recorded above and
+in PRD DEC-023; they do not widen S5.01's observed facts.
+
+## Sprint 6 verification — 2026-10-29
+
+Scope: the approved [local-search design](superpowers/specs/2026-10-29-sprint-6-design.md)
+and [implementation plan](superpowers/plans/2026-10-29-sprint-6.md).
+The application entry is `await tools.search_products(client, query,
+max_results=20)` with a trusted process-owned client. It is not registered
+in MCP; discovery remains empty and startup still makes no ERP request.
+The contract and per-operation gate evidence are in the API inventory.
+
+The collector gained an optional strict per-call budget without changing
+shared state or defaults for existing callers. The application validates
+query/limit before HTTP, filters description/mask/SKU locally and preserves
+partial/error semantics and normalized precision. No production change to
+config.py, catalog.py, server.py or requirements.txt was needed.
+
+| Executed check | Observed result |
+|---|---|
+| Task 1 TDD: focused client suite before/after optional budget | RED: unsupported max_results; GREEN: 35 tests; full suite 59 PASS |
+| Task 1 independent spec/quality review | PASS / PASS; no findings |
+| Task 2 TDD: search suite before/after function | RED: 15 missing-function assertions; final GREEN: 15 tests |
+| Controller: `.venv/Scripts/python.exe -B -m unittest discover -s tests -v` | 74 tests PASS in 5.821s |
+| Controller: `.venv/Scripts/python.exe -m pip check` | No broken requirements found; no installation performed |
+
+Task 2's first post-implementation test run exposed fixture assumptions:
+a one-row response with fixed page size 20 does not allow another page
+when fewer than 20 budget rows remain. The error-path fixtures now use
+budget 100, while the configuration-cap case isolates max_pages=1. The
+production pagination rules were not loosened to satisfy those fixtures.
+
+Real command: `.venv/Scripts/python.exe -B <managed-scratch>/netone_s6_real.py`.
+Started at 17:25:28 UTC. The loader read private configuration in memory,
+without displaying or modifying the file. Two application POSTs went to
+`/app-web/api/v2/produto/reduzidos`, each JSON page=1/limit=1; both returned
+HTTP 200. The first discovered a term in memory; the second used the actual
+public search function with max_results=1. They were independent planned
+queries, not an automatic retry. Existing guards remained installed; the
+probe added a stricter two-send/page1/limit1 observation hook only.
+
+Observed function output: pages_fetched=1, rows_received=1,
+returned_count=1, status=partial, partial=true, complete_dataset=false,
+error=null, local_text_search present and JSON serialization accepted.
+Identity matched the first sample in memory. Response and client cleanup
+completed. No source term, IDs, values, descriptions, origin, credentials,
+raw upstream error or response was retained in repository/scratch output.
+There was no login, token regeneration, redirect, retry or TLS bypass.
+
+Limits: no real multi-page traversal, negative result, permission failure,
+timeout, rate limit or snapshot consistency test was attempted. Offline
+regressions cover bounded pagination and error/empty/partial distinctions;
+they do not become remote evidence. Even a completed endpoint traversal
+remains subject to provider ecommerce/price-table visibility. Final task
+review and whole-change review are pending; later sprints remain untouched.

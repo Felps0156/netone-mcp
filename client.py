@@ -253,17 +253,27 @@ class NetOneClient:
 
     async def _collect(
         self, operation: str, *, page_size: int | None = None,
+        max_results: int | None = None,
     ) -> QueryResult:
         """Collect internally; this does not authorize real calls or tools.
 
-        The row budget counts received rows, including duplicates. Only
+        The optional row budget is capped by configuration and stays local
+        to this call. It counts received rows, including duplicates. Only
         page/limit enter the existing guarded POST path. No resume cursor,
         tenant, arbitrary filter, URL or method is accepted.
         """
         if operation not in _QUERY_PATHS:
             raise BlockedOperationError()
-        size = min(50, self._max_results) if page_size is None else page_size
-        _validate_query(1, size, self._max_results)
+        if max_results is not None and (
+            type(max_results) is not int or not 1 <= max_results <= 1000
+        ):
+            raise BlockedOperationError()
+        budget = (
+            self._max_results if max_results is None
+            else min(max_results, self._max_results)
+        )
+        size = min(50, budget) if page_size is None else page_size
+        _validate_query(1, size, budget)
         items: list[CatalogRecord] = []
         seen: dict[tuple[str | None, str], list[dict[str, object]]] = {}
         warnings: list[str] = []
@@ -283,7 +293,7 @@ class NetOneClient:
             nonlocal total_elements, complete
             for page in range(1, self._max_pages + 1):
                 # Changing limit mid-traversal can change offset semantics.
-                if self._max_results - rows_received < size:
+                if budget - rows_received < size:
                     warn('result_limit_reached')
                     return
                 limit = size
@@ -336,7 +346,7 @@ class NetOneClient:
                 if page >= pages:
                     complete = True
                     return
-                if rows_received >= self._max_results:
+                if rows_received >= budget:
                     warn('result_limit_reached')
                     return
             warn('page_limit_reached')

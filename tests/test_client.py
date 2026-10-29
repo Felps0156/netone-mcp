@@ -305,6 +305,152 @@ class ClientTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(result.rows_received, 2)
         self.assertIn('result_limit_reached', result.warnings)
 
+    async def test_per_call_budget_one_bounds_default_request(self):
+        self.handler = lambda request: response([row()], 1, 2)
+        result = await self.client._collect('products', max_results=1)
+        self.assertEqual(
+            [json.loads(request.content) for request in self.requests],
+            [{'page': 1, 'limit': 1}],
+        )
+        self.assertEqual(result.rows_received, 1)
+        self.assertEqual(len(result.items), 1)
+        self.assertTrue(result.partial)
+        self.assertFalse(result.complete_dataset)
+        self.assertIn('result_limit_reached', result.warnings)
+        self.assertEqual(self.client._max_results, 100)
+
+    async def test_per_call_budget_rejects_invalid_values_without_send(self):
+        class IntegerSubclass(int):
+            pass
+
+        for budget in (True, False, 0, -1, 1001, 1.0, '1',
+                       Decimal('1'), IntegerSubclass(1)):
+            with self.subTest(budget=budget):
+                with self.assertRaises(BlockedOperationError):
+                    await self.client._collect(
+                        'products', max_results=cast(Any, budget),
+                    )
+        self.assertEqual(self.requests, [])
+        self.assertEqual(self.client._max_results, 100)
+
+    async def test_per_call_budget_is_capped_by_configuration(self):
+        configured = settings(max_results=2)
+        instance = NetOneClient(configured)
+        self.addAsyncCleanup(instance.aclose)
+        self.handler = lambda request: response([row('001'), row('002')], 1, 2)
+        result = await instance._collect('products', max_results=1000)
+        self.assertEqual(
+            [json.loads(request.content) for request in self.requests],
+            [{'page': 1, 'limit': 2}],
+        )
+        self.assertEqual(result.rows_received, 2)
+        self.assertIn('result_limit_reached', result.warnings)
+        self.assertEqual(instance._max_results, 2)
+        self.assertEqual(configured.max_results, 2)
+
+    async def test_per_call_budget_keeps_fixed_page_size(self):
+        def pages(request):
+            page = json.loads(request.content)['page']
+            return response(
+                [row(f'{page}01'), row(f'{page}02')], page, 3,
+            )
+
+        self.handler = pages
+        result = await self.client._collect(
+            'products', page_size=2, max_results=5,
+        )
+        self.assertEqual(
+            [json.loads(request.content) for request in self.requests],
+            [{'page': 1, 'limit': 2}, {'page': 2, 'limit': 2}],
+        )
+        self.assertEqual(result.rows_received, 4)
+        self.assertEqual(len(result.items), 4)
+        self.assertIn('result_limit_reached', result.warnings)
+        self.assertFalse(result.complete_dataset)
+
+    async def test_per_call_budget_counts_duplicate_received_rows(self):
+        self.handler = lambda request: response([row(), row()], 1, 2)
+        result = await self.client._collect(
+            'products', page_size=2, max_results=3,
+        )
+        self.assertEqual(len(self.requests), 1)
+        self.assertEqual(result.rows_received, 2)
+        self.assertEqual(len(result.items), 1)
+        self.assertIn('duplicate_rows_removed', result.warnings)
+        self.assertIn('result_limit_reached', result.warnings)
+
+    async def test_page_size_must_fit_per_call_budget_without_send(self):
+        for size in (True, 0, 2, '1'):
+            with self.subTest(page_size=size):
+                with self.assertRaises(BlockedOperationError):
+                    await self.client._collect(
+                        'products', page_size=cast(Any, size), max_results=1,
+                    )
+        self.assertEqual(self.requests, [])
+
+    async def test_none_budget_preserves_default_collection(self):
+        for kwargs in ({}, {'max_results': None}):
+            with self.subTest(kwargs=kwargs):
+                result = await self.client._collect('products', **kwargs)
+                self.assertTrue(result.complete_dataset)
+        self.assertEqual(
+            [json.loads(request.content) for request in self.requests],
+            [{'page': 1, 'limit': 50}, {'page': 1, 'limit': 50}],
+        )
+        self.assertEqual(self.client._max_results, 100)
+
+    async def test_concurrent_budgets_are_isolated_on_original_client(self):
+        both_started = anyio.Event()
+        started = 0
+        results = {}
+        original_http = self.client._http
+
+        class OverlappingStream(Stream):
+            async def __aiter__(self):
+                nonlocal started
+                started += 1
+                if started == 2:
+                    both_started.set()
+                await both_started.wait()
+                async for chunk in super().__aiter__():
+                    yield chunk
+
+        def pages(request):
+            limit = json.loads(request.content)['limit']
+            envelope = {
+                'result': [row(str(index)) for index in range(limit)],
+                'page': 1, 'totalPages': 2,
+            }
+            return httpx.Response(200, stream=OverlappingStream(
+                json.dumps(envelope).encode(),
+            ))
+
+        async def collect(budget):
+            results[budget] = await self.client._collect(
+                'products', max_results=budget,
+            )
+
+        self.handler = pages
+        with anyio.fail_after(2):
+            async with anyio.create_task_group() as group:
+                group.start_soon(collect, 1)
+                group.start_soon(collect, 2)
+        self.assertEqual(results[1].rows_received, 1)
+        self.assertEqual(results[2].rows_received, 2)
+        self.assertEqual(
+            sorted(json.loads(request.content)['limit']
+                   for request in self.requests),
+            [1, 2],
+        )
+        self.assertTrue(all(stream.closed for stream in self.streams))
+        self.assertEqual(self.client._max_results, 100)
+        self.assertIs(self.client._http, original_http)
+        self.handler = lambda request: response([row()])
+        await self.client._collect('products')
+        self.assertEqual(
+            json.loads(self.requests[-1].content), {'page': 1, 'limit': 50},
+        )
+
     async def test_phase_timeout_and_redirect_policy(self):
         self.assertEqual(self.client._http.timeout, httpx.Timeout(15))
         self.assertFalse(self.client._http.follow_redirects)
