@@ -4,7 +4,7 @@ A Python MCP stdio foundation for authorized, strictly read-only NetOne ERP quer
 
 ## Current status
 
-**NOT_READY. No MCP commercial tools are registered.** Sprint 5 is complete. Sprint 6's bounded local search is implemented and passed offline and real-call checks; final review is pending. G0/G1 PASS only for the product page/limit operation, based on accepted query intent, transport safeguards and real token/TLS evidence. Later sprints remain unstarted; this is not V1 completion.
+**NOT_READY for V1. No MCP commercial tools are registered.** Sprints 5 and 6 are complete. Sprint 6's bounded local search passed 74 offline tests, real-call checks and independent reviews; both non-blocking review findings were corrected. G0/G1 PASS only for the product page/limit operation, based on accepted query intent, transport safeguards and real token/TLS evidence. Later sprints remain unstarted.
 
 The private client implements three documented query POSTs with fixed origin/Host and closed `page`/`limit` filters. Construction and startup make no ERP request. `tools.search_products` is callable application functionality, not an MCP registration. Its explicitly authorized two-request Sprint 6 observation returned HTTP 200 twice, including one matching item through the function with correct partiality. No login or environment-file modification was needed. See the [sanitized evidence and limits](docs/api-capabilities.md); bounded samples do not prove complete pagination, all permissions or general readiness.
 

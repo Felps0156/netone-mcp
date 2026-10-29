@@ -1,6 +1,6 @@
 # NetOne API capability evidence
 
-Initial investigation: 2026-10-27. Current policy: PRD 1.3.0, 2026-10-29. Sprint 5 evidence and Sprint 6's implemented bounded local-search contract are recorded below. Offline and real-call checks passed; final review is pending.
+Initial investigation: 2026-10-27. Current policy: PRD 1.3.0, 2026-10-29. Sprint 5 evidence and Sprint 6's completed bounded local-search contract are recorded below. Offline and real-call checks and independent reviews passed; both non-blocking review findings were corrected.
 
 ## Decision and scope
 
@@ -189,7 +189,8 @@ The maintainer approved local textual search, the implementation plan and
 delegated execution. This approval is limited to the product query path;
 it does not register an MCP tool or approve price/stock consumers. The
 function is implemented and verified offline and through the real guarded
-path below; final review is pending.
+path below. Independent task and whole-change reviews passed without
+Critical/Important findings; final regression and scope audit passed.
 
 The current rendered O3 article was reread anonymously on 2026-10-29.
 It documents POST `/app-web/api/v2/produto/reduzidos`, page (default 1),
@@ -281,7 +282,7 @@ The server formatter emits only `level=<...> component=mcp|httpx|httpcore|librar
 
 ## Gate record and unblock request
 
-Current decision: DEC-017 accepts query purpose with the residual limitation above. S5.01 and S6.13 supply real field/token/TLS and public-search evidence. The approved Sprint 6 design/plan authorized implementation and the completed two-request observation. G0/G1 PASS for products/page-limit only; commercial MCP tools remain absent, and no price/stock consumer or additional remote filter is released. Final review is pending.
+Current decision: DEC-017 accepts query purpose with the residual limitation above. S5.01 and S6.13 supply real field/token/TLS and public-search evidence. The approved Sprint 6 design/plan authorized implementation and the completed two-request observation. G0/G1 PASS for products/page-limit only; commercial MCP tools remain absent, and no price/stock consumer or additional remote filter is released. Sprint 6 is complete with independent review and final regression/scope audit accepted.
 
 Owner: maintainer, with NetOne support where the contract is ambiguous. Required next evidence:
 

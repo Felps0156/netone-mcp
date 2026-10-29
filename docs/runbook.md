@@ -2,7 +2,7 @@
 
 ## Current boundary
 
-PRD 1.3.0 records Sprint 5 complete and Sprint 6 implemented/verified with final review pending. Product query intent, offline safeguards and real token/TLS evidence satisfy G0/G1 for products/page-limit only; clean installation and broad permissions are not additional prerequisites for that narrow operation. The registry remains empty. The two specifically authorized page=1/limit=1 requests were completed with HTTP 200 and sanitized evidence below; that budget is exhausted. No login, token rotation, new remote filter, full-catalog scan, MCP registration or later sprint was performed or authorized.
+PRD 1.3.0 records Sprints 5 and 6 complete. Independent task and whole-change reviews passed without Critical/Important findings; both Minors were corrected and final checks passed. Product query intent, safeguards and real token/TLS evidence satisfy G0/G1 for products/page-limit only; clean installation and broad permissions are not additional prerequisites for that narrow operation. The registry remains empty. The two specifically authorized page=1/limit=1 requests were completed with HTTP 200 and sanitized evidence below; that budget is exhausted. No login, token rotation, new remote filter, full-catalog scan, MCP registration or later sprint was performed or authorized.
 
 Current behavior and limits: [configuration](configuration.md). Endpoint contracts, field mapping and unresolved provider ambiguities: [API inventory](api-capabilities.md). Canonical sprint IDs/states/sequence: [PRD section 28](../PRD.md#28-sprints-de-implementação-em-checklist).
 
@@ -180,8 +180,12 @@ config.py, catalog.py, server.py or requirements.txt was needed.
 | Task 1 TDD: focused client suite before/after optional budget | RED: unsupported max_results; GREEN: 35 tests; full suite 59 PASS |
 | Task 1 independent spec/quality review | PASS / PASS; no findings |
 | Task 2 TDD: search suite before/after function | RED: 15 missing-function assertions; final GREEN: 15 tests |
+| Task 2 independent spec/quality review | PASS / PASS; one non-blocking weak NBSP assertion |
+| Whole-change independent review | PASS for Sprint 6; no Critical/Important; two Minors: NBSP assertion and historical-checkpoint wording |
 | Controller: `.venv/Scripts/python.exe -B -m unittest discover -s tests -v` | 74 tests PASS in 5.821s |
 | Controller: `.venv/Scripts/python.exe -m pip check` | No broken requirements found; no installation performed |
+| Post-review targeted search suite | 15 PASS in 0.182s after asserting NBSP found/count/item |
+| Controller post-fix full suite, pip check and scope audit | 74 PASS in 4.857s; dependencies, scope, compilation, imports and links accepted |
 
 Task 2's first post-implementation test run exposed fixture assumptions:
 a one-row response with fixed page size 20 does not allow another page
@@ -210,5 +214,10 @@ Limits: no real multi-page traversal, negative result, permission failure,
 timeout, rate limit or snapshot consistency test was attempted. Offline
 regressions cover bounded pagination and error/empty/partial distinctions;
 they do not become remote evidence. Even a completed endpoint traversal
-remains subject to provider ecommerce/price-table visibility. Final task
-review and whole-change review are pending; later sprints remain untouched.
+remains subject to provider ecommerce/price-table visibility. Task and
+whole-change reviews passed; Minors corrected: the NBSP testcase now
+requires a matching item, and the prior 51-test checkpoint is explicitly
+historical in the PRD. Controller inspected the fixes and reran all 74
+tests, pip check and the public audit successfully. No Critical/Important
+or deferred Minor remains. Sprint 6 is accepted; later sprints remain
+untouched and V1/operator readiness remains NOT_READY.

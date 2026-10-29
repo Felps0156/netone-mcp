@@ -2,7 +2,7 @@
 
 ## Scope and current status
 
-Read `PRD.md` before architectural/sprint work. Sprint 5 is complete; Sprint 6 is explicitly authorized and in progress with an approved local-text-search design/plan. G0/G1 PASS only for products/page-limit using accepted query intent, offline safeguards and real S5.01 token/TLS evidence; no new general-reacceptance, broad-permission or clean-install prerequisite is imposed. The registry remains empty: a callable application function is not MCP registration, which belongs to Sprint 9. Only two additional product requests (page=1, limit=1) are authorized for Sprint 6 validation, with private configuration loaded in memory and sanitized evidence only. No login, token rotation, broader scan or Sprint 7+ is authorized. History archives are evidence from their time, not current policy.
+Read `PRD.md` before architectural/sprint work. Sprints 5 and 6 are complete; Sprint 6's bounded local-text-search function passed 74 offline tests, scoped real observation and independent reviews. G0/G1 PASS only for products/page-limit using accepted query intent, safeguards and real token/TLS evidence; no new general-reacceptance, broad-permission or clean-install prerequisite is imposed. The registry remains empty: a callable application function is not MCP registration, which belongs to Sprint 9. The authorized two additional product requests (page=1, limit=1) were completed; that validation budget is exhausted. No further ERP request, login, token rotation, broader scan or Sprint 7+ is authorized. History archives are evidence from their time, not current policy.
 
 ## Boundaries
 

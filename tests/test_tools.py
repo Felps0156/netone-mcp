@@ -126,6 +126,12 @@ class SearchProductsTests(unittest.IsolatedAsyncioTestCase):
             with self.subTest(length=len(query)):
                 result = await self.search(self.client, query)
                 self.assertIn(result['status'], ('found', 'not_found'))
+                if query == '\u00a0Match\u00a0':
+                    self.assertEqual(result['status'], 'found')
+                    self.assertEqual(result['returned_count'], 1)
+                    self.assertEqual(
+                        result['items'][0]['description'], 'Match',
+                    )
         self.assertEqual(len(self.requests), 3)
 
     async def test_budgets_are_capped_by_config_without_mutation(self):

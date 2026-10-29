@@ -1,12 +1,12 @@
 # PRD — NetOne MCP: Consulta e Análise Read-Only
 
 > **Versão:** 1.3.0 — pesquisa textual local limitada autorizada em 29/10/2026
-> **Estado:** NOT_READY; Sprint 5 concluída; tarefas da Sprint 6 implementadas e verificadas, revisão final pendente. G0/G1 PASS no escopo produtos/page-limit conforme evidências registradas; nenhuma tool MCP comercial registrada.
+> **Estado:** NOT_READY para V1; Sprints 5 e 6 concluídas. G0/G1 PASS no escopo produtos/page-limit conforme evidências registradas; nenhuma tool MCP comercial registrada.
 > **Regra fundamental:** nenhuma operação pode alterar dados comerciais do ERP.
 
 Este documento é a fonte de verdade para escopo, arquitetura, critérios e checklist. A revisão 1.2.0 substituiu restrições históricas de testes, Git somente leitura e frameworks obrigatórios. A revisão 1.2.1 registra autorização posterior explícita para leitura em memória da configuração e até três consultas de S5.01, sem exposição de segredos. Produtos/preços/estoque responderam com page=1 e limit=1; normalização e metadados das amostras aceitos. S5.01 e Sprint 5 concluídas, com 51 testes offline novamente aprovados. Não houve login, renovação, alteração do `.env`, novas tools ou avanço para Sprint 6. A autorização pontual não libera chamadas contínuas; evidências e limites em docs/runbook.md.
 
-A revisão 1.3.0 registra a autorização explícita para executar somente a Sprint 6, com desenho/plano aprovados: pesquisa textual local e limitada sobre produtos, sem filtro textual remoto inventado, sem registro MCP e sem iniciar Sprints 7–9. Implementação verificada por 74 testes offline e duas consultas reais adicionais de produtos page=1/limit=1, ambas HTTP 200; a função retornou um match parcial corretamente. Valores privados permaneceram somente em memória. Os critérios escritos de G0/G1 são reavaliados por operação com a evidência existente, não por um novo requisito genérico de reaceite, instalação limpa ou permissões amplas. Revisão final pendente.
+A revisão 1.3.0 registra a conclusão da Sprint 6 em 29/10/2026, com desenho/plano aprovados: pesquisa textual local e limitada sobre produtos, sem filtro textual remoto inventado, sem registro MCP e sem iniciar Sprints 7–9. Implementação verificada por 74 testes offline e duas consultas reais adicionais de produtos page=1/limit=1, ambas HTTP 200; a função retornou um match parcial corretamente. Valores privados permaneceram somente em memória. Os critérios escritos de G0/G1 são reavaliados por operação com a evidência existente, não por um novo requisito genérico de reaceite, instalação limpa ou permissões amplas. Revisões independentes por etapa e do conjunto aprovadas, sem achados críticos/importantes; dois achados menores corrigidos e regressão/auditoria finais aprovadas.
 
 Histórico integral: [PRD 1.1.6](docs/history/PRD-1.1.6.md) e [runbook até 1.1.6](docs/history/runbook-through-1.1.6.md). Esses arquivos preservam decisões/evidências e regras da época, não políticas atuais. O timeout anterior da edição protegida foi resolvido, conforme registro no runbook.
 
@@ -418,7 +418,7 @@ flowchart LR
 
 ## 28. Sprints de Implementação em Checklist
 
-IDs/ordem e estados não relacionados são preservados da versão 1.1.6. Sprints 0–4 têm entregas offline/documentais registradas; Sprint 5 concluída em 29/10/2026, com S5.02–S5.14 offline e S5.01 real delimitada conforme DEC-022. S0.11 é revisão documental, não prova remota. G2 aceito offline; G0/G1 PASS no recorte produtos/page-limit para a Sprint 6 autorizada e em execução conforme DEC-023. Nenhuma etapa 7+ foi iniciada. Evidências/autorizações/achados anteriores completos estão nos arquivos históricos.
+IDs/ordem e estados não relacionados são preservados da versão 1.1.6. Sprints 0–4 têm entregas offline/documentais registradas; Sprint 5 concluída em 29/10/2026, com S5.02–S5.14 offline e S5.01 real delimitada conforme DEC-022. S0.11 é revisão documental, não prova remota. G2 aceito offline; G0/G1 PASS no recorte produtos/page-limit da Sprint 6 concluída conforme DEC-023. Nenhuma etapa 7+ foi iniciada. Evidências/autorizações/achados anteriores completos estão nos arquivos históricos.
 
 Executar sequencialmente dentro do escopo autorizado, comprovar antes de marcar e manter tarefas condicionais bloqueadas. Commits são opcionais e dependem de autorização do responsável; não são unidade obrigatória de trabalho. Autorização de teste offline não libera consulta real nem tool.
 
@@ -596,8 +596,11 @@ autorizadas page=1/limit=1 deram HTTP 200; a segunda passou pela função com
 max_results=1 e retornou um match, status=partial, complete_dataset=false,
 error=null, identidade compatível em memória e cleanup completo. Termo,
 valores privados e respostas brutas não foram retidos. Evidências/limites
-em `docs/api-capabilities.md` e `docs/runbook.md`. Revisão final pendente;
-nenhuma tool MCP registrada ou tarefa 7+ executada.
+em `docs/api-capabilities.md` e `docs/runbook.md`. Revisões independentes por
+etapa e do conjunto aprovadas, sem achados críticos/importantes; os dois
+menores foram corrigidos. Regressão final: 74 testes PASS em 4.857s, pip
+check e auditoria de escopo/checklist/imports/links aprovados. S6.01–S6.14
+concluídas; nenhuma tool MCP registrada ou tarefa 7+ executada.
 
 ### Sprint 7 — Detalhes, SKU e EAN
 
@@ -783,13 +786,13 @@ nenhuma tool MCP registrada ou tarefa 7+ executada.
 ## 29. Pendências e Próximas Decisões
 
 - S5.01 concluída: após correção local pelo operador e renovação da autorização, produtos/preços/estoque responderam a três consultas delimitadas em 29/10/2026. Campos reais confirmados em amostras sanitizadas; normalização/metadados aceitos. Falha anterior de configuração é histórica, não bloqueio atual. `.env` não alterado pelo agente; evidência em `docs/runbook.md` e `docs/api-capabilities.md`.
-- G0/G1 PASS somente no recorte produtos/page-limit da Sprint 6 aprovada. Implementação, 74 testes e pesquisa real delimitada verificados; revisão final pendente. Não estender a preços/estoque, filtros novos ou tools MCP. Instalação limpa permanece futuro aceite S13.02, e granularidade ampla de permissões segue desconhecida sem impedir a leitura já comprovada.
+- G0/G1 PASS somente no recorte produtos/page-limit da Sprint 6 concluída. Implementação, 74 testes, pesquisa real delimitada e revisões independentes aprovados. Não estender a preços/estoque, filtros novos ou tools MCP. Instalação limpa permanece futuro aceite S13.02, e granularidade ampla de permissões segue desconhecida sem impedir a leitura já comprovada.
 - Conflitos documentais: nome de header gerado, stock IDs array, nomes/semântica timestamp, metadados/limites de paginação.
 - Identidade/unicidade, moeda/tabela, unidade/depósito e snapshot/visibilidade comercial permanecem desconhecidos.
 - Análise futura e necessidade de framework dependem de consumidor real e dados suficientes.
 - Licença/atribuição e outras plataformas/instalação limpa precisam de evidência aplicável.
 
-- Validação offline registrada no runbook: 51 testes passaram; uma falha importante de prioridade de exceções no cleanup, encontrada na revisão, foi reproduzida e corrigida. Sem segunda revisão independente, instalação limpa ou aceite remoto.
+- Checkpoint histórico anterior à Sprint 6: 51 testes offline passaram; uma falha importante de prioridade de exceções no cleanup, encontrada na revisão, foi reproduzida e corrigida. Naquele checkpoint não houve segunda revisão independente, instalação limpa ou aceite remoto. A Sprint 6 verificou a suíte total de 74 testes e acrescentou revisão independente por etapa e do conjunto, além da observação real delimitada de produtos; não comprova instalação limpa nem aceite amplo da V1.
 
 Mudança de escopo/segurança exige decisão relevante documentada antes da implementação e autorização quando amplia acesso; correção pequena não exige novo dossiê ou versão por arquivo.
 
