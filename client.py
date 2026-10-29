@@ -5,6 +5,7 @@ from decimal import Decimal, DecimalException
 import json
 import sys
 from types import TracebackType
+import unicodedata
 
 from anyio import fail_after, move_on_after
 import httpx
@@ -67,6 +68,24 @@ def _validate_query(page: object, limit: object, maximum: int) -> None:
     if (
         type(page) is not int or not 1 <= page <= 1_000_000
         or type(limit) is not int or not 1 <= limit <= maximum
+    ):
+        raise BlockedOperationError()
+
+
+def _validate_product_filter(
+    operation: str, product_id: object, product_mask: object = None,
+) -> None:
+    """Allow one typed ID or commercial-code filter on products only."""
+    if product_id is not None and (
+        operation != 'products' or type(product_id) is not int
+        or not 0 <= product_id <= 9223372036854775807
+    ):
+        raise BlockedOperationError()
+    if product_mask is not None and (
+        operation != 'products' or product_id is not None
+        or not isinstance(product_mask, str)
+        or not 1 <= len(product_mask) <= 256 or not product_mask.strip()
+        or any(unicodedata.category(c).startswith('C') for c in product_mask)
     ):
         raise BlockedOperationError()
 
@@ -223,16 +242,23 @@ class NetOneClient:
 
     async def _query(
         self, operation: str, page: int, limit: int,
+        *, product_id: int | None = None, product_mask: str | None = None,
     ) -> dict[str, object]:
         """Run a bounded internally selected query; never accept a URL."""
         path = _QUERY_PATHS.get(operation)
         if path is None:
             raise BlockedOperationError()
         _validate_query(page, limit, self._max_results)
+        _validate_product_filter(operation, product_id, product_mask)
+        body: dict[str, object] = {'page': page, 'limit': limit}
+        if product_id is not None:
+            body['idsProdutos'] = [product_id]
+        if product_mask is not None:
+            body['mascara'] = product_mask
         try:
             with fail_after(self._deadline):
                 request = self._http.build_request(
-                    'POST', path, json={'page': page, 'limit': limit},
+                    'POST', path, json=body,
                 )
                 response = await self._http.send(request, stream=True)
                 return await _read_json_response(response)
@@ -253,17 +279,20 @@ class NetOneClient:
 
     async def _collect(
         self, operation: str, *, page_size: int | None = None,
-        max_results: int | None = None,
+        max_results: int | None = None, product_id: int | None = None,
+        product_mask: str | None = None,
     ) -> QueryResult:
         """Collect internally; this does not authorize real calls or tools.
 
         The optional row budget is capped by configuration and stays local
         to this call. It counts received rows, including duplicates. Only
-        page/limit enter the existing guarded POST path. No resume cursor,
-        tenant, arbitrary filter, URL or method is accepted.
+        page/limit and one optional typed products-only filter enter the
+        guarded POST path. No resume cursor, tenant, arbitrary filter, URL
+        or method is accepted.
         """
         if operation not in _QUERY_PATHS:
             raise BlockedOperationError()
+        _validate_product_filter(operation, product_id, product_mask)
         if max_results is not None and (
             type(max_results) is not int or not 1 <= max_results <= 1000
         ):
@@ -297,7 +326,10 @@ class NetOneClient:
                     warn('result_limit_reached')
                     return
                 limit = size
-                envelope = await self._query(operation, page, limit)
+                envelope = await self._query(
+                    operation, page, limit, product_id=product_id,
+                    product_mask=product_mask,
+                )
                 rows = envelope['result']
                 if not isinstance(rows, list) or len(rows) > limit:
                     raise ResponseError('invalid_response')
@@ -321,6 +353,11 @@ class NetOneClient:
                     raise ResponseError('invalid_response')
                 total_pages, total_elements = pages, elements
                 normalized = [normalize_record(operation, row) for row in rows]
+                if product_id is not None and any(
+                    record.product_id != str(product_id)
+                    for record in normalized
+                ):
+                    raise ResponseError('invalid_response')
                 new_rows = 0
                 for row, record in zip(rows, normalized):
                     key = (record.product_id, record.reduced_id)

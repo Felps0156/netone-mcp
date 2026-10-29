@@ -2,7 +2,7 @@
 
 ## Current boundary
 
-PRD 1.3.0 records Sprints 5 and 6 complete. Independent task and whole-change reviews passed without Critical/Important findings; both Minors were corrected and final checks passed. Product query intent, safeguards and real token/TLS evidence satisfy G0/G1 for products/page-limit only; clean installation and broad permissions are not additional prerequisites for that narrow operation. The registry remains empty. The two specifically authorized page=1/limit=1 requests were completed with HTTP 200 and sanitized evidence below; that budget is exhausted. No login, token rotation, new remote filter, full-catalog scan, MCP registration or later sprint was performed or authorized.
+PRD 1.7.0 / DEC-027 records Sprints 5/6/7 complete. The maintainer explicitly accepted Sprint 7 with an exception for the unperformed real technical-codigoSku validation, revising S7.11 without claiming operational proof. Earlier open-status notes below are historical checkpoints under the original criterion. ID/EAN/commercial-code and text observations remain bounded; the registry is empty and V1 NOT_READY. All probe budgets are closed. No additional ERP request, login, token rotation, environment-file modification, full-catalog scan, MCP registration or Sprint 8+ is authorized.
 
 Current behavior and limits: [configuration](configuration.md). Endpoint contracts, field mapping and unresolved provider ambiguities: [API inventory](api-capabilities.md). Canonical sprint IDs/states/sequence: [PRD section 28](../PRD.md#28-sprints-de-implementação-em-checklist).
 
@@ -221,3 +221,200 @@ historical in the PRD. Controller inspected the fixes and reran all 74
 tests, pip check and the public audit successfully. No Critical/Important
 or deferred Minor remains. Sprint 6 is accepted; later sprints remain
 untouched and V1/operator readiness remains NOT_READY.
+
+## Sprint 7 verification — 2026-10-29
+
+Approved [design](superpowers/specs/2026-10-29-sprint-7-design.md) and
+[plan](superpowers/plans/2026-10-29-sprint-7.md). Only client.py, tools.py
+and their tests changed application behavior; the final review also led
+to a test-only stdio helper correction in tests/test_server.py, with no
+server/SDK change. config/catalog/server, other test modules and direct
+pins remain unchanged. No install, Git, persistence or MCP registration.
+
+| Executed check | Observed result |
+|---|---|
+| Task 1 TDD client suite | RED: unsupported product_id keyword; GREEN 46; full 85 PASS in 4.803s |
+| Task 1 independent compliance / quality review | PASS / PASS; no findings |
+| Task 2 TDD tools suite | RED: missing-function assertions; final focused 27 PASS; full 97 PASS in 5.351s before linewraps, focused 27 PASS after |
+| Task 2 independent compliance / quality review | PASS / PASS; no findings |
+| Controller `.venv/Scripts/python.exe -B -m unittest discover -s tests -v` | First run: 97 tests, one existing malformed-stdio recovery failure at tests/test_server.py:99; repeated full run: 97 PASS in 4.948s |
+| Controller `.venv/Scripts/python.exe -m pip check` | No broken requirements found |
+| Public-snapshot scope/import/compile/link audit | PASS; only Sprint 7 task states changed; unchanged lifecycle/config/normalization/pins; silent imports without .env/HTTP construction |
+| Final-review M1 stdio regression | RED: five tests, missing reply ID2; corrected helper GREEN five PASS in 1.697s; worker full98 PASS in 5.572s |
+| Controller post-fix full suite, pip check and public audit | 98 PASS in 5.603s; dependencies/scope/imports/compilation/links accepted |
+
+The failed stdio run lacked the tools/list reply after malformed initialize
+in the existing all-messages-then-EOF subprocess harness. A focused
+synthetic repeat returned IDs99/1/2, exit0 and sanitized stderr, and the
+complete suite then passed. No causal diagnosis or production correction
+was established; this is an intermittent verification limitation, not
+uniform success. Final review confirmed the EOF race mechanism with a
+controlled delayed-handler experiment; the original event's exact cause
+remains unproved. M1 led to a test-only bounded bidirectional helper:
+await error/initialize/tools-list replies before EOF, drain stderr
+concurrently and reap/close worker resources on failure. The delayed
+handler is regression scheduling, not a parent sleep/retry workaround.
+Scoped independent re-review accepted M1 as addressed, with no new
+breakage. The controller independently passed all 98 tests in 5.603s,
+pip check and public audit after this fix. Task 2's first GREEN
+attempt also exposed a fixture expectation: an empty nonterminal page
+stops for no progress before page-limit exhaustion. The fixture changed
+to an advancing row; collection behavior was not weakened.
+
+Real command: `.venv/Scripts/python.exe -B <managed-scratch>/netone_s7_real.py`.
+Started 18:03:27 UTC. A persisted start marker prevents automatic rerun.
+Private loader/token used in memory, no login or environment-file change.
+Extra observation hooks preserved the original guard and enforced one
+send per phase, products-only route, page1/limit1 and at most four sends.
+Three were actually sent, all HTTP200: discovery, public details with
+idsProdutos, public EAN lookup. Details: one matching reduced record,
+found, partial=false, complete_dataset=true within that filtered query.
+EAN: one exact match, partial=true, complete_dataset=false and fixed
+local_exact_ean_search warning. Both retained the discovery identity,
+had error=null and serialized correctly. Response/client cleanup completed.
+Only safe counts/statuses/invariants were retained, no private values,
+source timestamps, responses, origin or credentials.
+
+The discovery sample had no usable SKU; search_product_by_sku was skipped.
+No product-mask substitution, made-up term or extra discovery was used.
+S7.11 remains open for real SKU validation. Additional discovery requires
+a new narrowly scoped authorization, not reuse of an unspent conditional
+call. No real multi-page filtered traversal, SKU variant, negative lookup,
+permission error, timeout, snapshot or broad availability was tested.
+Final whole-change review passed with M1, then its scoped re-review
+accepted the correction without new findings. No review item is deferred.
+Only S7.11's real SKU evidence prevents full Sprint 7 acceptance; the
+engineering implementation is accepted. No Sprint 8+ was started.
+
+## Commercial product-code verification — PRD 1.5.0
+
+Maintainer approved direct implementation plus up to two filtered product
+queries, at most20 rows each, without intermediate check-ins. Prefer
+search_product_by_code when the operator says product code/business SKU;
+do not confuse this with technical codigoSku. The approved design/plan is
+[commercial-code lookup](superpowers/plans/2026-10-29-commercial-code.md).
+
+TDD: the new focused suite first ran ten tests with expected missing-mask
+keyword/function failures (RED). After implementation, all ten passed.
+The complete suite passed 108 tests in 5.991s; pip check reported no broken
+requirements. Public audit confirmed unchanged sprint tasks, allowed file
+scope, compilation/79-column style, local links and silent imports without
+configuration access or HTTP construction. Existing text/technical-SKU/
+EAN/ID behavior is covered by the full regression suite.
+
+At 18:41:47 UTC, a one-shot managed-scratch probe issued two guarded
+products requests with mascara, page1/limit20. Both returned HTTP200.
+Field comparison confirmed the supplied code equals mascara, not
+codigoSku/idProduto/idReduzido; technical SKU was null/absent in the sample.
+The actual public function returned one exact match, found, error=null,
+partial=false and complete_dataset=true within the filtered traversal.
+Response/client cleanup completed. No login, token rotation, retries,
+redirects, guard removal or environment-file modification occurred.
+
+Only sanitized counts/statuses/invariants are retained; the requested
+commercial result was shown to the operator, not saved in the project.
+No new request budget remains. The check does not complete S7.11 for
+technical SKU by substituting mascara. Independent final review accepted
+the implementation without Critical/Important findings. Its sole Minor
+was an outdated capability-summary omission of mascara; the DEC-026
+documentation update corrects that summary, without another ERP request.
+
+## Product-field profile and priority — PRD 1.6.0
+
+The maintainer chose up to 100 products, no raw source values retained,
+then asked to continue implementation/testing offline while away. See the
+[inventory and explicit limits](product-field-priority.md) and
+[inline plan](superpowers/plans/2026-10-29-product-field-priority.md).
+
+Actual one-shot command: `.venv/Scripts/python.exe -B
+<managed-scratch>/netone_field_profile.py`. Started 18:52:18 UTC; two
+products POSTs page1/2, limit50, HTTP200 each; 100 received rows profiled,
+known projection accepted, response/client cleanup completed. No real
+configuration or raw product data was written/displayed. Only known field
+names, type labels and aggregates survive. Prefix sample, not full catalog.
+
+Checked 39 known names; 36 observed, 30 populated at least once, 28 populated
+in every row. EAN 93/100, observation 1/100, codigoSku null 100/100. Six
+extra names were discarded; only their existence count survives. At this
+initial checkpoint, the follow-up question was unanswered and no request
+was executed or silently renewed while the operator was away. A later
+explicit authorization and its completed one-row check are recorded below.
+
+New tests in tests/test_product_fields.py ran RED before catalog changes:
+8 methods, 43 failures including subtests (missing projections/order/type
+checks). Focused GREEN: 8 PASS in 0.036s. Full command
+`.venv/Scripts/python.exe -B -m unittest discover -s tests -v` passed 116
+tests in 5.680s; `.venv/Scripts/python.exe -m pip check` found no broken
+requirements. Tests use synthetic settings/MockTransport, no real env or
+ERP; no dependencies installed. The existing source projection now adds
+five optional typed fields and populated-first presentation, not matching
+changes, new routes, price/stock joins or commercial inference.
+
+S7.11 still requires an actual usable codigoSku and exact-function proof.
+Null samples/mocks cannot close it, so all sprint checkboxes remain intact.
+At that checkpoint, six extras were unnamed and a planned AGENTS.md update
+had hit a protected-file approval timeout; the target was left unchanged,
+without an alternative write path. Both approvals were later explicitly
+renewed and carried out through the ordinary mechanisms below. PRD and field
+contract carry the new decisions. Independent final field-priority review
+accepted the narrow projection/presentation change with no Critical,
+Important or Minor findings. It independently checked all 39 inventory
+rows, exact optional-field additions and unchanged transport/matching/
+configuration/protected instructions. Its evidence limits remain explicit:
+no replay of ERP, no universal provider/stock/price guarantee, no technical
+SKU acceptance or classification of the six discarded extra names.
+
+## Approved extra-field follow-up and instruction reconciliation
+
+The operator later explicitly approved one additional products query,
+page1/limit1, retaining only names/types/presence states, and the narrow
+protected AGENTS.md update to match PRD1.6.0 while preserving S7.11.
+The protected patch subsequently succeeded through the normal tool;
+the earlier timeout is historical, not a current pending approval.
+
+Actual one-shot command: `.venv/Scripts/python.exe -B
+<managed-scratch>/netone_extra_fields.py`. Started20:56:08 UTC,
+one guarded POST products page1/limit1, HTTP200, one row. The current
+projection accepted it; response/client cleanup completed. The extra
+metadata is listed in [the field inventory](product-field-priority.md).
+Two extras were filled: integer quantidadePecasPorEmbalagem and string
+unidadeDeMedidaSigla. Four promotional fields were null; no non-null
+types, final prices, units/conversion or stock facts were inferred.
+
+Only names/types/states were retained; no source values, raw rows, private
+origin, credentials, settings or upstream error text. No login/token/env
+changes, retries, redirects, guard removal, new DTO/HTTP consumers or
+sprint-checkbox changes. The one-request budget is consumed and closed.
+The six names are observed in this new row; lost original names cannot
+prove their identity/frequency in the earlier 100-row sample. S7.11 still
+requires a usable technical codigoSku and real exact-function validation.
+
+Post-follow-up verification: the complete offline unittest suite passed
+116 tests in 5.658s. The public-baseline audit confirmed only the six
+authorized documentation files changed, with production/tests unchanged,
+all PRD checkboxes identical and all 212 sprint tasks preserved. It checked
+the six new metadata rows against the actual one-row safe report and all
+39 older matrix rows against the original 100-row aggregate. Compilation,
+local links and silent imports without env/HTTP construction also passed.
+
+## Sprint 7 closure by explicit acceptance with exception — PRD 1.7.0
+
+After reviewing the real product-search result, the maintainer explicitly
+selected closure with the documented technical-SKU exception. DEC-027
+preserves the original S7.11 wording/open status as history and revises
+only that criterion to record the available manual observations plus the
+accepted exception. Marking revised S7.11 complete does not assert an
+unperformed real codigoSku match, mask equivalence or full operational
+coverage. The SKU function retains offline coverage and no real validation.
+
+The additional actual search used search_products: two page1/2 limit50
+HTTP200 requests, 100 received rows, eight matches, partial=true,
+complete_dataset=false, error=null and completed client cleanup. The
+operator reviewed the displayed results; no source values were persisted.
+This search budget is also closed, not permission for a rerun or discovery.
+
+Current controller regression: `.venv/Scripts/python.exe -B -m unittest
+discover -s tests -v` passed 116 tests in 5.815s. Closure changes only
+documentation, not application behavior or tests. Sprint 8 remains
+unstarted, MCP registry empty and V1 NOT_READY. Any later real SKU check
+requires its own usable input and bounded authorization.

@@ -98,6 +98,226 @@ class ClientTests(unittest.IsolatedAsyncioTestCase):
             )
         self.assertTrue(all(stream.closed for stream in self.streams))
 
+    async def test_product_filter_uses_closed_body_and_existing_route(self):
+        await self.client._query('products', 1, 1, product_id=7)
+        request = self.requests[-1]
+        self.assertEqual(request.method, 'POST')
+        self.assertEqual(request.url.host, 'example.invalid')
+        self.assertEqual(
+            request.url.path, '/app-web/api/v2/produto/reduzidos',
+        )
+        self.assertEqual(
+            json.loads(request.content),
+            {'page': 1, 'limit': 1, 'idsProdutos': [7]},
+        )
+        self.assertTrue(self.streams[-1].closed)
+
+    async def test_product_filter_accepts_strict_integer_boundaries(self):
+        for value in (0, 9223372036854775807):
+            with self.subTest(value=value):
+                self.handler = lambda request: response([
+                    row(idProduto=value),
+                ])
+                result = await self.client._collect(
+                    'products', product_id=value,
+                )
+                self.assertEqual(result.status, 'found')
+                self.assertEqual(result.items[0].product_id, str(value))
+                self.assertEqual(
+                    json.loads(self.requests[-1].content),
+                    {'page': 1, 'limit': 50, 'idsProdutos': [value]},
+                )
+
+    async def test_invalid_product_filters_are_blocked_without_send(self):
+        class IntegerSubclass(int):
+            pass
+
+        for value in (True, False, '007', '7', 7.0, -1,
+                      9223372036854775808, IntegerSubclass(7),
+                      Decimal('7'), [], {}):
+            for collect in (False, True):
+                with self.subTest(value=value, collect=collect):
+                    with self.assertRaises(BlockedOperationError) as caught:
+                        if collect:
+                            await self.client._collect(
+                                'products', product_id=cast(Any, value),
+                            )
+                        else:
+                            await self.client._query(
+                                'products', 1, 1,
+                                product_id=cast(Any, value),
+                            )
+                    self.assertEqual(
+                        str(caught.exception),
+                        'The NetOne query is not allowed.',
+                    )
+        self.assertEqual(self.requests, [])
+
+    async def test_product_filter_is_blocked_for_prices_and_stock(self):
+        for operation in ('prices', 'stock'):
+            with self.subTest(operation=operation):
+                with self.assertRaises(BlockedOperationError):
+                    await self.client._query(operation, 1, 1, product_id=7)
+                with self.assertRaises(BlockedOperationError):
+                    await self.client._collect(operation, product_id=7)
+        self.assertEqual(self.requests, [])
+
+    async def test_none_product_filter_preserves_all_legacy_bodies(self):
+        for operation in ('products', 'prices', 'stock'):
+            await self.client._query(operation, 1, 1, product_id=None)
+            await self.client._collect(operation, product_id=None)
+        self.assertEqual(
+            [json.loads(request.content) for request in self.requests],
+            [{'page': 1, 'limit': 1}, {'page': 1, 'limit': 50}] * 3,
+        )
+
+    async def test_product_filter_keeps_fixed_pagination_and_budget(self):
+        def pages(request):
+            page = json.loads(request.content)['page']
+            return response([
+                row(f'{page}01', idProduto=7),
+                row(f'{page}02', idProduto='7'),
+            ], page, 3)
+
+        self.handler = pages
+        result = await self.client._collect(
+            'products', page_size=2, max_results=5, product_id=7,
+        )
+        self.assertEqual(
+            [json.loads(request.content) for request in self.requests],
+            [{'page': 1, 'limit': 2, 'idsProdutos': [7]},
+             {'page': 2, 'limit': 2, 'idsProdutos': [7]}],
+        )
+        self.assertEqual(
+            [record.reduced_id for record in result.items],
+            ['101', '102', '201', '202'],
+        )
+        self.assertEqual(result.rows_received, 4)
+        self.assertEqual(result.status, 'partial')
+        self.assertIn('result_limit_reached', result.warnings)
+
+    async def test_mixed_product_page_is_rejected_atomically(self):
+        for other in (8, '007', None):
+            with self.subTest(other=other):
+                self.handler = lambda request: response([
+                    row('001', idProduto=7), row('002', idProduto=other),
+                ])
+                result = await self.client._collect(
+                    'products', product_id=7,
+                )
+                self.assertEqual(result.items, ())
+                self.assertEqual(result.status, 'error')
+                self.assertEqual(result.error, 'invalid_response')
+                self.assertTrue(result.partial)
+                self.assertFalse(result.complete_dataset)
+                self.assertEqual(result.rows_received, 2)
+
+    async def test_later_mixed_product_page_keeps_only_previous_page(self):
+        def pages(request):
+            page = json.loads(request.content)['page']
+            rows = [row('001', idProduto=7), row('002', idProduto=7)]
+            if page == 2:
+                rows = [row('003', idProduto=7), row('004', idProduto=8)]
+            return response(rows, page, 2, totalElements=4)
+
+        self.handler = pages
+        result = await self.client._collect(
+            'products', page_size=2, product_id=7,
+        )
+        self.assertEqual(
+            [record.reduced_id for record in result.items], ['001', '002'],
+        )
+        self.assertEqual(result.status, 'partial')
+        self.assertEqual(result.error, 'invalid_response')
+        self.assertEqual(result.rows_received, 4)
+        self.assertFalse(result.complete_dataset)
+
+    async def test_filtered_http_failure_preserves_error_and_rows(self):
+        for failed_page in (1, 2):
+            def pages(request):
+                page = json.loads(request.content)['page']
+                if page == failed_page:
+                    return httpx.Response(401, stream=Stream())
+                return response([row(idProduto=7)], page, 2)
+
+            with self.subTest(failed_page=failed_page):
+                self.handler = pages
+                result = await self.client._collect(
+                    'products', page_size=1, product_id=7,
+                )
+                self.assertEqual(result.error, 'authentication_error')
+                self.assertEqual(
+                    result.status, 'error' if failed_page == 1 else 'partial',
+                )
+                self.assertEqual(len(result.items), failed_page - 1)
+                self.assertTrue(result.partial)
+                self.assertFalse(result.complete_dataset)
+        self.assertTrue(all(stream.closed for stream in self.streams))
+
+    async def test_filtered_empty_terminal_page_is_not_found(self):
+        self.handler = lambda request: response([], totalElements=0)
+        result = await self.client._collect('products', product_id=7)
+        self.assertEqual(result.status, 'not_found')
+        self.assertTrue(result.complete_dataset)
+        self.assertFalse(result.partial)
+
+    async def test_concurrent_product_filters_and_budgets_stay_local(self):
+        both_started = anyio.Event()
+        started = 0
+        results = {}
+        original_http = self.client._http
+
+        class OverlappingStream(Stream):
+            async def __aiter__(self):
+                nonlocal started
+                started += 1
+                if started == 2:
+                    both_started.set()
+                await both_started.wait()
+                async for chunk in super().__aiter__():
+                    yield chunk
+
+        def pages(request):
+            body = json.loads(request.content)
+            product = body['idsProdutos'][0]
+            envelope = {
+                'result': [row(str(index), idProduto=product)
+                           for index in range(body['limit'])],
+                'page': 1, 'totalPages': 2,
+            }
+            return httpx.Response(200, stream=OverlappingStream(
+                json.dumps(envelope).encode(),
+            ))
+
+        async def collect(product, budget):
+            results[product] = await self.client._collect(
+                'products', product_id=product, max_results=budget,
+            )
+
+        self.handler = pages
+        with anyio.fail_after(2):
+            async with anyio.create_task_group() as group:
+                group.start_soon(collect, 7, 1)
+                group.start_soon(collect, 8, 2)
+        self.assertEqual(
+            sorted((json.loads(request.content) for request in self.requests),
+                   key=lambda body: body['limit']),
+            [{'page': 1, 'limit': 1, 'idsProdutos': [7]},
+             {'page': 1, 'limit': 2, 'idsProdutos': [8]}],
+        )
+        self.assertEqual([r.product_id for r in results[7].items], ['7'])
+        self.assertEqual([r.product_id for r in results[8].items], ['8', '8'])
+        self.assertEqual(results[7].rows_received, 1)
+        self.assertEqual(results[8].rows_received, 2)
+        self.assertTrue(all(stream.closed for stream in self.streams))
+        self.assertEqual(self.client._max_results, 100)
+        self.assertIs(self.client._http, original_http)
+        self.handler = lambda request: response([row()])
+        await self.client._collect('products')
+        self.assertEqual(
+            json.loads(self.requests[-1].content), {'page': 1, 'limit': 50},
+        )
+
     async def test_invalid_operation_and_parameters_do_not_send(self):
         for operation, page, limit in (
             ('login', 1, 10), ('products', True, 10),

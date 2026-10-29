@@ -18,14 +18,25 @@ _TEXT_FIELDS = {
     'ean': 'ean',
     'description': 'descricao',
     'group': 'grupoDescricao',
+    'subgroup': 'subgrupoDescricao',
     'line': 'linhaDescricao',
+    'notes': 'observacao',
     'price_table': 'tabelaPreco',
+    'wholesale_price_table': 'tabelaPrecoAtacado',
     'last_changed_raw': 'ultimaAlteracaoTimestamp',
 }
 _DECIMAL_FIELDS = {
     'price': 'valor',
+    'wholesale_price': 'valorAtacado',
     'quantity': 'quantidade',
 }
+
+_PRODUCT_FIELD_PRIORITY = (
+    'product_mask', 'description', 'blocked', 'group', 'subgroup', 'line',
+    'ean', 'product_id', 'reduced_id', 'price', 'price_table',
+    'wholesale_price', 'wholesale_price_table', 'notes', 'last_changed_raw',
+    'quantity', 'sku',
+)
 
 
 def _identifier(value: object, required: bool) -> str | None:
@@ -58,6 +69,18 @@ def _decimal(value: object) -> Decimal | None:
     raise NormalizationError()
 
 
+def _boolean(value: object) -> bool | None:
+    if value is None or type(value) is bool:
+        return value
+    raise NormalizationError()
+
+
+def _populated(value: object) -> bool:
+    return value is not None and not (
+        isinstance(value, str) and not value.strip()
+    )
+
+
 @dataclass(frozen=True, slots=True)
 class CatalogRecord:
     """An explicit projection, not a complete copy of an ERP product."""
@@ -74,16 +97,30 @@ class CatalogRecord:
     last_changed_raw: str | None = None
     price: Decimal | None = None
     quantity: Decimal | None = None
+    subgroup: str | None = None
+    notes: str | None = None
+    wholesale_price_table: str | None = None
+    wholesale_price: Decimal | None = None
+    blocked: bool | None = None
     missing_fields: tuple[str, ...] = ()
 
     def as_json(self) -> dict[str, object]:
+        """Present populated business fields first, retaining every value."""
         data = asdict(self)
         for key, value in data.items():
             if isinstance(value, Decimal):
                 data[key] = str(value)
             elif isinstance(value, tuple):
                 data[key] = list(value)
-        return data
+        ordered = {key: data[key] for key in _PRODUCT_FIELD_PRIORITY}
+        ordered.update(data)
+        missing = ordered.pop('missing_fields')
+        populated = {key: value for key, value in ordered.items()
+                     if _populated(value)}
+        populated.update({key: value for key, value in ordered.items()
+                          if not _populated(value)})
+        populated['missing_fields'] = missing
+        return populated
 
 
 def normalize_record(operation: str, raw: object) -> CatalogRecord:
@@ -100,7 +137,7 @@ def normalize_record(operation: str, raw: object) -> CatalogRecord:
              for key, source in _TEXT_FIELDS.items()}
     decimals = {key: _decimal(raw.get(source))
                 for key, source in _DECIMAL_FIELDS.items()}
-    sources = ('idProduto', 'idReduzido', *_TEXT_FIELDS.values(),
+    sources = ('idProduto', 'idReduzido', 'bloqueado', *_TEXT_FIELDS.values(),
                *_DECIMAL_FIELDS.values())
     return CatalogRecord(
         product_id=product_id, reduced_id=reduced_id,
@@ -111,6 +148,10 @@ def normalize_record(operation: str, raw: object) -> CatalogRecord:
         last_changed_raw=texts['last_changed_raw'],
         price=decimals['price'],
         quantity=decimals['quantity'],
+        subgroup=texts['subgroup'], notes=texts['notes'],
+        wholesale_price_table=texts['wholesale_price_table'],
+        wholesale_price=decimals['wholesale_price'],
+        blocked=_boolean(raw.get('bloqueado')),
         missing_fields=tuple(key for key in sources if key not in raw),
     )
 

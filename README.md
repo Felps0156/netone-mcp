@@ -4,9 +4,9 @@ A Python MCP stdio foundation for authorized, strictly read-only NetOne ERP quer
 
 ## Current status
 
-**NOT_READY for V1. No MCP commercial tools are registered.** Sprints 5 and 6 are complete. Sprint 6's bounded local search passed 74 offline tests, real-call checks and independent reviews; both non-blocking review findings were corrected. G0/G1 PASS only for the product page/limit operation, based on accepted query intent, transport safeguards and real token/TLS evidence. Later sprints remain unstarted.
+**NOT_READY for V1. No MCP commercial tools are registered.** Sprints 5, 6 and 7 are complete. Under PRD 1.7.0 / DEC-027, the maintainer explicitly accepted Sprint 7 with a documented exception: technical codigoSku has offline coverage but no real validation. S7.11 records the revised acceptance, not invented SKU success or mask equivalence. ID/EAN/commercial-code and text observations remain bounded; the current offline suite passes 116 tests. Sprints 8+ remain unstarted.
 
-The private client implements three documented query POSTs with fixed origin/Host and closed `page`/`limit` filters. Construction and startup make no ERP request. `tools.search_products` is callable application functionality, not an MCP registration. Its explicitly authorized two-request Sprint 6 observation returned HTTP 200 twice, including one matching item through the function with correct partiality. No login or environment-file modification was needed. See the [sanitized evidence and limits](docs/api-capabilities.md); bounded samples do not prove complete pagination, all permissions or general readiness.
+The private client implements three documented query POSTs with fixed origin/Host and closed `page`/`limit` filters. Sprint 7 adds only a products-specific integer product_id encoded as idsProdutos=[product_id], not a caller-supplied filter dictionary. Construction and startup make no ERP request. `tools.search_products` is callable application functionality, not an MCP registration. Its completed Sprint 6 observation returned HTTP 200 twice, including one matching item with correct partiality. See the [sanitized evidence and limits](docs/api-capabilities.md); bounded samples do not prove complete pagination, all permissions or general readiness.
 
 ## Architecture
 
@@ -14,7 +14,7 @@ The private client implements three documented query POSTs with fixed origin/Hos
 - `server.py`: thin MCP stdio entrypoint, empty registry, one private client per lifespan.
 - `client.py`: HTTPX authentication, literal allowlist, bounded streaming/pagination and safe errors.
 - `catalog.py`: immutable normalized records consumed by private collection.
-- `tools.py`: Sprint 6 adds callable local `search_products` orchestration; no MCP query or analysis tool is registered.
+- `tools.py`: bounded text search, ID-filtered details and exact local SKU/EAN application functions; no MCP query or analysis tool is registered.
 
 IDs/SKU/EAN preserve leading zeros. Decimal prices/quantities serialize as strings; absent/null/zero remain distinct. The projection includes identity, description, group/line, EAN, price, stock and raw last-change data, plus separate API SKU and price-table provenance. Photos, color, size, wholesale and discounts are excluded. Pagination is bounded and reports incomplete/conflicting data as partial; completeness is not an ERP-wide snapshot.
 
@@ -61,6 +61,58 @@ Expected discovery is an empty tool list, not a working commercial query. stdout
 
 ## Development and evidence
 
+### Priority: commercial product code (operator's business SKU)
+
+When the operator asks for a product code or business SKU, prefer
+`await tools.search_product_by_code(client, code, max_results=20)`.
+It queries products with the documented `mascara` filter, then requires
+exact equality against normalized product_mask. It does not scan an
+unfiltered catalog prefix or fall back silently to another identifier.
+
+Codes are strings of 1–256 characters, nonblank and without Unicode
+C-category characters. Leading zeros, case, spaces and punctuation are
+preserved. The source mascara/product_mask is the commercial code;
+codigoSku/sku is a separate technical field and may be null. The existing
+search_product_by_sku still means exact API codigoSku, not this business
+alias. IDs/EAN remain separate too. No conversational router or MCP tool
+has been registered; this priority is the application-function contract.
+
+The provider does not document exact-equality semantics for mascara, so
+the application checks equality after the bounded filtered traversal.
+It reports remote_product_code_exact_match, source-row budgets and the
+existing partial/error/completeness metadata. A partial miss is not global
+absence; complete_dataset refers only to the provider-visible query.
+Product-ID and mask filters cannot be combined; prices/stock are unchanged.
+
+The specifically authorized two-request real check returned HTTP200 twice,
+confirmed the supplied code in mascara rather than codigoSku or the IDs,
+and exercised this public application function: one exact match, found,
+error=null and a complete filtered traversal. No source values are retained
+here. The observation is closed, not ongoing request authorization.
+
+### Evidence-based product-field priority
+
+PRD 1.6.0 adds a [field inventory and priority contract](docs/product-field-priority.md)
+from 100 received product rows in two approved HTTP200 queries. Commercial
+code/description, group/subgroup/line, source block flag and product-source
+prices/tables were filled in every sampled row; EAN in 93, notes in 1,
+technical codigoSku in none. This is a prefix sample, not global coverage.
+A later separately approved page1/limit1 HTTP200 check identified six extra
+names: filled unit/packaging metadata and null promotional metadata in
+that one row. Names/types/states are recorded in the inventory, not source
+values or inferred 100-row frequencies. No additional DTO fields, stock
+conversion, promotional pricing or ongoing request permission were added.
+
+The shared immutable projection now adds subgroup, notes,
+wholesale_price_table, wholesale_price and strict optional blocked.
+JSON presents filled fields first and null/blank fields afterwards without
+removing any old keys or values. Zero/false remain filled; absent versus
+null remains visible through missing_fields. Read keys by name, not order.
+No stock, sellability, currency, final price or discounts are inferred.
+No new HTTP consumer, MCP tool, Sprint8 work or technical-SKU acceptance.
+Eight new offline tests pass; the full suite passes 116 tests. No private
+source values or credentials are stored in the inventory or examples.
+
 ### Bounded product search (application function, not an MCP tool)
 
 For an operator-authorized caller holding the existing process-owned
@@ -86,6 +138,33 @@ only possible after a valid complete traversal of the provider-visible
 endpoint universe; it does not assert absence from the entire ERP.
 Errors remain error/partial with a safe code, never an empty success.
 Remote multi-page behavior and snapshot consistency remain unproved.
+
+### Product details and exact codes (Sprint 7 application functions)
+
+Implemented and independently task-reviewed; ID/EAN real observations
+succeeded, SKU real acceptance remains pending. None is registered in MCP:
+
+- `await tools.get_product_details(client, product_id, max_results=20)`
+  requests the documented product-ID filter and returns the bounded set
+  of normalized reduced variants, not the full raw ERP payload.
+  product_id must be an exact built-in integer 0–9223372036854775807;
+  this defensive local ceiling is not an official provider limit. String
+  IDs are rejected rather than silently stripping leading zeros.
+- `await tools.search_product_by_sku(client, sku, max_results=20)` matches
+  only the API codigoSku field, never the product mask or description.
+- `await tools.search_product_by_ean(client, ean, max_results=20)` matches
+  only the EAN field. No barcode checksum or remote filter is inferred.
+
+SKU/EAN are strings of 1–256 characters, not whitespace-only and without
+Unicode C-category characters. Equality is case-sensitive and preserves
+spaces, punctuation and leading zeros; unlike search_products there is
+no trimming for matching, casefold or substring matching. Codes are
+compared locally in a bounded traversal and disclose local_exact_sku_search
+or local_exact_ean_search. They do not solve catalog-wide text search.
+max_results counts received source rows, not matches. Missing codes remain
+unknown; no match in a partial sample is not proof of global absence.
+Errors, metadata, precision and visibility limitations remain unchanged.
+No stock/price query or persistent catalog is added by these functions.
 
 Offline unit tests and mocked integration are allowed:
 

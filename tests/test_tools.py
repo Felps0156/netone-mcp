@@ -13,7 +13,7 @@ from test_client import Stream, response, row, settings
 import tools
 
 
-class SearchProductsTests(unittest.IsolatedAsyncioTestCase):
+class ProductToolsTestCase(unittest.IsolatedAsyncioTestCase):
     async def asyncSetUp(self):
         search = getattr(tools, 'search_products', None)
         if not callable(search):
@@ -48,6 +48,8 @@ class SearchProductsTests(unittest.IsolatedAsyncioTestCase):
     def bodies(self):
         return [json.loads(request.content) for request in self.requests]
 
+
+class SearchProductsTests(ProductToolsTestCase):
     async def test_invalid_queries_never_send_or_echo_input(self):
         invalid = (
             '', '   ', 'X' * 201, 'SECRET\n', '\tSECRET',
@@ -315,6 +317,320 @@ class SearchProductsTests(unittest.IsolatedAsyncioTestCase):
         result = await self.search(self.client, 'absent', 4)
         self.assertEqual(result['status'], 'partial')
         self.assertEqual(result['returned_count'], 0)
+
+
+class ExactProductToolsTests(ProductToolsTestCase):
+    def lookup(self, name):
+        function = getattr(tools, name, None)
+        self.assertTrue(callable(function), f'{name} is missing')
+        return cast(Any, function)
+
+    def cases(self):
+        return (
+            ('get_product_details', 7, None, None),
+            ('search_product_by_sku', '00-Ab', 'codigoSku',
+             'local_exact_sku_search'),
+            ('search_product_by_ean', '000123', 'ean',
+             'local_exact_ean_search'),
+        )
+
+    def matching_row(self, field, value, reduced='001', **extra):
+        code = {field: value} if field else {}
+        return row(reduced, idProduto=7, **code, **extra)
+
+    async def test_details_filters_id_and_preserves_all_reduced_rows(self):
+        self.handler = lambda request: response([
+            row('0002', idProduto=7), row('0003', idProduto=7),
+        ], totalElements=2)
+        result = await self.lookup('get_product_details')(self.client, 7)
+        self.assertEqual(self.bodies(), [
+            {'page': 1, 'limit': 20, 'idsProdutos': [7]},
+        ])
+        self.assertEqual(result['status'], 'found')
+        self.assertEqual(result['returned_count'], 2)
+        self.assertEqual(
+            [item['reduced_id'] for item in result['items']],
+            ['0002', '0003'],
+        )
+        self.assertEqual(result['warnings'], [])
+        self.assertNotIn('product_id', result)
+
+    async def test_codes_match_only_exact_designated_field(self):
+        for name, value, field, warning in self.cases()[1:]:
+            with self.subTest(name=name):
+                self.requests.clear()
+                alternatives = (
+                    ('00-ab', 'Ab', '00-Ab-extra') if field == 'codigoSku'
+                    else ('123', 'x000123', '0001234')
+                )
+                self.handler = lambda request: response([
+                    self.matching_row(field, value),
+                    *[self.matching_row(field, code, str(index))
+                      for index, code in enumerate(alternatives, 2)],
+                    row('005', descricao=value, mascara=value,
+                        **({'ean': value} if field == 'codigoSku'
+                           else {'codigoSku': value})),
+                    row('006', **{field: None}), row('007'),
+                ], totalElements=7)
+                result = await self.lookup(name)(self.client, value)
+                self.assertEqual(result['status'], 'found')
+                self.assertEqual(result['returned_count'], 1)
+                self.assertEqual(result['items'][0]['reduced_id'], '001')
+                self.assertEqual(result['rows_received'], 7)
+                self.assertEqual(result['warnings'], [warning])
+                self.assertEqual(self.bodies(), [{'page': 1, 'limit': 20}])
+                self.assertNotIn('query', result)
+                self.assertNotIn(field, result)
+
+    async def test_code_boundaries_and_significant_spaces_are_exact(self):
+        for name, _, field, _ in self.cases()[1:]:
+            for value in ('x', 'x' * 256, ' 00-Ab ', '\u00a0000123\u00a0'):
+                with self.subTest(name=name, length=len(value)):
+                    self.handler = lambda request: response([
+                        self.matching_row(field, value),
+                        self.matching_row(field, value.strip(), '002'),
+                    ])
+                    result = await self.lookup(name)(self.client, value)
+                    expected = 2 if value == value.strip() else 1
+                    self.assertEqual(result['returned_count'], expected)
+                    key = 'sku' if field == 'codigoSku' else 'ean'
+                    self.assertEqual(result['items'][0][key], value)
+
+    async def test_all_invalid_inputs_and_budgets_never_send_or_echo(self):
+        class IntegerSubclass(int):
+            pass
+
+        invalid_codes = (
+            '', ' ', '\u00a0', 'x' * 257, 'SECRET' * 43, 'SECRET\n',
+            '\tSECRET', 'SECRET\u200b', 'SECRET\ud800',
+            'SECRET\ue000', 'SECRET\u0378', None, True, False,
+            7, 1.0, Decimal('1'), b'SECRET', [], {},
+        )
+        invalid_ids = (
+            -1, 9223372036854775808, True, False, 7.0, Decimal('7'),
+            '007', 'SECRET', None, IntegerSubclass(7),
+        )
+        invalid_budgets = (
+            True, False, 0, -1, 1001, 1.0, Decimal('1'),
+            'SECRET', None, IntegerSubclass(1),
+        )
+        for name, valid, field, _ in self.cases():
+            function = self.lookup(name)
+            for value in invalid_codes if field else invalid_ids:
+                for budget in (20, 'SECRET'):
+                    with self.subTest(name=name, value=repr(value)):
+                        with self.assertRaises(ValueError) as caught:
+                            await function(self.client, value, budget)
+                        self.assertNotIn('SECRET', str(caught.exception))
+                        self.assertNotIn('007', str(caught.exception))
+            for budget in invalid_budgets:
+                with self.subTest(name=name, budget=repr(budget)):
+                    with self.assertRaises(ValueError) as caught:
+                        await function(self.client, valid, budget)
+                    self.assertNotIn('SECRET', str(caught.exception))
+        self.assertEqual(self.requests, [])
+
+    async def test_details_accepts_integer_endpoints_without_coercion(self):
+        for value in (0, 9223372036854775807):
+            self.handler = lambda request: response([
+                row(idProduto=value),
+            ])
+            result = await self.lookup('get_product_details')(
+                self.client, value,
+            )
+            self.assertEqual(result['status'], 'found')
+            self.assertEqual(result['items'][0]['product_id'], str(value))
+            self.assertEqual(self.bodies()[-1]['idsProdutos'], [value])
+
+    async def test_details_rejects_mixed_identity_page_atomically(self):
+        self.handler = lambda request: response([
+            row('001', idProduto=7), row('002', idProduto=8),
+        ])
+        result = await self.lookup('get_product_details')(self.client, 7)
+        self.assertEqual(result['status'], 'error')
+        self.assertEqual(result['error'], 'invalid_response')
+        self.assertEqual(result['items'], [])
+
+    async def test_complete_metadata_and_empty_terminal_are_preserved(self):
+        for name, value, field, warning in self.cases():
+            for matched in (False, True):
+                with self.subTest(name=name, matched=matched):
+                    rows = [self.matching_row(field, value)] if matched else []
+                    self.handler = lambda request: response(
+                        rows, totalElements=len(rows),
+                    )
+                    result = await self.lookup(name)(self.client, value)
+                    self.assertEqual(
+                        result['status'], 'found' if matched else 'not_found',
+                    )
+                    self.assertEqual(result['returned_count'], int(matched))
+                    self.assertEqual(result['rows_received'], int(matched))
+                    self.assertEqual(result['pages_fetched'], 1)
+                    self.assertEqual(result['total_pages'], 1)
+                    self.assertEqual(result['total_elements'], int(matched))
+                    self.assertEqual(result['operation'], 'products')
+                    self.assertEqual(result['source'], 'netone_api')
+                    self.assertIsInstance(result['retrieved_at'], str)
+                    self.assertTrue(result['complete_dataset'])
+                    self.assertFalse(result['partial'])
+                    self.assertIsNone(result['error'])
+                    self.assertEqual(
+                        result['warnings'], [warning] if warning else [],
+                    )
+                    json.dumps(result, allow_nan=False)
+
+    async def test_cap_duplicate_and_nonmatch_rows_consume_budget(self):
+        for name, value, field, warning in self.cases():
+            self.requests.clear()
+            instance = self.make_client(max_results=3)
+            matched = self.matching_row(field, value)
+            other = self.matching_row(field, 'other', '002')
+            self.handler = lambda request: response(
+                [matched, matched, other], 1, 2, totalElements=6,
+            )
+            result = await self.lookup(name)(instance, value, 1000)
+            body: dict[str, object] = {'page': 1, 'limit': 3}
+            if not field:
+                body['idsProdutos'] = [7]
+            self.assertEqual(self.bodies(), [body])
+            self.assertEqual(result['rows_received'], 3)
+            self.assertEqual(result['returned_count'], 1 if field else 2)
+            self.assertEqual(result['status'], 'partial')
+            self.assertFalse(result['complete_dataset'])
+            self.assertIn('duplicate_rows_removed', result['warnings'])
+            self.assertIn('result_limit_reached', result['warnings'])
+            self.assertEqual(instance._max_results, 3)
+
+    async def test_fixed_pages_keep_filter_and_budget_per_call(self):
+        for name, value, field, _ in self.cases():
+            self.requests.clear()
+
+            def pages(request):
+                page = json.loads(request.content)['page']
+                return response([
+                    self.matching_row(field, value, f'{page}-{index}')
+                    for index in range(50)
+                ], page, 3, totalElements=150)
+
+            self.handler = pages
+            instance = self.make_client(max_results=200)
+            result = await self.lookup(name)(instance, value, 125)
+            bodies: list[dict[str, object]] = [
+                {'page': 1, 'limit': 50}, {'page': 2, 'limit': 50},
+            ]
+            if not field:
+                for body in bodies:
+                    body['idsProdutos'] = [7]
+            self.assertEqual(self.bodies(), bodies)
+            self.assertEqual(result['rows_received'], 100)
+            self.assertEqual(result['returned_count'], 100)
+            self.assertEqual(result['status'], 'partial')
+            self.assertIn('result_limit_reached', result['warnings'])
+            self.handler = lambda request: response([])
+            await self.lookup(name)(instance, value)
+            self.assertEqual(self.bodies()[-1]['limit'], 20)
+
+    async def test_page_limit_and_missing_metadata_cannot_claim_absence(self):
+        for name, value, field, warning in self.cases():
+            for metadata in (False, True):
+                self.requests.clear()
+                instance = self.make_client(max_pages=1)
+                self.handler = lambda request: (
+                    response([
+                        self.matching_row(field, 'other'),
+                    ], 1, 2) if metadata else
+                    httpx.Response(200, stream=Stream(b'{"result":[]}'))
+                )
+                result = await self.lookup(name)(instance, value)
+                self.assertEqual(result['status'], 'partial')
+                self.assertEqual(
+                    result['returned_count'], int(metadata and not field),
+                )
+                self.assertFalse(result['complete_dataset'])
+                expected = ('page_limit_reached' if metadata
+                            else 'pagination_metadata_missing')
+                self.assertIn(expected, result['warnings'])
+                if warning:
+                    self.assertIn(warning, result['warnings'])
+
+    async def test_initial_and_later_errors_override_found_or_absence(self):
+        errors = (
+            (401, 'authentication_error'), (403, 'authorization_error'),
+            (404, 'not_found'), (429, 'rate_limited'),
+            (500, 'upstream_error'), (None, 'timeout'),
+        )
+        for name, value, field, warning in self.cases():
+            for code, error in errors:
+                for preceding in (None, False, True):
+                    # Details can only retain matching product identities.
+                    if not field and preceding is False:
+                        continue
+                    with self.subTest(name=name, code=code, prior=preceding):
+                        self.requests.clear()
+
+                        def pages(request):
+                            page = json.loads(request.content)['page']
+                            if preceding is not None and page == 1:
+                                data = self.matching_row(
+                                    field, value if preceding else 'other',
+                                )
+                                return response([data], 1, 2)
+                            if code is None:
+                                raise httpx.ReadTimeout('SECRET')
+                            return httpx.Response(
+                                code, stream=Stream(b'SECRET'),
+                            )
+
+                        self.handler = pages
+                        result = await self.lookup(name)(
+                            self.client, value, 100,
+                        )
+                        self.assertEqual(result['error'], error)
+                        self.assertEqual(
+                            result['status'],
+                            'error' if preceding is None else 'partial',
+                        )
+                        self.assertEqual(
+                            result['returned_count'], int(preceding is True),
+                        )
+                        self.assertEqual(
+                            result['rows_received'],
+                            0 if preceding is None else 1,
+                        )
+                        self.assertEqual(
+                            len(self.requests),
+                            1 if preceding is None else 2,
+                        )
+                        self.assertTrue(result['partial'])
+                        self.assertFalse(result['complete_dataset'])
+                        self.assertIn(
+                            'collection_interrupted', result['warnings'],
+                        )
+                        if warning:
+                            self.assertIn(warning, result['warnings'])
+                        self.assertNotIn('SECRET', json.dumps(result))
+
+    async def test_decimal_json_null_absence_and_identifiers_stay_exact(self):
+        self.handler = lambda request: httpx.Response(200, stream=Stream(
+            b'{"result":[{"idProduto":7,"idReduzido":"0002",'
+            b'"codigoSku":"00-Ab","ean":"000123","mascara":null,'
+            b'"valor":0.123456789012345678901,"quantidade":0}],'
+            b'"page":1,"totalPages":1,"totalElements":1}'
+        ))
+        for name, value, _, _ in self.cases():
+            result = await self.lookup(name)(self.client, value)
+            item = result['items'][0]
+            self.assertEqual(item['product_id'], '7')
+            self.assertEqual(item['reduced_id'], '0002')
+            self.assertEqual(item['sku'], '00-Ab')
+            self.assertEqual(item['ean'], '000123')
+            self.assertEqual(item['price'], '0.123456789012345678901')
+            self.assertEqual(item['quantity'], '0')
+            self.assertIsNone(item['product_mask'])
+            self.assertNotIn('mascara', item['missing_fields'])
+            self.assertIsNone(item['description'])
+            self.assertIn('descricao', item['missing_fields'])
+            json.dumps(result, allow_nan=False)
 
 
 if __name__ == '__main__':

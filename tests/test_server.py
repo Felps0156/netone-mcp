@@ -4,8 +4,11 @@ import io
 import json
 import logging
 from pathlib import Path
+import queue
 import subprocess
 import sys
+import threading
+from typing import TextIO, cast
 import unittest
 from unittest.mock import patch
 
@@ -62,21 +65,97 @@ def initialize():
 
 class ServerTests(unittest.TestCase):
     def stdio(self, invalid=False):
-        messages = []
-        if invalid:
-            messages.append({
-                'jsonrpc': '2.0', 'id': 99, 'method': 'initialize',
-                'params': {'capabilities': 'SENSITIVE_INPUT_SENTINEL'},
-            })
-        messages.extend([
-            initialize(),
-            {'jsonrpc': '2.0', 'method': 'notifications/initialized'},
-            {'jsonrpc': '2.0', 'id': 2, 'method': 'tools/list', 'params': {}},
-        ])
-        return subprocess.run(
+        process = subprocess.Popen(
             [sys.executable, '-B', '-c', CHILD], cwd=ROOT,
-            input=''.join(json.dumps(m) + '\n' for m in messages),
-            capture_output=True, text=True, timeout=20,
+            stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE, text=True,
+        )
+        stdin_pipe = cast(TextIO, process.stdin)
+        stdout_pipe = cast(TextIO, process.stdout)
+        stderr_pipe = cast(TextIO, process.stderr)
+        stdout, stderr = [], []
+        completed = queue.Queue()
+        errors = []
+
+        def send(message):
+            stdin_pipe.write(json.dumps(message) + '\n')
+            stdin_pipe.flush()
+
+        def receive(reply_id, field):
+            line = stdout_pipe.readline()
+            self.assertTrue(line, 'Unexpected stdio EOF before reply')
+            stdout.append(line)
+            reply = json.loads(line)
+            self.assertEqual(reply['id'], reply_id)
+            self.assertIn(field, reply)
+
+        def exchange():
+            try:
+                if invalid:
+                    send({
+                        'jsonrpc': '2.0', 'id': 99, 'method': 'initialize',
+                        'params': {'capabilities': 'SENSITIVE_INPUT_SENTINEL'},
+                    })
+                    receive(99, 'error')
+                send(initialize())
+                receive(1, 'result')
+                send({'jsonrpc': '2.0', 'method': 'notifications/initialized'})
+                send({
+                    'jsonrpc': '2.0', 'id': 2,
+                    'method': 'tools/list', 'params': {},
+                })
+                receive(2, 'result')
+                # EOF is safe only after the last required response arrived.
+                stdin_pipe.close()
+                stdout.extend(stdout_pipe)
+            except BaseException as exc:
+                completed.put(exc)
+            else:
+                completed.put(None)
+
+        def drain_stderr():
+            try:
+                stderr.extend(stderr_pipe)
+            except BaseException as exc:
+                errors.append(exc)
+
+        threads = []
+        try:
+            for target in (exchange, drain_stderr):
+                thread = threading.Thread(target=target, daemon=True)
+                thread.start()
+                threads.append(thread)
+            # This bounds the entire exchange, including writes and EOF drain,
+            # not just individual reads. stderr is drained concurrently.
+            try:
+                error = completed.get(timeout=20)
+            except queue.Empty:
+                self.fail('Stdio exchange exceeded 20 seconds')
+            if error is not None:
+                raise error
+            process.wait(timeout=5)
+        finally:
+            try:
+                if process.poll() is None:
+                    process.kill()
+                process.wait(timeout=5)
+            finally:
+                # Reaping the child releases blocked pipe operations before
+                # joining workers or closing their buffered pipe objects.
+                for thread in threads:
+                    thread.join(timeout=2)
+                alive = [thread for thread in threads if thread.is_alive()]
+                if not alive:
+                    for pipe in (stdin_pipe, stdout_pipe, stderr_pipe):
+                        try:
+                            pipe.close()
+                        except BaseException as exc:
+                            errors.append(exc)
+                self.assertFalse(alive, 'Stdio worker failed to stop')
+        if errors:
+            raise errors[0]
+        return subprocess.CompletedProcess(
+            process.args, process.returncode, ''.join(stdout), ''.join(stderr),
         )
 
     def test_stdio_has_empty_registry_and_no_network_or_llm(self):
@@ -103,6 +182,41 @@ class ServerTests(unittest.TestCase):
         )
         self.assertNotIn('SYNTHETIC_PRIVATE_TOKEN', result.stderr)
         self.assertNotIn('Traceback', result.stderr)
+
+    def test_stdio_awaits_delayed_tools_list_before_eof(self):
+        # Regression scheduling only: expose EOF cancellation of an in-flight
+        # handler, as in the review diagnostic. Never delay the parent helper.
+        child = CHILD.replace('raise SystemExit(server.main())', '''
+import anyio
+from mcp import types
+original_create = server.create_server
+
+def instrumented_create(settings):
+    app = original_create(settings)
+    handlers = app._mcp_server.request_handlers
+    original_list = handlers[types.ListToolsRequest]
+    async def delayed_list(request):
+        await anyio.sleep(0.1)
+        return await original_list(request)
+    handlers[types.ListToolsRequest] = delayed_list
+    return app
+
+server.create_server = instrumented_create
+raise SystemExit(server.main())
+''')
+        with patch(__name__ + '.CHILD', child):
+            result = self.stdio(invalid=True)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        replies = [json.loads(line) for line in result.stdout.splitlines()]
+        self.assertEqual({reply['id'] for reply in replies}, {99, 1, 2})
+        self.assertIn('error', replies[0])
+        self.assertIn('result', replies[1])
+        self.assertEqual(replies[2]['result']['tools'], [])
+        for sentinel in (
+            'SENSITIVE_INPUT_SENTINEL', 'SYNTHETIC_PRIVATE_TOKEN',
+            'example.invalid', 'Traceback',
+        ):
+            self.assertNotIn(sentinel, result.stdout + result.stderr)
 
     def test_configuration_error_is_safe_and_stdout_empty(self):
         out, err = io.StringIO(), io.StringIO()

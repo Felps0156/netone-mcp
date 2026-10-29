@@ -1,12 +1,22 @@
 # PRD — NetOne MCP: Consulta e Análise Read-Only
 
-> **Versão:** 1.3.0 — pesquisa textual local limitada autorizada em 29/10/2026
-> **Estado:** NOT_READY para V1; Sprints 5 e 6 concluídas. G0/G1 PASS no escopo produtos/page-limit conforme evidências registradas; nenhuma tool MCP comercial registrada.
+> **Versão:** 1.7.0 — Sprint 7 encerrada por aceite com ressalva explícita
+> **Estado:** NOT_READY para V1; Sprints 5, 6 e 7 concluídas. Sprint 7 aceita pelo mantenedor com exceção documentada para validação real de codigoSku técnico (DEC-027), não realizada. Código comercial/ID/EAN e busca textual têm evidências delimitadas; nenhuma tool MCP comercial registrada ou Sprint 8 iniciada.
 > **Regra fundamental:** nenhuma operação pode alterar dados comerciais do ERP.
 
 Este documento é a fonte de verdade para escopo, arquitetura, critérios e checklist. A revisão 1.2.0 substituiu restrições históricas de testes, Git somente leitura e frameworks obrigatórios. A revisão 1.2.1 registra autorização posterior explícita para leitura em memória da configuração e até três consultas de S5.01, sem exposição de segredos. Produtos/preços/estoque responderam com page=1 e limit=1; normalização e metadados das amostras aceitos. S5.01 e Sprint 5 concluídas, com 51 testes offline novamente aprovados. Não houve login, renovação, alteração do `.env`, novas tools ou avanço para Sprint 6. A autorização pontual não libera chamadas contínuas; evidências e limites em docs/runbook.md.
 
 A revisão 1.3.0 registra a conclusão da Sprint 6 em 29/10/2026, com desenho/plano aprovados: pesquisa textual local e limitada sobre produtos, sem filtro textual remoto inventado, sem registro MCP e sem iniciar Sprints 7–9. Implementação verificada por 74 testes offline e duas consultas reais adicionais de produtos page=1/limit=1, ambas HTTP 200; a função retornou um match parcial corretamente. Valores privados permaneceram somente em memória. Os critérios escritos de G0/G1 são reavaliados por operação com a evidência existente, não por um novo requisito genérico de reaceite, instalação limpa ou permissões amplas. Revisões independentes por etapa e do conjunto aprovadas, sem achados críticos/importantes; dois achados menores corrigidos e regressão/auditoria finais aprovadas.
+
+A revisão 1.4.0 registra a autorização posterior exclusiva da Sprint 7,
+desenho/plano aprovados e execução delegada com revisão por etapa: ID
+remoto pelo filtro documentado idsProdutos e igualdade exata local limitada
+por SKU/EAN. Até quatro requisições de produtos limit=1 foram autorizadas,
+incluindo descoberta e até uma por função, sem login ou alteração do .env.
+Três consultas reais HTTP 200 validaram descoberta, detalhes pelo filtro
+de ID e EAN exato local; SKU não tinha valor utilizável na amostra e ficou
+sem validação real. S7.11 permanece aberta; revisão final aprovada. Não
+autoriza banco/sync, preço/estoque adicional, MCP ou Sprints 8+.
 
 Histórico integral: [PRD 1.1.6](docs/history/PRD-1.1.6.md) e [runbook até 1.1.6](docs/history/runbook-through-1.1.6.md). Esses arquivos preservam decisões/evidências e regras da época, não políticas atuais. O timeout anterior da edição protegida foi resolvido, conforme registro no runbook.
 
@@ -56,14 +66,14 @@ flowchart LR
     S -->|lifespan| H
     H --> D[catalog.py]
     H -.->|Authorized query only| E[NetOne ERP]
-    T[tools.py: documentation boundary] -.-> H
+    T[tools.py: bounded application queries] -.-> H
 ```
 
 - `config.py`: único loader/validador; `Settings` imutável com token `SecretStr`, origem/token fora do repr; não serializar settings.
 - `server.py`: valida antes do stdio, `create_server(settings)` injeta um cliente privado por lifespan; não faz HTTP no startup. Registry vazio.
 - `client.py`: HTTPX único, autenticação, guarda de origem/método/rota/schema, streaming, limites, erros, paginação e fechamento.
 - `catalog.py`: modelos imutáveis e normalização consumida pela coleta privada; sem persistência ou join preço/estoque.
-- `tools.py`: função assíncrona `search_products(client, query, max_results=20)` valida entrada e aplica substring casefold local à projeção normalizada; sem registro MCP nesta sprint. Não aceita configuração do operador como argumento do modelo.
+- `tools.py`: search_product_by_code é prioritária para código comercial (mascara remota e igualdade local); search_products faz substring casefold local, get_product_details usa ID remoto e search_product_by_sku/search_product_by_ean mantêm códigos técnicos distintos. Retornam a mesma projeção imutável com prioridade de apresentação, parcialidade/erro e proveniência; nenhuma registrada em MCP. Não aceitam configuração do operador como argumento do modelo.
 - `analysis.py`: futuro e opcional, somente para análise real que justifique módulo separado. Sem grafo/adapter fictício.
 
 ## 7. Adaptação dos Padrões do SCSI
@@ -141,7 +151,11 @@ Em 27/10/2026 o responsável autorizou revisar a política GET-only para reutili
 
 `CatalogRecord` e `QueryResult` são imutáveis e consumidos por `_collect()`. Projeção: `idProduto`→`product_id`, `idReduzido`→`reduced_id`, `mascara`→`product_mask`, `codigoSku`→`sku`, `descricao`→`description`, `grupoDescricao`→`group`, `linhaDescricao`→`line`, `ean`, `valor`→`price`, `tabelaPreco`→`price_table`, `quantidade`→`quantity`, `ultimaAlteracaoTimestamp`→`last_changed_raw`, além de `missing_fields`.
 
-IDs inteiros não negativos viram strings exatas; IDs textuais preservam zeros. Preço/quantidade finitos são Decimal, JSON string, sem quantização. Texto é preservado sem trim. Timestamp é string bruta/null, sem data/fuso/cursor inferido. Ausência e null permanecem distintos. Fotos, cor, tamanho, atacado e descontos estão fora da projeção. Tabela é proveniência, não seleção arbitrária de preço. Regras detalhadas e tipos exigidos: `docs/api-capabilities.md`.
+DEC-026 acrescenta cinco opcionais consumidos pelo retorno das funções atuais: `subgrupoDescricao`→`subgroup`, `observacao`→`notes`, `tabelaPrecoAtacado`→`wholesale_price_table`, `valorAtacado`→`wholesale_price`, `bloqueado`→`blocked`. Não expande o JSON bruto nem inventa filtros.
+
+IDs inteiros não negativos viram strings exatas; IDs textuais preservam zeros. Preço/quantidade finitos são Decimal, JSON string, sem quantização. Texto é preservado sem trim. Timestamp é string bruta/null, sem data/fuso/cursor inferido. Ausência, null e texto vazio permanecem distintos. blocked exige bool estrito/null; false e zero são preenchidos, não ausentes. Fotos, cor, tamanho, dimensões e descontos continuam fora da projeção; atacado usa somente o campo já presente em products. Tabela é proveniência, não seleção arbitrária de preço. Nenhum preço final, moeda, imposto, disponibilidade ou estoque é inferido. Inventário: [campos de produto](docs/product-field-priority.md).
+
+Na apresentação JSON, campos preenchidos vêm primeiro: código comercial/descrição; bloqueio e classificação/EAN/IDs; preço/tabela de origem; observação e timestamp; demais opcionais. Null/vazio permanecem depois, sem remover chaves ou substituir valores; missing_fields fica ao final. Ordem de chaves não é contrato de consumo, ranking ou roteamento conversacional. Campos adicionais ampliam as chaves e missing_fields, não mudam status/parcialidade/completude.
 
 ### 11.3 Estados de presença de dados
 
@@ -270,7 +284,7 @@ Token do operador exclusivamente em `netone-auth-token`, confirmado documentalme
 
 ## 16. Segurança e Política Read-Only
 
-Allowlist literal dos três POSTs da seção 10.5, origem/Host fixos, body fechado com inteiros `page` e `limit`; nenhum prefixo/wildcard/body livre. `_query()` valida filtros/constrói body; hook obrigatório antes do transporte valida somente método/origem/Host/rota, sem desserialização duplicada. HTTPS com certificado/hostname verificados, sem redirects nem fallback de rota/método. POST usa zero retries inclusive em timeout, 429 e `Retry-After`; ajuste legado não autoriza repetição. Nenhum controle deve ser removido para fazer probe.
+Allowlist literal dos três POSTs da seção 10.5, origem/Host fixos, body fechado com inteiros `page` e `limit`; nenhum prefixo/wildcard/body livre. DEC-024 acrescenta somente em products o filtro opcional idsProdutos=[product_id], inteiro estrito validado, sem filtros arbitrários ou alteração de prices/stock. Sua prova própria retornou um produto de identidade correspondente; isso não autoriza chamadas contínuas ou outros filtros. `_query()` valida filtros/constrói body; hook obrigatório antes do transporte valida somente método/origem/Host/rota, sem desserialização duplicada. HTTPS com certificado/hostname verificados, sem redirects nem fallback de rota/método. POST usa zero retries inclusive em timeout, 429 e `Retry-After`; ajuste legado não autoriza repetição. Nenhum controle deve ser removido para fazer probe.
 
 HTTPX privado, `trust_env=False`, sem proxy/netrc/CA herdados; pool de uma conexão/keepalive. Host privado/single-label definido pelo operador é permitido, mas TLS continua obrigatório e a validação não resolve DNS, protege contra rebinding ou aprova operacionalmente o destino. Sem override de TLS inseguro. Acesso deliberado a privados/reconfiguração do processo confiável não é sandbox.
 
@@ -356,6 +370,107 @@ DEC-022 — 1.2.1: após autorização explícita, carregamento privado pelo loa
 
 DEC-023 — 1.3.0: mantenedor aprovou pesquisa textual local em páginas limitadas, desenho e plano, execução delegada/revisada e até duas consultas reais de produtos page=1/limit=1. Alternativa não escolhida: filtro remoto mascara, que não pesquisa descrição e ampliaria o schema fechado. Busca usa substring casefold em description/product_mask/sku; termo 1–200 caracteres sem controles Unicode, max_results inteiro estrito 1–1000/default 20 limitado também pela configuração. O orçamento conta linhas recebidas, inclusive não correspondentes/duplicatas; não promete esse número de matches. G0 PASS para a finalidade de produtos/page-limit conforme DEC-017 e prova S5.01; G1 PASS para Python 3.14.3, configuração/token/proteções já verificados nesse escopo. O reaceite genérico da revisão anterior deixa de ser pendência independente: permissões amplas e instalação limpa não são seus critérios escritos. Custos: busca limitada pode omitir matches fora da amostra, não remove acentos e não comprova snapshot/efeitos internos. Sem cache, join, LLM, filtro remoto novo, login ou registro MCP. A função de aplicação não equivale a tool descoberta; Sprints 7–9 permanecem não iniciadas.
 
+DEC-024 — 1.4.0: após análise de O3 atualizada, o mantenedor escolheu ID
+remoto + SKU/EAN exatos locais limitados, aprovou desenho/plano e execução
+delegada/revisada. O3 publica idsProdutos array[number] e idProduto integer;
+não publica filtro codigoSku/ean na consulta de produtos. Autoriza somente
+product_id keyword-only em _query/_collect para products, body page/limit
++ idsProdutos=[product_id], sem novo endpoint ou dict arbitrário. Entrada
+ID inteira estrita 0–9223372036854775807 (teto defensivo local, não quota),
+sem cast de string/zeros; resposta de outra identidade rejeita a página.
+SKU/EAN são strings 1–256, não vazias após strip e sem categorias C;
+igualdade local sem transformar fonte/entrada, preservando caixa, espaços,
+hífens e zeros. max_results mantém default20/teto1000/cap configurado,
+contando linhas recebidas. Não suporta busca global de códigos; amostra
+sem match continua partial. Alternativa não escolhida: implementar só ID
+e recusar SKU/EAN. Banco sincronizado/filtros inventados fora do escopo.
+Até quatro requests products limit1: descoberta + até uma por função com
+dado utilizável em memória. Ausência de código não vira validação real;
+S7.11 permanece aberta se alguma função não for demonstrada. Não autoriza
+novas descobertas/retries/login/rotação/MCP/Sprints 8+. Prova própria do
+filtro de ID foi bem-sucedida, não inferida de G0/G1 anterior: HTTP200,
+uma identidade correspondente, found e percurso filtrado completo. EAN
+local retornou um match parcial. SKU não tinha dado utilizável na amostra;
+S7.11 continua pendente. Três envios realizados; probe encerrado sem
+reaproveitar a chamada condicional não usada para descoberta adicional.
+
+DEC-025 — 1.5.0: mantenedor solicitou conferir o campo do código comercial
+e priorizá-lo quando pedir código/SKU, autorizando executar diretamente o
+ajuste e até duas requisições filtradas, até20 registros cada, sem novo
+checkpoint. O3 relida confirma mascara:string na consulta de reduzidos.
+Autoriza product_mask keyword-only somente em products, body fechado
+page/limit/mascara; strings1–256, não whitespace-only, sem categorias C,
+sem conversão/trim/casefold e sem combinação com product_id. Não ampliar
+prices/stock ou aceitar filtros arbitrários. search_product_by_code é a
+entrada prioritária para o código/SKU comercial do operador; codigoSku/sku
+técnico e search_product_by_sku permanecem distintos e compatíveis.
+Como igualdade exata remota não é documentada, filtrar mascara por igualdade
+na aplicação após a coleta limitada, preservando erros/parcialidade e
+avisando remote_product_code_exact_match. Sem fallback para código de outro
+campo ou varredura não filtrada. Alternativa rejeitada: repetir as primeiras
+páginas. Não altera critérios/estados das sprints, não conclui S7.11 por
+substituição implícita de campo, não inicia8/9/MCP. Prova real própria às
+18:41:47 UTC: duas consultas filtradas page1/limit20, HTTP200 ambas. O
+código informado correspondeu a mascara, não a codigoSku/idProduto/
+idReduzido; codigoSku estava null/ausente na amostra. Função pública
+retornou um match exato, found, error=null e complete_dataset=true somente
+no percurso filtrado; JSON/cleanup aceitos. Nenhum valor comercial retido
+no projeto/scratch. Orçamento de validação encerrado; sem novas chamadas
+ou alteração de critérios/checklists. Código comercial é a entrada
+prioritária; S7.11 técnico segue pendente, sem fechamento por renomeação.
+
+DEC-026 — 1.6.0: mantenedor solicitou verificar campos preenchidos e
+priorizá-los, escolhendo amostra de até100 produtos sem guardar valores.
+Às18:52:18 UTC, duas consultas products page1/2 limit50, HTTP200 ambas,
+inspecionaram100 linhas recebidas; normalização aceita e cleanup completo.
+39 nomes conhecidos verificados:36 presentes,30 com preenchimento em alguma
+linha,28 preenchidos nas100. mascara/descricao/classificação/preço/tabelas/
+bloqueado/timestamp preenchidos nas100; EAN em93; observacao em1; codigoSku
+null nas100. Falso/zero não são vazios. Prefixo de catálogo não é amostra
+representativa nem prova global, de estoque ou semântica de dimensões.
+Adicionar cinco campos opcionais à projeção e apresentação preenchidos-
+primeiro conforme11.1, sem novos consumidores HTTP ou Sprint8. Inventário
+agregado em docs/product-field-priority.md; seis chaves extras tiveram só
+existência contada, não nomes/tipos/valores retidos nessa amostra inicial.
+Após autorização pontual posterior, às20:56:08 UTC, uma única consulta
+products page1/limit1 HTTP200 identificou seis extras na própria linha:
+quantidadePecasPorEmbalagem inteiro preenchido; unidadeDeMedidaSigla texto
+preenchido; descricaoPromocao/descricaoPromocaoAtacado/valorPromocional/
+valorPromocionalAtacado null. Reter somente nomes/tipos/estados; projeção
+atual aceita e cleanup completo. Sem inferir tipos não-null, promoção,
+conversão de unidade, estoque ou frequências nas100 linhas anteriores.
+Nomes originais descartados não permitem provar identidade dos conjuntos;
+o inventário continua limitado às duas observações, não catálogo global.
+Metadados unidade/embalagem são contexto secundário candidato; promoções
+null não ganham prioridade nem novos campos no DTO. Autorização renovada
+de AGENTS.md aplicada pelo mecanismo normal; instruções refletem1.6.0.
+O orçamento adicional de uma consulta foi consumido e está encerrado.
+Solicitação de continuar offline enquanto operador ausente não renova
+orçamento ERP nem permite encerrar S7.11 sem codigoSku real. Probe de100
+linhas encerrado; sem novas chamadas, login, rotação ou alterações no .env.
+Não alterar tarefas, checkboxes, critérios de aceite ou estado de Sprints8+.
+
+DEC-027 — 1.7.0: após analisar o teste real de busca e solicitar encerrar a
+Sprint 7, o mantenedor escolheu explicitamente «Encerrar com essa ressalva
+documentada», aprovando revisar S7.11 sem fingir validação não executada.
+Novo critério: registrar evidências manuais disponíveis e aceite com
+ressalva para codigoSku técnico, mantido sem validação real. O texto
+original «Validar manualmente cada tool realmente implementada.» e seu
+estado anterior aberto ficam preservados como histórico nesta decisão.
+S7.11 passa a [x] pelo critério revisado e aceite explícito, não pela
+comprovação de um match técnico nem por substituir mascara por codigoSku.
+As demais onze tarefas da Sprint 7 já estavam concluídas; nenhum outro
+texto/estado de tarefa muda. A busca textual adicional examinou100 linhas
+em duas consultas page1/2 limit50 HTTP200, retornou8 itens, status partial,
+complete_dataset=false, error=null e cleanup completo. O mantenedor
+revisou o resultado apresentado, sem persistência de valores comerciais.
+Regressão offline atual:116 testes PASS em5.815s. Mantêm-se limites de
+consulta, ausência de estoque confirmado, registry MCP vazio e V1
+NOT_READY. Encerramento é aceite com exceção conhecida, não liberação
+operacional de SKU técnico, nova autorização ERP ou avanço à Sprint8.
+Os registros DEC-024–026 preservam os critérios/estados de sua época;
+o fechamento atual é regido por esta decisão posterior explícita.
+
 ## 26. Critérios de Aceite
 
 ### 26.1 Critérios globais
@@ -418,7 +533,7 @@ flowchart LR
 
 ## 28. Sprints de Implementação em Checklist
 
-IDs/ordem e estados não relacionados são preservados da versão 1.1.6. Sprints 0–4 têm entregas offline/documentais registradas; Sprint 5 concluída em 29/10/2026, com S5.02–S5.14 offline e S5.01 real delimitada conforme DEC-022. S0.11 é revisão documental, não prova remota. G2 aceito offline; G0/G1 PASS no recorte produtos/page-limit da Sprint 6 concluída conforme DEC-023. Nenhuma etapa 7+ foi iniciada. Evidências/autorizações/achados anteriores completos estão nos arquivos históricos.
+IDs/ordem e estados não relacionados são preservados. Sprints 0–4 têm entregas offline/documentais registradas; Sprint 5 concluída conforme DEC-022 e Sprint 6 conforme DEC-023. Sprint 7 concluída por aceite com ressalva explícita do mantenedor em DEC-027, com S7.11 revisada somente para registrar esse aceite; codigoSku técnico continua sem prova real. S0.11 é revisão documental, não prova remota; G2 aceito offline e G0/G1 limitados às operações observadas. Nenhuma etapa 8+ iniciada; registros anteriores preservam evidências e critérios de sua época.
 
 Executar sequencialmente dentro do escopo autorizado, comprovar antes de marcar e manter tarefas condicionais bloqueadas. Commits são opcionais e dependem de autorização do responsável; não são unidade obrigatória de trabalho. Autorização de teste offline não libera consulta real nem tool.
 
@@ -605,22 +720,74 @@ concluídas; nenhuma tool MCP registrada ou tarefa 7+ executada.
 ### Sprint 7 — Detalhes, SKU e EAN
 
 **Objetivo:** pesquisas específicas sem funcionalidades redundantes.
-- [ ] S7.01 — Verificar consulta/filtro por ID em fonte oficial, sem presumir endpoint dedicado ou alterar método.
-- [ ] S7.02 — Validar identificador do produto no input.
-- [ ] S7.03 — Implementar `get_product_details` somente quando suportado.
-- [ ] S7.04 — Inspecionar suporte documentado à busca por SKU.
-- [ ] S7.05 — Implementar `search_product_by_sku` ou reutilizar ferramenta existente sem duplicação.
-- [ ] S7.06 — Preservar zeros e caracteres significativos do SKU.
-- [ ] S7.07 — Inspecionar suporte documentado à busca por EAN.
-- [ ] S7.08 — Implementar `search_product_by_ean` apenas quando suportado.
-- [ ] S7.09 — Distinguir correspondência exata de busca textual aproximada.
-- [ ] S7.10 — Tratar IDs não encontrados e campos ausentes.
-- [ ] S7.11 — Validar manualmente cada tool realmente implementada.
-- [ ] S7.12 — Remover do registro MCP qualquer candidata sem endpoint aprovado.
+- [x] S7.01 — Verificar consulta/filtro por ID em fonte oficial, sem presumir endpoint dedicado ou alterar método.
+- [x] S7.02 — Validar identificador do produto no input.
+- [x] S7.03 — Implementar `get_product_details` somente quando suportado.
+- [x] S7.04 — Inspecionar suporte documentado à busca por SKU.
+- [x] S7.05 — Implementar `search_product_by_sku` ou reutilizar ferramenta existente sem duplicação.
+- [x] S7.06 — Preservar zeros e caracteres significativos do SKU.
+- [x] S7.07 — Inspecionar suporte documentado à busca por EAN.
+- [x] S7.08 — Implementar `search_product_by_ean` apenas quando suportado.
+- [x] S7.09 — Distinguir correspondência exata de busca textual aproximada.
+- [x] S7.10 — Tratar IDs não encontrados e campos ausentes.
+- [x] S7.11 — Registrar as validações manuais disponíveis e o aceite com ressalva explícita para codigoSku técnico sem validação real, conforme DEC-027.
+- [x] S7.12 — Remover do registro MCP qualquer candidata sem endpoint aprovado.
 
 **Entrega:** consultas específicas condicionais e descrições MCP precisas.  
 
 **Aceite:** nenhuma tool promete suporte inexistente.
+
+**Evidência S7.01/S7.04/S7.07:** O3 relida após renderização em
+29/10/2026: idsProdutos array[number] filtra ID do produto; codigoSku/ean
+são campos de resposta, não filtros publicados nessa consulta. Desenho
+aprovado registra comparação local exata limitada para códigos e filtro
+remoto fechado de ID; não confundir mascara com codigoSku. Contratos e
+limites em `docs/api-capabilities.md`.
+
+**Evidência offline S7.02/S7.03/S7.05/S7.06/S7.08–S7.10/S7.12:** três
+funções implementadas em tools.py pelo desenho aprovado. O coordenador
+executou 97 testes PASS em 4.948s, pip check e auditoria de escopo/imports/
+compilação/links PASS. Casos cobrem tipo/limites antes de HTTP, filtro
+fechado e identidade por página, códigos exatos preservados, campos
+ausentes/null, erro/vazio/parcialidade, Decimal/JSON e stdio com registry
+vazio, sem rede/LLM. S7.12 verifica que nenhuma candidata foi registrada;
+não é implementação antecipada da Sprint 9. Uma execução integrada anterior
+falhou intermitentemente no teste existente de recuperação MCP malformada
+(resposta tools/list ausente); o probe sintético focado e a repetição
+integrada passaram, sem alteração de produção ou diagnóstico causal
+confirmado naquele checkpoint; não foi omitida como sucesso uniforme.
+Task2 aprovada por revisão independente sem achados. A revisão final
+confirmou por experimento controlado o mecanismo EOF/in-flight-handler,
+sem atribuir causa exata ao evento histórico. Correção somente em
+tests/test_server.py: diálogo bidirecional limitado, aguardar respostas
+antes de EOF, stderr concorrente e cleanup em falhas; regressão com handler
+atrasado falhou antes e passou após a correção. M1 resolvido em re-revisão
+independente, sem novos achados. Suíte final do coordenador: 98 testes PASS
+em 5.603s, pip check e auditoria PASS. Nenhuma alteração no servidor/SDK.
+
+**Prova real delimitada — 29/10/2026, 18:03:27 UTC:** três requisições
+products page1/limit1, todas HTTP200, sem retries. Descoberta em memória;
+get_product_details usou idsProdutos e retornou um reduzido correspondente,
+status=found, complete_dataset=true no universo da consulta filtrada.
+search_product_by_ean retornou um match exato, status=partial e
+complete_dataset=false pelo limite. Ambas serializaram JSON e preservaram
+identidade; cleanup do cliente concluído. Nenhum valor privado foi retido.
+search_product_by_sku não foi chamada por falta de SKU utilizável na única
+amostra autorizada; não foi usada máscara como substituto. Sob o critério
+original, S7.11 ficou aberta para esse caso. Não houve renovação de orçamento;
+a parcela não utilizada não libera consulta adicional. Revisão final e
+re-revisão aprovadas; sem avanço às Sprints 8/9 ou registro MCP. Apenas
+naquele checkpoint, S7.11 permanecia pendente até amostra real de SKU.
+Esse requisito original não foi comprovado posteriormente: DEC-027
+registra sua dispensa explícita como impedimento ao encerramento, não
+uma validação bem-sucedida. A função técnica mantém cobertura offline,
+sem observação real; qualquer teste futuro exige autorização própria.
+
+**Encerramento atual — DEC-027:** Sprint 7 concluída por aceite explícito
+com ressalva; S7.01–S7.12 marcadas, S7.11 pelo critério revisado acima.
+ID/EAN/código comercial e texto mantêm suas evidências específicas,
+sem equivalência de campos ou promessa de cobertura global/estoque.
+Não inicia Sprint 8, não registra MCP nem altera NOT_READY para V1.
 
 ### Sprint 8 — Preço, estoque e listagem paginada
 

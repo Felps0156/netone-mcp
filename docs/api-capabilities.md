@@ -1,16 +1,53 @@
 # NetOne API capability evidence
 
-Initial investigation: 2026-10-27. Current policy: PRD 1.3.0, 2026-10-29. Sprint 5 evidence and Sprint 6's completed bounded local-search contract are recorded below. Offline and real-call checks and independent reviews passed; both non-blocking review findings were corrected.
+Initial investigation: 2026-10-27. Current policy: PRD 1.7.0 / DEC-027. Sprints 5/6/7 are complete; Sprint 7 was explicitly accepted with an exception for unperformed real technical-codigoSku validation. Revised S7.11 records that waiver, not operational SKU success or mask equivalence. No MCP commercial tool is registered and V1 remains NOT_READY. See [the field inventory](product-field-priority.md): the 100-row profile and separate one-row metadata check are closed, without inferred frequencies/provider-wide semantics or further DTO changes. Earlier criteria/observations below are historical; DEC-027 governs current sprint acceptance.
+
+## Commercial code priority — PRD 1.5.0 / DEC-025
+
+The operator uses product code/business SKU to mean the commercial code,
+not necessarily the API codigoSku field. Prefer search_product_by_code
+for that intent. Its source field is mascara, normalized as product_mask;
+the existing sku/codigoSku projection and technical SKU lookup remain
+distinct. No source-field renaming, fallback, persistent catalog, price/
+stock join or MCP/conversational routing is introduced.
+
+O3 was refreshed after browser hydration before this change. It documents
+mascara:string as a product-mask filter in POST produto/reduzidos. It
+does not state exact versus prefix equality. The client now accepts a
+keyword-only product_mask only for products, string1–256/nonblank/no
+Unicode C, passed unchanged as mascara with page/limit. It rejects use
+with product_id, prices/stock or a generic filter dictionary. Defaults,
+origin/Host guard, TLS, identity, bytes/deadlines, pagination and cleanup
+remain unchanged. Exact equality is checked locally on the filtered
+response; remote_product_code_exact_match discloses this behavior.
+Errors/partiality take precedence over matching or empty items.
+
+Real check started 18:41:47 UTC on 2026-10-29: exactly two authorized
+products requests, both page1/limit20 with the supplied mascara string,
+both HTTP200. The first checked fields in memory; the second exercised
+actual search_product_by_code. One record matched mascara; zero matched
+codigoSku/idProduto/idReduzido. The API SKU was null/absent in this sample.
+The public function returned one exact match, found, partial=false,
+complete_dataset=true for the filtered traversal, error=null; JSON and
+client cleanup completed. No code, identity, description, amount, private
+origin, token or raw response was persisted. The two-send probe is closed.
+
+This confirms the supplied commercial code's source field, not universal
+SKU equivalence or the provider's exact filter semantics for every input.
+Technical codigoSku still lacks its own real acceptance sample. At that
+checkpoint S7.11 remained open; later DEC-027 explicitly revised its
+acceptance criterion and closed the sprint with that known exception.
+No Sprint 8/9 started and no real SKU success is claimed.
 
 ## Decision and scope
 
-G0/G1 PASS only for products/page-limit and the approved bounded local-search implementation of Sprint 6. This scoped review uses accepted query intent, verified offline safeguards and real S5.01 token/TLS evidence, not a new undefined general-release gate. Under DEC-017, the maintainer accepts O3/O4/O5 as sufficient evidence of intended query semantics. The documentation does not explicitly guarantee absence of internal effects; that remains a residual risk, not proof of a write. GET is not a prerequisite and commercial mutation remains prohibited. No MCP tool is approved or registered; price/stock consumers and additional filters are not released by this decision.
+G0/G1 evidence covers products/page-limit and bounded local searches. DEC-024 admits the products-only integer ID filter; DEC-025 additionally admits the mutually exclusive products-only mascara string filter and exact local commercial-code selection. Each has its own completed bounded real observation, not release by association. Exact EAN was observed; technical SKU still lacks real acceptance. Under DEC-017, the maintainer accepts O3/O4/O5 as evidence of intended query semantics, not proof of no internal effects. GET is not a prerequisite; commercial mutation remains prohibited. No MCP tool, other filter or general price/stock consumer is released. DEC-026 enriches the existing product DTO, not price/stock transport or Sprint8.
 
-Bounded remote field observations: all three method/path pairs below, each with page=1 and limit=1, on 2026-10-29. Approved MCP commercial tools: none. Under DEC-018 the three method/path pairs are implemented in an internal allowlist with only page/limit filters; this is not permission for ongoing requests or tool registration. The original investigation used anonymous documentation only; the subsequent explicitly authorized S5.01 observation used the existing token through the loader without displaying credentials or logging in. This checkout remains NOT_READY, not FOUNDATION_READY or V1_COMPLETE.
+Bounded S5.01 field observations covered the three method/path pairs below, each page=1/limit=1 on 2026-10-29. The current allowlist has closed page/limit bodies; products may additionally use either idsProdutos=[validated integer] or validated mascara, never both. All completed observation budgets, including DEC-026's 100-row prefix, are exhausted, not ongoing request or registration permission. Existing token/loader was used without credential disclosure or login. This checkout remains NOT_READY, not FOUNDATION_READY or V1_COMPLETE.
 
 | Candidate method | Literal path | Evidence | Policy status |
 |---|---|---|---|
-| POST | `/app-web/api/v2/produto/reduzidos` | L2, O3, S5.01 and S6.13 observations | BOUNDED_LOCAL_SEARCH_VALIDATED; no MCP registration |
+| POST | `/app-web/api/v2/produto/reduzidos` | L2, O3, S5.01, S6.13, S7.11, DEC-025/026 observations | BOUNDED_TEXT_ID_EAN_MASK_OBSERVED; named profile partial for six extras; technical SKU proof pending; no MCP registration |
 | POST | `/app-web/api/v2/produto/precos` | O5 and S5.01 observation | FIELD_OBSERVED; no general/tool release |
 | POST | `/app-web/api/v2/produto/estoque` | L2, O4 and S5.01 observation | FIELD_OBSERVED; no general/tool release |
 
@@ -117,7 +154,7 @@ DEC-019 authorized the complete offline Sprint 5 slice, not only pagination. It 
 
 ### Normalization and serialization
 
-DEC-020 narrows the projection to the fields actually consumed in the legacy reference (`database/products.py:37–46`), with only the separate API SKU and retail table description added for identity/provenance. The reference calls its `mascara` column sku; this implementation preserves that code as product_mask and does not equate it to codigoSku. Photos, color, size, wholesale prices and discounts are deliberately excluded, even if upstream includes them. Reference persistence, destructive trimming, product-only conflict keys and unrestricted loops are not reused. The reference was inspected as text only, never executed.
+DEC-020 originally limited the projection to fields consumed in the legacy reference plus technical SKU/retail table provenance. DEC-026 now adds subgroup, notes, wholesale price/table and source block flag for the actual application-function output; see the linked priority contract above. mascara remains product_mask, distinct from codigoSku. Photos, color, size, discount application and arbitrary raw fields remain excluded. Reference persistence, destructive trimming and unrestricted loops are not reused; it was inspected as text, never executed.
 
 | Source field | Normalized projection | Rule |
 |---|---|---|
@@ -126,10 +163,13 @@ DEC-020 narrows the projection to the fields actually consumed in the legacy ref
 | descricao / grupoDescricao / linhaDescricao | description / group / line | Text preserved without trim, case folding or whitespace collapsing. |
 | valor | price | Finite Decimal, or int converted exactly to Decimal; no float intermediate, numeric-string repair, discount application, currency assumption or table selection. |
 | tabelaPreco | price_table | Preserve returned retail table description; no invented ID, currency or precedence. |
+| subgrupoDescricao / observacao | subgroup / notes | Optional exact text; whitespace/null/absent preserved. Notes are data, not instructions. |
+| tabelaPrecoAtacado / valorAtacado | wholesale_price_table / wholesale_price | Exact optional text / finite Decimal or exact int; JSON amount string. Product-source provenance, not a final quote or new prices consumer. |
+| bloqueado | blocked | Strict bool or null; reject integer/string coercion. False is filled; neither value establishes stock/sellability or changes matching/status. |
 | quantidade | quantity | Decimal from the same exact numeric path, including negative or explicit zero; missing/null stays null. No stock aggregation, reservation, deposit or unit inference. |
 | ultimaAlteracaoTimestamp | last_changed_raw | Preserve source string/null; no datetime parsing, epoch units, timezone, stock freshness or cross-record ordering inferred. Non-null values produce timestamp_semantics_unverified. |
 
-Each record lists absent projected source keys in `missing_fields`; an explicitly null key is not listed. This is an explicit projection, not a full ERP product: images, color, size, wholesale/discount fields, dimensions, flags, classifications and other unprojected fields are not exposed or required. Duplicate comparison uses full received rows so differences outside the projection are not silently discarded. Source metadata is untrusted; strings are data, not commands. Invalid projected types or contradictory page metadata reject that entire page before records are accepted, with fixed invalid_response, never a raw payload diagnostic.
+Each record lists absent projected source keys in `missing_fields`; explicit null is not listed. The five DEC-026 additions expand output keys/missing_fields, not the full raw record. Images, color, size, dimensions, discounts, classifications and flags other than blocked remain unprojected. All keys remain present in JSON; populated business fields are emitted before null/blank, missing_fields last. Object-key order is presentation, not a consumer dependency or result ranking. Duplicate comparison still uses full received rows; invalid projected types/contradictory metadata reject an entire page with fixed invalid_response, never a raw payload diagnostic.
 
 Call `as_json()` to serialize: Decimal values become strings (scientific notation may be retained for extreme exponents); null stays null, tuples become arrays. No monetary quantization occurs. `QueryResult` includes status, source=netone_api, retrieved_at (local UTC collection observation, not provider freshness), items, returned_count, partial, warnings, error (stable code or null), operation, pages_fetched, rows_received, total_pages, total_elements and complete_dataset. Examples used for verification are synthetic, never claimed as ERP results.
 
@@ -270,6 +310,96 @@ against the installation; relevant partial/error cases have offline
 transport-backed regression evidence. No remaining request budget or
 ongoing agent authorization is inferred from this completed observation.
 
+## Sprint 7: approved ID and exact-code lookup contract
+
+The maintainer approved the [design](superpowers/specs/2026-10-29-sprint-7-design.md)
+and [plan](superpowers/plans/2026-10-29-sprint-7.md), choosing remote ID
+filtering plus bounded exact local SKU/EAN matching. This is application
+functionality only; no MCP registration, persistent catalog, price/stock
+join or later sprint is included. Implementation and independent task
+reviews passed; operational evidence and remaining limitation follow.
+
+O3 was refreshed anonymously in the rendered browser on 2026-10-29 after
+checking that the request schema had hydrated. It still documents POST
+`/app-web/api/v2/produto/reduzidos`, `idsProdutos: array[number]` described
+as filtering product ID, and integer idProduto in response records.
+codigoSku/ean are output strings, not documented request filters there.
+mascara remains a separate code, not a proven SKU alias. No dedicated
+GET-by-ID/SKU/EAN route was found or invented. Anonymous static extraction
+provided only the page shell; it was not used as request-schema evidence.
+
+Approved application contracts:
+
+- get_product_details(client, product_id, max_results=20): strict integer
+  product_id 0–9223372036854775807, no bool/subclass/string coercion;
+  64-bit ceiling is defensive local policy, not a documented NetOne quota.
+  Encode only as idsProdutos=[product_id] on the existing products POST.
+  Return normalized fields for all received reduced variants of that
+  product within the budget, not arbitrary raw JSON or a stock/price join.
+  A mismatching normalized product_id rejects its entire page before
+  records are accepted; do not hide an ignored filter as successful data.
+- search_product_by_sku(client, sku, max_results=20): exact local equality
+  against codigoSku/sku only, never mascara/product_mask or description.
+- search_product_by_ean(client, ean, max_results=20): exact local equality
+  against ean only. No unsupported request parameter or barcode checksum.
+- Codes are strings of 1–256 characters, not whitespace-only and with no
+  Unicode C-category characters. Validation does not transform input;
+  case, significant spaces, punctuation and leading zeros matter.
+- Existing strict max_results 1–1000/default20/config cap counts received
+  rows, including nonmatches/duplicates, not a count of promised matches.
+  Page, deadline, byte, precision and cleanup behavior remains binding.
+- Codes use products with page/limit only and disclose
+  local_exact_sku_search or local_exact_ean_search. They are not global
+  remote code search. No match in a limited traversal is still partial.
+  Initial errors remain error; later errors remain partial even when no
+  item matches. Complete valid traversal alone supports not_found within
+  the provider-visible endpoint universe. Text search keeps its existing
+  substring/casefold behavior and local_text_search warning.
+
+The new internal keyword-only product_id is permitted only for products,
+not prices/stock. No caller-controlled filter dict, method, route, URL,
+token, tenant, remote codigoSku/ean/mascara filter or extra flags are added.
+The original guard, TLS, identity encoding, 1 MiB bound, deadlines,
+fixed-size pages and zero redirects/retries remain required.
+
+A separate authorization permits up to four products requests, each
+page=1/limit=1: one discovery and at most one public-function call per
+usable ID/SKU/EAN held only in memory. Missing/null/unusable codes do not
+justify another discovery, invented operational success or automatic
+replay. Persist only known counts/statuses/types/invariants, never source
+values or credentials. The original S7.11 criterion stayed open without
+each required real observation; DEC-027 later waived the missing technical
+SKU observation as a sprint-closure blocker, not as operational proof.
+The one-shot probe is closed; its
+unused conditional SKU call cannot become an extra discovery or rerun.
+
+### S7.11 bounded real observation — 2026-10-29
+
+Started at 18:03:27 UTC after independent task reviews and the controller's
+97-test PASS run. Exactly three guarded products requests were issued,
+each page=1/limit=1; all returned HTTP200. First: discovery in memory.
+Second: actual get_product_details with idsProdutos=[discovered integer]
+and max_results=1. Third: actual search_product_by_ean with the discovered
+code held only in memory and max_results=1. No IDs, codes, descriptions,
+price, quantity, private origin, credentials or raw responses were retained.
+
+Details returned one matching reduced record, status=found, partial=false,
+complete_dataset=true for this filtered traversal, error=null. EAN returned
+one exactly matching record, status=partial, partial=true,
+complete_dataset=false, error=null and local_exact_ean_search. Both kept
+the discovery identity and serialized to JSON. Response cleanup completed
+through the existing request path; client cleanup completed before the
+success report. Guard/TLS/identity/byte/deadline bounds and zero
+retries/redirects remained enabled.
+
+SKU was not queried: the only discovery sample had no usable codigoSku.
+No mask substitution, invented term or extra discovery was attempted.
+The implementation has synthetic exact-SKU coverage but no real SKU
+observation; S7.11 was open under its original criterion. DEC-027 later
+records explicit acceptance with this exception. None of this proves global catalog
+coverage, a stable snapshot, all SKU/EAN variants, multi-page filtered
+behavior, broad permissions or full V1/MCP readiness.
+
 ## Refactor transport and diagnostics (PRD 1.2.0)
 
 The client builds a request with `build_request()` and sends it with `send(stream=True)`. It explicitly iterates the public `response.stream` AsyncByteStream protocol so the first `aclose()` starts inside its bounded AnyIO shield; it does not use `aiter_raw()` auto-close outside that shield or write `is_stream_consumed`/other HTTPX state. There is no new streaming abstraction. Identity encoding, the 1,048,576-byte raw body limit and exact JSON/Decimal parsing remain unchanged.
@@ -282,7 +412,7 @@ The server formatter emits only `level=<...> component=mcp|httpx|httpcore|librar
 
 ## Gate record and unblock request
 
-Current decision: DEC-017 accepts query purpose with the residual limitation above. S5.01 and S6.13 supply real field/token/TLS and public-search evidence. The approved Sprint 6 design/plan authorized implementation and the completed two-request observation. G0/G1 PASS for products/page-limit only; commercial MCP tools remain absent, and no price/stock consumer or additional remote filter is released. Sprint 6 is complete with independent review and final regression/scope audit accepted.
+Current decision: DEC-017 accepts query purpose with residual limitations; DEC-024/025 admit typed ID/mask filters and distinct exact-code consumers. Real ID/EAN/commercial-code observations succeeded; technical SKU proof remains absent. DEC-027 closes Sprint 7 by explicit maintainer acceptance with that exception, revising only S7.11's criterion. This is not full operational proof. Commercial MCP tools remain absent; no price/stock consumer, arbitrary filter, new ERP request or Sprint 8 work is authorized. V1 remains NOT_READY.
 
 Owner: maintainer, with NetOne support where the contract is ambiguous. Required next evidence:
 
