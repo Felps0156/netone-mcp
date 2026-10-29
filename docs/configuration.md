@@ -1,75 +1,61 @@
 # Configuration
 
-Sprint 2 implemented local configuration validation; Sprint 3 consumes the validated settings in a private, token-configured HTTP client managed by the MCP lifespan. Neither sprint validates credentials against NetOne, implements login, authorizes HTTP operations, or releases MCP tools. G0 remains BLOCKED. Offline configuration/client acceptance is not complete G1: remote credential validation and operator installation readiness remain BLOCKED.
+`config.load_config()` is the only loader. It explicitly reads `.env` beside `config.py`, overlays recognized process variables, validates settings, and makes no network request. Imports do not load configuration. `main()` loads once before stdio; `create_server(settings)` manages one private client per lifespan. No tool accepts URL, method, route, header, credential or tenant configuration.
 
-## Loading and ownership
+## Loading and secret ownership
 
-`config.load_config()` is the sole loader. It reads `.env` next to `config.py`, not relative to the current working directory. Importing modules does not load configuration. Settings are immutable and process-owned; MCP arguments cannot supply configuration. The entrypoint validates settings before starting the empty stdio server. No request is made during loading or startup.
+The pinned python-dotenv parser reads UTF-8/BOM in memory without interpolation or rewriting the file. Process values take precedence, including explicitly empty values, which fail where a value is required. `os.environ` is not mutated. A missing file is allowed when process settings suffice; unreadable files, malformed assignments and duplicate recognized keys fail with fixed diagnostics. Unknown keys and legacy login/password keys are not retained in settings.
 
-The root file is parsed in memory using the pinned python-dotenv parser, with UTF-8 BOM support and without interpolation. It is never rewritten. Existing process variables take precedence, including an empty value (which is rejected where a value is required). `os.environ` is not modified. Missing `.env` is allowed when the process provides configuration. Unreadable files, malformed assignments and duplicate recognized keys fail with fixed errors. Unknown keys, including legacy login/password keys, are not retained in settings and cannot enable login.
-
-Do not overwrite an existing `.env` with `.env.example`. Configure missing settings through the process environment or an operator-controlled launch configuration. Do not send secrets in chat, command-line arguments or client tool arguments.
+Settings are immutable. URL/token are omitted from repr; token uses `SecretStr`. This is accidental-disclosure protection, not encryption or a serialization boundary. Never dump settings/environment, render a secret, or return configuration through MCP. Preserve an existing `.env` exactly: no display, overwrite, move or replacement by `.env.example`. Use an operator-controlled launch configuration for migration; never supply credentials through chat or command-line arguments.
 
 ## Variables
 
-These are local project controls, not provider quotas or evidence of supported remote behavior.
+Local controls are not provider quotas.
 
 | Name | Default | Accepted values / purpose |
 |---|---|---|
-| `NETONE_BASE_URL` | Derived from a supported legacy URL if absent | HTTPS origin, such as `https://example.invalid`; no API path, userinfo, query or fragment |
-| `TOKEN_NETONE` | Required | Operator-supplied user token; 1–8192 printable ASCII characters, no whitespace; validated structurally, not remotely |
-| `REDUCED_PRODUCTS_URL` | Optional | Legacy reference with exact path `/app-web/api/v2/produto/reduzidos` |
-| `STOCK_URL` | Optional | Legacy reference with exact path `/app-web/api/v2/produto/estoque` |
-| `NETONE_TIMEOUT_SECONDS` | `15` | Integer 1–120 seconds; HTTP connect/read/write/pool timeout per phase, not a total request deadline |
-| `NETONE_MAX_RESULTS` | `100` | Integer 1–1000; future result ceiling |
-| `NETONE_MAX_PAGES` | `5` | Integer 1–100; future pagination ceiling |
-| `NETONE_MAX_RETRIES` | `0` | Integer 0–3; global ceiling reserved for reviewed operations; actual transport retries remain zero |
-| `NETONE_LOG_LEVEL` | `WARNING` | `WARNING`, `INFO`, `ERROR`, `CRITICAL`; MCP diagnostic configuration; DEBUG remains rejected; HTTPX/httpcore raw logs are suppressed |
-| `LOGIN_NETONE`, `SENHA_NETONE` | Ignored | Legacy names only; no login, refresh, OAuth or token regeneration is implemented |
-
-Timeout is consumed by the private HTTP client. Pagination/result limits remain reserved for future approved operations. The retry ceiling never enables replay: the transport uses zero retries even with a larger configured ceiling. The log setting configures MCP diagnostics, not third-party debug/trace output. Commercial redirects and method/route fallback remain prohibited under the PRD.
-
-## Private HTTP client and lifecycle
-
-`server.create_server(settings)` binds one `NetOneClient(settings)` to each MCP lifespan. The lifespan context contains `netone_client` for future trusted internal consumers; it is not an MCP resource, tool or configuration endpoint. Importing application modules creates no HTTP client and reads no `.env`. `main()` loads configuration once before starting stdio. Normal exit, body exceptions and AnyIO cancellation close the client; `aclose()` shields cleanup against the SDK's cancellation scopes and is idempotent after successful closure. A lifecycle failure returns a fixed `client_error`, not success or a raw exception group.
-
-The public client exposes only asynchronous context management, `aclose()` and `is_closed`. It offers no public arbitrary request method or MCP commercial tool. Following DEC-018, the private `_query` method and request hook admit only the three literal query POST paths, a fixed origin and Host, and integer `page`/`limit` filters. This is an internally callable implementation, not a remotely validated operation or authorization to contact the ERP. Synthetic in-memory transport checks do not validate an installation.
-
-The operator's token is configured only in `netone-auth-token`; no login, OAuth, refresh, expiry handling, token regeneration or MCP token input exists. The provided Settings must come from `load_config()`, not model/tool arguments. Settings and the private HTTPX object must never be serialized or logged.
-
-TLS uses explicit certificate/hostname verification and the HTTPX default CA store. `trust_env=False` prevents implicit proxies, `.netrc` authentication and `SSL_CERT_FILE`/`SSL_CERT_DIR` overrides. No insecure-TLS or proxy override is exposed. Redirects are disabled, retries are zero, and the pool is bounded to one connection/one keepalive. Four timeout phases use `NETONE_TIMEOUT_SECONDS`; the whole-request deadline is four times that setting with up to one extra second for shielded response cleanup. Responses require identity encoding and a maximum of 1,048,576 bytes; only a JSON object with a `result` list is accepted. These are local limits, not provider quotas or proof of real compatibility. `Retry-After` does not cause a retry when none is permitted.
-
-Before client construction, raw `httpx`/`httpcore` diagnostics are suppressed process-wide, including existing descendants and later descendants inheriting normal logger configuration. No caller-supplied hooks or trace extensions are supported. The hosting Python process is trusted: deliberately accessing private fields or reconfiguring descendant loggers afterwards can bypass application conventions and is not sandboxed. Safe application diagnostics remain on stderr; stdout remains MCP-only.
-
-`create_server()` also takes ownership of root/MCP logging before constructing FastMCP. Existing root handlers are replaced by a stderr handler, and existing named MCP handlers propagate to that boundary. Its formatter emits only `mcp_diagnostic: Diagnostic details suppressed for security.`; it never renders the SDK message, arguments, validation input, exception or stack. This covers SDK calls to the root logger, which can otherwise log malformed MCP request/notification contents even at WARNING. The configured log level controls whether a record is emitted, not its raw content. The trade-off is intentionally reduced SDK diagnostic detail and replacement of inherited logging sinks in this dedicated stdio process. Fixed configuration/client errors retain their distinct codes. No protocol response or installed SDK file is modified.
-
-These are offline implementation controls, not evidence of a TLS handshake, DNS/rebinding protection, provider permissions, token freshness or business-side-effect safety. No ERP request is performed during construction, startup or shutdown; invoking the private query would send a request, so a real call requires separate authorization.
+| `NETONE_BASE_URL` | Derived from supported legacy URL if absent | Operator-approved HTTPS origin; no API path, userinfo, query or fragment |
+| `TOKEN_NETONE` | Required | 1–8192 printable ASCII characters, no whitespace; structural validation only |
+| `REDUCED_PRODUCTS_URL` | Optional | Exact path `/app-web/api/v2/produto/reduzidos` |
+| `STOCK_URL` | Optional | Exact path `/app-web/api/v2/produto/estoque` |
+| `NETONE_TIMEOUT_SECONDS` | `15` | Integer 1–120; timeout for each connect/read/write/pool phase |
+| `NETONE_MAX_RESULTS` | `100` | Integer 1–1000; whole-collection received-row ceiling |
+| `NETONE_MAX_PAGES` | `5` | Integer 1–100; whole-collection page ceiling |
+| `NETONE_MAX_RETRIES` | `0`, legacy compatibility only | Validated integer 0–3, then discarded; never enables replay and is not operational state in Settings |
+| `NETONE_LOG_LEVEL` | `WARNING` | DEBUG/INFO/WARNING/ERROR/CRITICAL under the same safe diagnostic boundary |
+| `LOGIN_NETONE`, `SENHA_NETONE` | Ignored | No login, refresh, OAuth or token regeneration |
 
 ## URL validation and legacy migration
 
-For a new installation, provide `NETONE_BASE_URL` and `TOKEN_NETONE`. The example host is deliberately non-operational; do not contact it or substitute the published test host as operational evidence.
+URL parsing uses a library rather than a public-network lexical allowlist. Require HTTPS, valid host/port and no embedded credentials, query or fragment. Base path must be empty or `/`; legacy paths match literally, without trailing slash or encoding substitutions. Origin comparison normalizes hostname case, default port 443 and IPv6 representation. All supplied base/legacy origins must agree. Optional URL variables may be absent, not explicitly blank.
 
-For a legacy installation, keep its file untouched. When `NETONE_BASE_URL` is absent, the loader derives the HTTPS origin from either supported legacy resource URL. If both legacy URLs exist, they must agree. If an explicit base exists, all provided legacy URLs must match it as well. Optional variables may be absent, but explicitly blank URLs are rejected, not silently ignored.
+Operator-defined private HTTPS addresses and single-label hosts are allowed. This does not approve a destination, resolve DNS, prevent DNS rebinding or establish a TLS handshake. Certificate/hostname verification remains mandatory; private addressing is not an insecure-TLS exception. Do not infer a new endpoint or repair malformed source configuration silently.
 
-The base permits only an empty path or `/`. Legacy paths must match literally, with no trailing slash or encoding. Hostnames are normalized to lowercase, default port 443 is omitted, and IPv6 literals are canonicalized before origin comparison. Ports must be 1–65535. Public IP literals and well-formed, multi-label ASCII hostnames are accepted. Private/non-global IP literals, single-label hosts, `.local`/`.localhost` names, malformed DNS labels, backslashes, percent encoding, control characters, non-ASCII URL characters, query delimiters and fragment delimiters are rejected. Use operator-approved ASCII/punycode names where appropriate.
+For a new installation, provide base and token. For a legacy installation, keep the file intact and derive origin from a valid supported URL if the base is absent. If changing origin through process configuration, override every conflicting legacy URL as well as the base. Neutral `example.invalid` hosts are non-operational; never probe them or the published test host as an installation check.
 
-Bracketed authorities are accepted only for supported IPv6 literals; IPvFuture is rejected rather than reinterpreted as DNS. This is lexical validation, not DNS resolution, DNS-rebinding protection, certificate verification or remote-origin approval. The operator must approve the configured destination. Sprint 3 configures certificate verification and disabled redirects but blocks all requests; connection-time DNS/IP controls and actual TLS validation remain unverified. Validating a resource URL does not register or activate that endpoint.
+Historical Sprint 2 inspection found a local reduced-products route mismatch; no URL value is published. This refactor has not reread the installation file or established readiness. The operator owns any correction.
 
-If existing URLs fail validation, leave `.env` intact. The authorized operator can provide corrected configuration through the process environment; override all conflicting legacy URL variables as well as the base when changing origin. Never downgrade HTTPS, guess a replacement path, silently repair a source value or disclose the rejected URL. Local inspection during Sprint 2 found that the current `REDUCED_PRODUCTS_URL` fails validation; no value or host was displayed, and no migration or request was attempted.
+## Private client and request limits
 
-## Errors and secret handling
+The public client offers lifecycle/context management, `aclose()` and `is_closed`, not an arbitrary HTTP interface. Private `_query()` validates integer page/limit filters and constructs the closed body. Its mandatory request hook checks only method, fixed origin/Host and one of the three literal POST routes in the [API inventory](api-capabilities.md), without deserializing the body a second time. Calling it with real settings would send a request and requires separate authorization. Startup/shutdown do not call ERP.
 
-The entrypoint returns exit code 1 with a single English `configuration_error` message on stderr and no stdout when configuration is invalid. Messages contain fixed variable names and constraints only, never the rejected value, file contents, private URL or third-party exception text. Successful startup reserves stdout for MCP protocol messages.
+Token goes only in `netone-auth-token`. HTTPX uses explicit certificate/hostname verification and its normal CA store, `trust_env=False`, no inherited proxies/netrc/CA overrides, no redirects, zero retries and one connection/keepalive. No caller-supplied transport/hooks/trace options are exposed. `Retry-After`, 429, timeout or a legacy retry setting never causes POST replay or method/route fallback.
 
-Settings omit token and base URL from their repr; tokens use Pydantic `SecretStr`. This reduces accidental disclosure, but is not encryption or a serialization boundary: privileged application code can deliberately access fields. Never serialize Settings, dump the environment, log `get_secret_value()`, or return settings from an MCP tool.
+Each request and the whole collection have a local deadline of four times the configured phase timeout. Response cleanup may add up to one second under an AnyIO cancellation shield. The client uses `build_request()` plus `send(stream=True)` and explicitly iterates the public `response.stream` AsyncByteStream protocol. It does not use auto-closing `aiter_raw()` outside the shield or write `is_stream_consumed`/other HTTPX state. Both response and client cleanup have a one-second shielded allowance, not an unlimited shield. Requiring `Accept-Encoding: identity` and rejecting compressed success responses avoids unbounded decompression before a size check. Count raw bytes, cap each body at 1,048,576 bytes, reject duplicate keys/nonfinite JSON, and require a JSON object with a `result` list. This does not bound underlying library/network buffers or prove provider compatibility.
 
-## Safe local checks
+The collector keeps page size fixed, default min(50, max_results), with whole-query page/row/deadline ceilings and conservative partiality. See [normalization and pagination](api-capabilities.md#pagination-and-data-universe). External cancellation propagates. Cleanup failure must not mask the original error/cancellation; a stalled close beyond its bounded allowance is not proof of completed resource release. HTTPX closed state alone is not cleanup evidence.
 
-On the existing Windows environment:
+## Logging and errors
+
+stdout is MCP-only. The dedicated process normalizes root and relevant MCP/HTTPX/httpcore handlers, emitting only `level=<...> component=mcp|httpx|httpcore|library code=<component>_diagnostic`. It does not indiscriminately disable loggers or render raw SDK/HTTP messages, arguments, validation input, exception text or stacks, including malformed MCP data and root DEBUG. Application-owned fixed/sanitized diagnostics may remain specific. Configuration/client failures retain safe codes; no SDK source or protocol reply is patched. A trusted embedding process can deliberately reconfigure private logging; this is not a sandbox.
+
+Invalid configuration makes the entrypoint return exit 1, no stdout and a safe `configuration_error` diagnostic without rejected values. Structural configuration, mock HTTP and stderr checks are offline controls, not authentication, permissions, token freshness, DNS/TLS or no-business-side-effect proof.
+
+## Safe offline checks
 
 ```powershell
-.\.venv\Scripts\python.exe -c "from config import load_config; load_config(); print('Configuration valid')"
-.\.venv\Scripts\python.exe server.py
+.\.venv\Scripts\python.exe -B -m unittest discover -s tests -v
+.\.venv\Scripts\python.exe -m pip check
 ```
 
-The first command reports only success; if configuration is invalid, use the server entrypoint for its sanitized error without a traceback. Neither command authenticates remotely. Do not print the settings object or URL/token fields for diagnostics. See [the runbook](runbook.md) for executed manual scenarios and limitations. No automated tests or test fixtures are part of this project.
+Tests must use synthetic settings and in-memory file/transport substitutions, never the real `.env` or ERP. Do not run an unoverridden `load_config()` as part of this refactor. [Runbook](runbook.md) separates historical evidence, the executed offline refactor checks and remaining operational validation.

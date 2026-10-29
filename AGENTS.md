@@ -1,62 +1,29 @@
 # NetOne MCP — Agent Instructions
 
-NetOne MCP is a Python MCP stdio foundation for authorized, strictly read-only NetOne ERP queries and deterministic catalog/inventory analysis. A private token-configured HTTPX client is managed by MCP lifespan; `tools.py` remains a documentation-only boundary. PRD 1.1.4 authorizes an internal restricted allowlist for three documented query POSTs with `page`/`limit` filters, without enabling MCP tools or authorizing real calls. Official descriptions are accepted as evidence of intended query purpose, with residual internal-side-effect risk. S0.11 records this documentary assessment; G0, full G1 and current operator readiness remain BLOCKED pending operational validation. Offline checks do not validate a real token or TLS handshake. See `docs/configuration.md`, `docs/api-capabilities.md`, `docs/scsi-reference.md`, and `docs/runbook.md`.
+## Scope and current status
 
-## Source of truth and scope
+Read `PRD.md` before architectural/sprint work. NetOne MCP is a read-only stdio foundation: empty commercial tool registry, no ERP/login authorization, Sprint 5 partial with S5.01 pending, no Sprint 6. G0/full G1 and operator readiness remain BLOCKED. Offline evidence does not validate credentials, real TLS or provider behavior. History archives are evidence from their time, not current policy.
 
-- Read `PRD.md` before a sprint or architectural change; its requirements, gates, and sprint checklists are canonical.
-- Update affected PRD decisions, risks, roadmap, sprints, and version before implementing scope changes. Mark `[x]` only with verification evidence.
-- Do not execute any Git commands, including `git status`, or edit `.git`; versioning belongs to the maintainer (PRD §16.3).
-- PRD §3.2 excludes automated tests/fixtures, `tests/`, CI/CD, Docker, databases/ORM, persistent cache/sync, web UI, and autonomous conversational agents.
+## Boundaries
 
-## Dev environment
+- `config.py` is the sole explicit loader/validator. Process variables override root dotenv without interpolation/environment mutation; imports perform no configuration I/O. Settings are immutable, token SecretStr, URL/token excluded from repr; never serialize settings.
+- `server.py` is thin stdio/registry/lifespan. One private HTTPX client per lifespan; no startup request. `tools.py` remains documentation-only.
+- `client.py` owns token auth, fixed-origin three-POST allowlist, closed page/limit filters, bounded streaming/pagination/errors. `_query()` validates body; request hook checks method/origin/Host/route only. Never remove/bypass the guard for a probe.
+- `catalog.py` owns immutable normalization consumed by private collection. Decimal serializes exactly as strings; preserve IDs/leading zeros, text and absent/null/zero. Timestamp stays raw. Duplicates/conflicts and missing metadata must not create false completeness.
+- No arbitrary HTTP/SQL/commands, MCP configuration/tenant selection, commercial mutation, persistent cache/DB/UI/Docker/CI or autonomous agent. Analysis frameworks are optional only with a real justified consumer, not scaffolding.
 
-- Target Python is `>=3.14,<4`; use one root `.venv` and one root `requirements.txt`. Clean installation of the original six direct dependencies was verified on Windows with Python 3.14.3 in Sprint 1; Sprint 3 checks the seven installed direct pins, not another clean install. Other platforms and transitive versions remain unverified.
-- The maintainer authorized replacement of the former incompatible environment; the root `.venv` now uses Python 3.14.3. Do not silently lower the requirement or create a second environment.
-- Dependencies include a maintained MCP SDK, LangChain 1.x+, LangGraph, Pydantic and HTTPX as the single HTTP client. AnyIO 4.15.1, already installed through the SDK, is now explicitly pinned for cancellation-shielded client cleanup. No installation was needed; the expanded manifest's installed pins/imports and `pip check` were checked, not a new clean install. Basic queries must work without an LLM API key.
-- The commands below are PRD §22.3 examples. Installation and stdio startup were verified using the existing Windows `.venv`; `py -3.14` did not select the installed Python 3.14 runtime in the earlier inspection. Environment creation applies only when `.venv` is absent.
+## Security and lifecycle
 
-Windows PowerShell reference:
-```powershell
-py -3.14 -m venv .venv
-.\.venv\Scripts\python.exe -m pip install -r requirements.txt
-.\.venv\Scripts\python.exe server.py
-```
+Preserve `.env` exactly: no display/read/write/move during this refactor. Examples use empty credentials and neutral hosts. Only operator-approved HTTPS configuration, including private/single-label hosts, with fixed origin and verified certificates. No inherited proxy/netrc/CA override, redirects, retries or method/route fallback; legacy retry configuration is inert. No real ERP, login or token regeneration without separate explicit authorization.
 
-macOS/Linux reference:
-```bash
-python3.14 -m venv .venv
-./.venv/bin/python -m pip install -r requirements.txt
-./.venv/bin/python server.py
-```
+Request `identity`, reject compressed success responses, limit raw body to 1 MiB and bound whole-query time/pages/rows. Use public build_request/send(stream=True) and response.stream protocol; no HTTPX state writes. Response and client closure are shielded with one-second bounds. Completed cleanup needs evidence, not merely closed state; a timeout is bounded failure, not release assurance.
 
-## Build and validation
+stdout is MCP-only. Relevant/root log handlers emit safe level/component/code, never raw SDK/HTTP message/args/exception/stack. Do not indiscriminately disable loggers. Fixed safe application errors may remain specific. Never log settings, environment, headers, bodies or credentials.
 
-- No build, test, lint, or formatter configuration/command exists in the inspected checkout. Do not invent one or claim the reference setup has passed.
-- PRD §23 prohibits `pytest` and automated test files. Use its VM01–VM20 manual matrix for configuration, stdio, tool discovery, errors, pagination, and data fidelity.
-- Record executed scenarios in `docs/runbook.md` when created: date, exact command/scenario, `PASS`/`FAIL`/`BLOCKED`, and sanitized evidence. Remote validation requires explicit authorization and a proven-safe endpoint.
+## Development and verification
 
-## Planned boundaries and prescribed conventions
+Use Python >=3.14,<4, one root `.venv`, one `requirements.txt`; preserve remaining direct pins and avoid unnecessary installs. LangChain/LangGraph are removed while unused; no LLM key required. English public docs/code/comments/logs; pt-BR PRD/plans; PEP 8, single quotes and Mermaid.
 
-Executable application code validates configuration, initializes an empty MCP server and owns a private HTTP client per lifespan. `server.create_server(settings)` receives validated process settings; `main()` loads them once. `NetOneClient` exposes only lifecycle operations/state, not generic HTTP or commercial queries. The following are explicit PRD requirements:
+Offline unittest and mocked integration are allowed. Run `.venv/Scripts/python.exe -B -m unittest discover -s tests -v` and relevant safe checks; use only synthetic settings/streams, forbid HTTP sends and real `.env` access. Exercise stdio without LLM. Record actual relevant command/result/limits, not invented success. Update only documentation affected by meaningful decisions; no dossier per microchange. Mark checkboxes only with evidence and never change unrelated sprint states.
 
-- Root `config.py`: sole configuration loader/validator; `client.py`: HTTP, authentication, literal endpoint allowlist, pagination, limits, and sanitized errors.
-- Root `tools.py`: typed MCP contracts and query orchestration; `server.py`: thin stdio initialization and approved tool registration.
-- Add `analysis.py` only for a justified, real deterministic multistep LangGraph flow. Simple queries must not require a graph or LLM.
-- PRD/planning prose is pt-BR; public README/docs, technical identifiers, comments, tool descriptions, and standardized logs are English. PRD specifies PEP 8, single-quoted Python strings, and Mermaid diagrams.
-- Monetary values use `Decimal`, serialized as strings; preserve textual IDs/SKU/EAN and leading zeros. Missing stock/price is `null`, not zero.
-- Commercial responses distinguish `found`, `not_found`, `partial`, and `error`, with provenance/completeness. Authentication/network failure must not become an empty successful catalog.
-
-## Pitfalls and security gates
-
-- **G0 = BLOCKED:** PRD 1.1.3 accepts official query descriptions as evidence of intended read-only semantics for POST `/app-web/api/v2/produto/reduzidos`, POST `/app-web/api/v2/produto/precos`, and POST `/app-web/api/v2/produto/estoque`, with residual risk of undocumented internal effects. S0.11 records the documentary review, not proof of internals. These remain policy candidates, not runtime-approved operations. Seven auxiliary Product queries are inventoried only; never infer generic POST permission or tool release.
-- Under PRD 1.1.4 / DEC-018 the maintainer authorized an internal allowlist of the three documented query POSTs before remote validation. Each requires literal method and route, fixed origin and closed typed filters; runtime validation and tool release remain separate. Reject arbitrary payload fields, URL, method, route, headers and tenant in MCP inputs. Neither GET nor POST alone proves safety. POST query retries default to zero (including ambiguous timeout), automatic commercial redirects are disabled, and method/route fallback is forbidden; retries require specific repeat-safety evidence. Record evidence in `docs/api-capabilities.md`.
-- Official documentation describes the user token in `netone-auth-token`, obtainable from ERP settings or POST `/app-web/api/v2/auth/login` with `usuario` and `senha`. No authentication call was made. Token-only authentication is separate from commercial query admission and does not permit arbitrary POST. OAuth/refresh/expiry support is unconfirmed. Header rendering conflicts and other contract ambiguities are recorded in `docs/api-capabilities.md`. Sprint 4 offline is authorized; login, real API calls and other sprints are not.
-- Preserve any existing `.env` exactly; never display, rewrite, move, or replace it with `.env.example`. `.gitignore` excludes `.venv/`, environment variants, logs and common local Python artifacts.
-- `.env.example` must contain only empty credentials and neutral placeholder hosts. Its `example.invalid` URLs are deliberately non-operational. Removing an exposed credential from a file does not revoke it; rotation belongs to the authorized operator.
-- `config.load_config()` reads only recognized configuration from the root `.env`, then overlays process variables without interpolation or environment mutation. `TOKEN_NETONE` is required; `LOGIN_NETONE` and `SENHA_NETONE` are ignored. A validated HTTPS base can be derived from exact legacy routes, with all origins required to agree. Defaults/ranges and migration are in `docs/configuration.md`. Settings omit URL/token from repr and store the token as `SecretStr`; never serialize settings. The existing local reduced-products URL fails validation and remains unchanged; offline synthetic acceptance does not mean installation readiness or G1 completion.
-- Base URL and credentials belong to process configuration, never MCP arguments. Keep HTTP/authentication inside `client.py`; tools must not accept arbitrary paths, methods, URLs, or tenant selection.
-- The private HTTPX client uses explicit certificate verification, four phase timeouts, zero transport retries, disabled redirects, `trust_env=False` and a one-connection pool. Its request hook enforces the reviewed restricted internal allowlist; do not remove or bypass it to run a probe. Local mock transport checks do not validate a real token or TLS handshake. Raw HTTPX/httpcore logging is suppressed in the dedicated trusted process; no trace extensions or caller transport options are exposed. Cleanup uses AnyIO `CancelScope(shield=True)` because HTTPX marks CLOSED before awaiting transport closure; state alone is not cleanup evidence. No implicit proxy/private-CA override is supported.
-- Reserve stdout exclusively for MCP messages; send sanitized diagnostics to stderr. Bound pages/results/retries, label incomplete analyses as partial, and never fabricate missing records or global metrics.
-- `create_server()` owns root/MCP logging in the dedicated process before FastMCP construction. Replace inherited root handlers with a stderr handler and propagate existing MCP handlers to a fixed-message formatter; never render SDK message/args/exception/stack. The SDK logs invalid MCP payloads through root logging too, so suppressing only HTTPX or `mcp.*` is insufficient. Keep the fixed protocol-diagnostic boundary even when root logging is DEBUG; do not use raw SDK traceback logging as a troubleshooting shortcut.
-- Without a proven-safe and validated commercial query operation, tools remain absent, regardless of method. A completed foundation would be `FOUNDATION_READY / COMMERCIAL_API_BLOCKED`, not `V1_COMPLETE`; Sprint 1 alone does not complete the broader foundation. No checklist status was changed by the PRD 1.1.0 policy revision.
+PRD policy permits read-only Git inspection, but commits/push/reset/branch changes require authorization; never edit `.git`. This delegated refactor explicitly performs no Git commands. Protected-tool timeout/refusal is a stop, not permission to use another write path. Do not modify another Hermes profile or out-of-scope files.

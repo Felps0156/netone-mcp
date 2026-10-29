@@ -2,14 +2,11 @@
 
 from dataclasses import dataclass, field
 from io import StringIO
-from ipaddress import ip_address
 import os
 from pathlib import Path
-import re
-from urllib.parse import urlsplit
 
 from dotenv.parser import parse_stream
-from pydantic import SecretStr
+from pydantic import HttpUrl, SecretStr, ValidationError
 
 
 PROJECT_ROOT = Path(__file__).resolve().parent
@@ -39,7 +36,6 @@ class Settings:
     timeout_seconds: int = 15
     max_results: int = 100
     max_pages: int = 5
-    max_retries: int = 0
     log_level: str = 'WARNING'
 
 
@@ -74,50 +70,28 @@ def _url_origin(value: str | None, key: str, route: str = '') -> str:
     message = f'{key} must be a valid HTTPS URL with the expected path.'
     if (
         not isinstance(value, str) or not value
-        or any(ord(char) <= 32 or ord(char) >= 127 for char in value)
+        or any(ord(char) <= 32 or ord(char) == 127 for char in value)
         or any(char in value for char in ('\\', '%', '?', '#'))
     ):
         raise ConfigurationError(message)
-    try:
-        parsed = urlsplit(value)
-        host = parsed.hostname
-        port = parsed.port
-    except ValueError:
-        raise ConfigurationError(message) from None
+    # Check literal components before a URL parser can normalize dot segments,
+    # empty ports, userinfo or missing separators into a different URL.
+    _, separator, remainder = value.partition('://')
+    authority, slash, path = remainder.partition('/')
     if (
-        parsed.scheme != 'https' or not host
-        or parsed.username is not None or parsed.password is not None
-        or (port is not None and not 1 <= port <= 65535)
-        or parsed.netloc.endswith(':')
-        or parsed.path not in ((route,) if route else ('', '/'))
+        not separator or not authority or '@' in authority
+        or authority.endswith(':')
+        or (slash + path) not in ((route,) if route else ('', '/'))
     ):
         raise ConfigurationError(message)
-
     try:
-        address = ip_address(host)
-    except ValueError:
-        if '[' in parsed.netloc or ']' in parsed.netloc:
-            raise ConfigurationError(message) from None
-        labels = host.split('.')
-        if (
-            len(labels) < 2 or len(host) > 253
-            or all(label.isdigit() for label in labels)
-            or any(not re.fullmatch(
-                r'[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?', label
-            ) for label in labels)
-            or host.endswith(('.localhost', '.local'))
-        ):
-            raise ConfigurationError(message) from None
-        normalized_host = host
-    else:
-        if not address.is_global:
-            raise ConfigurationError(message)
-        normalized_host = (
-            f'[{address}]' if address.version == 6 else str(address)
-        )
-
-    suffix = f':{port}' if port is not None and port != 443 else ''
-    return f'https://{normalized_host}{suffix}'
+        parsed = HttpUrl(value)
+    except ValidationError:
+        raise ConfigurationError(message) from None
+    if parsed.scheme != 'https' or not parsed.host or not parsed.port:
+        raise ConfigurationError(message)
+    suffix = f':{parsed.port}' if parsed.port != 443 else ''
+    return f'https://{parsed.host}{suffix}'
 
 
 def _integer(
@@ -126,7 +100,8 @@ def _integer(
 ) -> int:
     value = values.get(key, str(default))
     if (
-        not isinstance(value, str) or not re.fullmatch(r'[0-9]{1,6}', value)
+        not isinstance(value, str) or not 1 <= len(value) <= 6
+        or not value.isascii() or not value.isdecimal()
         or not minimum <= int(value) <= maximum
     ):
         raise ConfigurationError(
@@ -163,18 +138,19 @@ def _validate(values: dict[str, str | None]) -> Settings:
         )
 
     log_level = values.get('NETONE_LOG_LEVEL', 'WARNING')
-    if log_level not in ('WARNING', 'INFO', 'ERROR', 'CRITICAL'):
+    if log_level not in ('DEBUG', 'WARNING', 'INFO', 'ERROR', 'CRITICAL'):
         raise ConfigurationError(
-            'NETONE_LOG_LEVEL must be WARNING, INFO, ERROR or CRITICAL.'
+            'NETONE_LOG_LEVEL must be DEBUG, WARNING, INFO, ERROR or CRITICAL.'
         )
 
+    # Legacy compatibility only: this option never enables request retries.
+    _integer(values, 'NETONE_MAX_RETRIES', 0, 0, 3)
     return Settings(
         base_url=base,
         token=SecretStr(token),
         timeout_seconds=_integer(values, 'NETONE_TIMEOUT_SECONDS', 15, 1, 120),
         max_results=_integer(values, 'NETONE_MAX_RESULTS', 100, 1, 1000),
         max_pages=_integer(values, 'NETONE_MAX_PAGES', 5, 1, 100),
-        max_retries=_integer(values, 'NETONE_MAX_RETRIES', 0, 0, 3),
         log_level=log_level,
     )
 

@@ -1,6 +1,6 @@
 # NetOne API capability evidence
 
-Investigation and authorized policy revision date: 2026-10-27. PRD version: 1.1.0.
+Initial investigation: 2026-10-27. Current policy: PRD 1.2.0, 2026-10-28. Contract investigation and Sprint 5 evidence are retained below; executed offline refactor validation and its limits are in the runbook.
 
 ## Decision and scope
 
@@ -16,7 +16,7 @@ Remotely validated commercial method/path pairs: none. Approved MCP commercial t
 
 The seven auxiliary Product queries remain INVENTORIED_ONLY, outside this narrow admission. Login remains AUTH_ONLY, separate from the commercial list. New routes require an explicit scope decision and individual review; no wildcard or product-prefix authorization is permitted.
 
-Future transport must choose the operation internally and validate a closed typed filter schema, rejecting unknown fields and arbitrary tool-supplied bodies. Do not accept method, route, URL, headers, credentials or tenant through MCP arguments. POST query retries default to zero, including ambiguous timeouts; disable automatic commercial redirects (including same-origin 301/302/303/307/308), method rewriting and GET/POST fallback. Retry enablement requires specific repeat-safety evidence and a bounded policy, not an assumption from a query label.
+The internal transport selects the operation and validates a closed typed filter schema, rejecting unknown fields and arbitrary tool-supplied bodies. Do not accept method, route, URL, headers, credentials or tenant through MCP arguments. POST query retries default to zero, including ambiguous timeouts; disable automatic commercial redirects (including same-origin 301/302/303/307/308), method rewriting and GET/POST fallback. Retry enablement requires specific repeat-safety evidence and a bounded policy, not an assumption from a query label.
 
 The inventory covers all ten queries visible under the official Product reference and the separate authentication operation. Other API domains (orders, finance, customers, etc.) are outside the investigation and authorization scope. Public documentation evidence does not prove installation-specific permissions, runtime behavior, or absence of business side effects.
 
@@ -100,14 +100,61 @@ Sprint 3 authentication review, 2026-10-28 (PRD 1.1.2): O2 was read again anonym
 - O3/O5 return only ecommerce-active reduced products with prices in at least one seller-configured price table. A complete paginated response need not represent the entire ERP catalogue.
 - Product IDs are documented integers; masks, EAN and `codigoSku` are textual. `mascara` is the product mask/code, not proven equivalent to the reduced-product `codigoSku`. Preserve these distinct source fields; DEC-003 remains open for uniqueness and normalization.
 - `codigoSku` may be null; published product examples also contain null EAN/prices. Examples illustrate possible values, not a complete nullable/required schema. Missing values stay null, never zero.
-- O3/O5 describe `valor` as retail price and `valorAtacado` as wholesale price, with separate table descriptions and discounts. Currency, tax, final discount application and operator table choice are not established. Future monetary parsing must use Decimal without a float intermediate, serialize as strings, and keep table provenance.
+- O3/O5 describe `valor` as retail price and `valorAtacado` as wholesale price, with separate table descriptions and discounts. Currency, tax, final discount application and operator table choice are not established. Monetary parsing uses Decimal without a float intermediate, serializes values as strings and retains table provenance.
 - O4 defines stock as physical minus reservations, not physical stock alone. `idDeposito` selects a deposit; omission uses the user's configured deposit. Actual deposit/company identity, aggregation, negative stock semantics and freshness remain unknown. Reading about reservations does not prove that a candidate query cannot create reservations; its HTTP method does not settle the question.
 - Stock `idsReduzidos` is rendered as `number`, while its request example and legacy use an array. Do not silently choose a schema; obtain provider clarification.
 - O12 uses `ultimaDataAlteracaoTimestamp`, while operation contracts use `ultimaAlteracaoTimestamp`; O4's filter is `comAlteracaoDesdeTimestamp`. Do not normalize these differing names into a guessed common API parameter. Synchronization/storage advice in O12 is outside the product scope.
 
 ### Errors, rate limits and payload bounds
 
-O7 describes non-200 errors, generally 400/500; O8 defines `erros: [{codigo, mensagem}]`. O6 explicitly lists 200/400/401. Core commercial pages display 200, auxiliary pages 200/400. The investigator did not trigger any error. 403/404/429, Retry-After behavior, timeout budgets, retry safety, payload ceilings and per-route quotas are not verified provider contracts. Their handling remains a future MCP defensive requirement, not an observed API result. Legacy `raise_for_status()` alone does not establish safe classification or redaction.
+O7 describes non-200 errors, generally 400/500; O8 defines `erros: [{codigo, mensagem}]`. O6 explicitly lists 200/400/401. Core commercial pages display 200, auxiliary pages 200/400. The investigator did not trigger any error. 403/404/429, Retry-After behavior, timeout budgets, retry safety, payload ceilings and per-route quotas are not verified provider contracts. Their handling is implemented as a local defensive policy, not an observed provider contract. Legacy `raise_for_status()` alone does not establish safe classification or redaction.
+
+## Sprint 5: internal normalized records and pagination (PRD 1.1.6)
+
+DEC-019 authorizes the complete offline Sprint 5 slice, not only pagination. It does not authorize real requests, MCP tools, new filters or Sprint 6. O3/O4/O5/O10 were reread anonymously in the rendered documentation on 2026-10-28 after hydration; no Send action was used. Published examples contain omitted paging fields, null EAN/retail price and null last-change timestamps. O5 publishes an offset-bearing timestamp example, but this does not establish every record's temporal semantics. S5.01's installation-specific field presence/absence remains BLOCKED, not inferred from these examples. G0/full G1 and operator readiness are unchanged.
+
+`catalog.py` defines frozen `CatalogRecord` and `QueryResult` models, consumed by `NetOneClient._collect()` in `client.py`. They are internal components, not registered tools. The existing `_query()` remains the only request path: the same three literal POST routes and closed integer page/limit body, fixed origin, TLS, identity encoding, response-byte bound, no redirects/retries/fallback. No source field is interpreted as an instruction.
+
+### Normalization and serialization
+
+DEC-020 narrows the projection to the fields actually consumed in the legacy reference (`database/products.py:37–46`), with only the separate API SKU and retail table description added for identity/provenance. The reference calls its `mascara` column sku; this implementation preserves that code as product_mask and does not equate it to codigoSku. Photos, color, size, wholesale prices and discounts are deliberately excluded, even if upstream includes them. Reference persistence, destructive trimming, product-only conflict keys and unrestricted loops are not reused. The reference was inspected as text only, never executed.
+
+| Source field | Normalized projection | Rule |
+|---|---|---|
+| idProduto / idReduzido | product_id / reduced_id | Nonnegative integer becomes its exact decimal string; nonempty textual IDs up to 256 characters are preserved, including leading zeros. Floats/bools rejected. Reduced ID required; product ID required for products/prices, nullable for stock. These are local compatibility rules, not proof of provider uniqueness or string-ID support. |
+| mascara / codigoSku / ean | product_mask / sku / ean | Strings retained exactly, including leading zeros, whitespace and punctuation; no numeric coercion or mask/SKU substitution. Missing/null stays null. |
+| descricao / grupoDescricao / linhaDescricao | description / group / line | Text preserved without trim, case folding or whitespace collapsing. |
+| valor | price | Finite Decimal, or int converted exactly to Decimal; no float intermediate, numeric-string repair, discount application, currency assumption or table selection. |
+| tabelaPreco | price_table | Preserve returned retail table description; no invented ID, currency or precedence. |
+| quantidade | quantity | Decimal from the same exact numeric path, including negative or explicit zero; missing/null stays null. No stock aggregation, reservation, deposit or unit inference. |
+| ultimaAlteracaoTimestamp | last_changed_raw | Preserve source string/null; no datetime parsing, epoch units, timezone, stock freshness or cross-record ordering inferred. Non-null values produce timestamp_semantics_unverified. |
+
+Each record lists absent projected source keys in `missing_fields`; an explicitly null key is not listed. This is an explicit projection, not a full ERP product: images, color, size, wholesale/discount fields, dimensions, flags, classifications and other unprojected fields are not exposed or required. Duplicate comparison uses full received rows so differences outside the projection are not silently discarded. Source metadata is untrusted; strings are data, not commands. Invalid projected types or contradictory page metadata reject that entire page before records are accepted, with fixed invalid_response, never a raw payload diagnostic.
+
+Call `as_json()` to serialize: Decimal values become strings (scientific notation may be retained for extreme exponents); null stays null, tuples become arrays. No monetary quantization occurs. `QueryResult` includes status, source=netone_api, retrieved_at (local UTC collection observation, not provider freshness), items, returned_count, partial, warnings, error (stable code or null), operation, pages_fetched, rows_received, total_pages, total_elements and complete_dataset. Examples used for verification are synthetic, never claimed as ERP results.
+
+### Pagination and data universe
+
+- `_collect(operation, *, page_size=None)` is private, starts at page 1, and uses one fixed limit throughout. Default page size is min(50, configured max_results), a local choice, not a provider quota. No arbitrary filters or resume cursor are accepted.
+- `NETONE_MAX_PAGES` and `NETONE_MAX_RESULTS` apply to the whole collection. The row budget counts received rows before deduplication. If the remaining budget cannot accommodate another full fixed-size page, stop partial instead of shrinking limit and potentially changing page offsets. This can leave unused row capacity. No page/result ceiling can be disabled by the caller.
+- A whole-collection deadline uses four configured phase-timeout seconds, as does each request; response cleanup may add at most the existing one-second shielded allowance. No automatic POST replay or wait/retry is added for Retry-After.
+- Require valid integer page/totalPages for a complete traversal; validate optional totalElements when present. Missing metadata stops as partial, even for a short or empty page. Explicit null/invalid/changing/contradictory metadata is invalid_response. No total is synthesized from `total`, whose semantics are not established, or from a page's length.
+- An empty result is not_found only on the first page with consistent terminal page metadata. Any later empty page or a page adding only previously seen rows stops partial, including the advertised terminal page. An empty first nonterminal page is also partial. Page/result/deadline limits and failures cannot become successful empty catalogs.
+- Full identical rows with the same (product_id, reduced_id) are deduplicated with duplicate_rows_removed. Different reduced IDs of the same product survive. Conflicting rows with the same identity are retained, warned as conflicting_rows_preserved, and the result remains partial; no arbitrary last-write-wins or quantity sum is performed.
+- Error before usable data gives status=error; error after usable data gives partial with preserved records and a stable error code. HTTP 404 remains an endpoint error, not a valid empty product query. External cancellation propagates rather than returning fabricated completeness.
+- complete_dataset refers only to the endpoint pages traversed without known conflicts/interruption. It does not assert a stable snapshot or the entire ERP catalog: the provider's ecommerce-active/price-table visibility restrictions still apply. Stock scope remains the configured user's deposit, not a verified deposit identity. No price/stock join or global analysis is implemented.
+
+Provider compatibility with these conservative shape/metadata rules and real fields remains unverified. Offline verification exercises the actual internal collection/request path with in-memory transport, not only a standalone normalizer. See the runbook for executed scenarios.
+
+## Refactor transport and diagnostics (PRD 1.2.0)
+
+The client builds a request with `build_request()` and sends it with `send(stream=True)`. It explicitly iterates the public `response.stream` AsyncByteStream protocol so the first `aclose()` starts inside its bounded AnyIO shield; it does not use `aiter_raw()` auto-close outside that shield or write `is_stream_consumed`/other HTTPX state. There is no new streaming abstraction. Identity encoding, the 1,048,576-byte raw body limit and exact JSON/Decimal parsing remain unchanged.
+
+`_query()` validates filters and constructs the closed page/limit body. The request hook checks only method, origin, Host and literal route, rather than deserializing that body a second time. The hook remains mandatory and is not a general untrusted in-process body sandbox. Only trusted internal code can access the private HTTP client. Response and client cleanup are each cancellation-shielded and bounded to one second; timeout of a stalled close is not proof that resource release completed.
+
+Each request and the whole collection have a local total deadline of four times the phase timeout. Retries remain zero regardless of legacy `NETONE_MAX_RETRIES`. No route, filter, tool, real-call authorization or catalog semantics changed.
+
+The server formatter emits only `level=<...> component=mcp|httpx|httpcore|library code=<component>_diagnostic`, never `record.msg`, args, exception or stack. Existing handlers are normalized only for root and the relevant families; loggers are not disabled. Entrypoint configuration/client failures retain fixed safe stderr messages. LangChain/LangGraph pins were removed without uninstalling the existing environment; the five remaining direct pins are preserved. Final application-validation results belong in the coordinator's runbook record, not this inventory.
 
 ## Gate record and unblock request
 
@@ -119,6 +166,6 @@ Owner: maintainer, with NetOne support where the contract is ambiguous. Required
 2. Record O3/O4/O5 and reviewed request paths as the accepted evidence of query intent, and the risk that server-internal effects are not explicitly guaranteed. The legacy has no explicit mutation request in the inspected functions, but cannot prove server behavior. Stop if evidence of commercial mutation appears; HTTP 200 alone is not evidence of semantic safety.
 3. Resolve auth-header rendering, stock ID-array shape, timestamp spelling, price currency/table semantics and pagination completeness conflicts above.
 4. Only after security review, safe configuration/transport and explicit bounded-call authorization are available, perform a small query using the documented method and record date, method/path, sanitized status/schema/completeness and any observed safety evidence without claiming proof of server internals. A validation call can precede tool release; it is not permission to expose a tool or scan the full catalog. No credential or real record belongs in this document.
-5. Review a future literal allowlist and actual tool registration. Documentation alone does not release tools.
+5. Review the implemented internal literal allowlist and any future tool registration. Documentation alone does not release tools.
 
 Historical policy (PRD 1.0.1, superseded): all commercial POSTs were prohibited and G0 was blocked for lack of GET. The maintainer subsequently selected narrowly scoped query POST admission and authorized document revision. PRD 1.1.0 now records that decision (DEC-013, ADR-15/16); it is not a generic POST exception, completed security review, runtime authorization or permission to start another sprint. No new remote evidence was obtained by this revision.

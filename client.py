@@ -1,16 +1,17 @@
-"""Own a token-configured HTTP client without approved query operations."""
+"""Own restricted query transport and bounded internal catalog collection."""
 
+from datetime import datetime, timezone
 from decimal import Decimal, DecimalException
 import json
-import logging
 import sys
 from types import TracebackType
-from types import MappingProxyType
 
-from anyio import CancelScope, fail_after, move_on_after
+from anyio import fail_after, move_on_after
 import httpx
 
 from config import Settings
+from catalog import CatalogRecord, NormalizationError, QueryResult
+from catalog import normalize_record
 
 
 class NetOneClientError(Exception):
@@ -25,12 +26,12 @@ class NetOneClientError(Exception):
 
 
 class BlockedOperationError(NetOneClientError):
-    """Reject every request until operations receive individual approval."""
+    """Reject operations outside the documented internal query contract."""
 
     code = 'blocked_operation'
 
     def __init__(self) -> None:
-        Exception.__init__(self, 'No NetOne HTTP operation is approved.')
+        Exception.__init__(self, 'The NetOne query is not allowed.')
 
 
 class ResponseError(Exception):
@@ -53,11 +54,12 @@ class ResponseError(Exception):
 
 
 _MAX_RESPONSE_BYTES = 1_048_576
-_QUERY_PATHS = MappingProxyType({
+_CLEANUP_SECONDS = 1
+_QUERY_PATHS = {
     'products': '/app-web/api/v2/produto/reduzidos',
     'prices': '/app-web/api/v2/produto/precos',
     'stock': '/app-web/api/v2/produto/estoque',
-})
+}
 
 
 def _validate_query(page: object, limit: object, maximum: int) -> None:
@@ -78,87 +80,64 @@ def _unique_object(pairs: list[tuple[str, object]]) -> dict[str, object]:
     return result
 
 
+def _reject_constant(value: str) -> None:
+    raise ValueError('Non-finite JSON number')
+
+
 async def _read_json_response(response: httpx.Response) -> dict[str, object]:
-    """Consume a streamed, uncompressed response with fixed diagnostics."""
-    code = None
-    value = None
+    """Read the public AsyncByteStream once and own its bounded cleanup.
+
+    Iterating Response.aiter_raw() would auto-close outside our cancellation
+    shield. The public stream protocol avoids that race without writing any
+    HTTPX state or buffering the whole response before the byte limit.
+    """
     try:
-        status = response.status_code
-        if status == 401:
-            raise ResponseError('authentication_error')
-        if status == 403:
-            raise ResponseError('authorization_error')
-        if status == 404:
-            raise ResponseError('not_found')
-        if status == 429:
-            raise ResponseError('rate_limited')
-        if not 200 <= status < 300:
+        errors = {
+            401: 'authentication_error', 403: 'authorization_error',
+            404: 'not_found', 429: 'rate_limited',
+        }
+        if response.status_code in errors:
+            raise ResponseError(errors[response.status_code])
+        if not response.is_success:
             raise ResponseError('upstream_error')
         if response.headers.get('content-encoding', 'identity').lower() != (
             'identity'
         ):
             raise ResponseError('invalid_response')
         data = bytearray()
-        async for chunk in response.aiter_raw():
+        if not isinstance(response.stream, httpx.AsyncByteStream):
+            raise ResponseError('invalid_response')
+        async for chunk in response.stream:
             if len(data) + len(chunk) > _MAX_RESPONSE_BYTES:
                 raise ResponseError('invalid_response')
             data.extend(chunk)
         try:
             value = json.loads(
                 data, parse_float=Decimal, object_pairs_hook=_unique_object,
-                parse_constant=lambda _: (_ for _ in ()).throw(ValueError()),
+                parse_constant=_reject_constant,
             )
         except (ValueError, UnicodeError, RecursionError, DecimalException):
             raise ResponseError('invalid_response') from None
-        if not isinstance(value, dict):
+        if not isinstance(value, dict) or not isinstance(
+            value.get('result'), list,
+        ):
             raise ResponseError('invalid_response')
-    except ResponseError as error:
-        code = error.code
-    except httpx.TimeoutException:
-        code = 'timeout'
-    except httpx.DecodingError:
-        code = 'invalid_response'
-    except httpx.RequestError:
-        code = 'connection_error'
-    except Exception:
-        code = 'invalid_response'
+        return value
     finally:
-        active_exception = sys.exc_info()[0] is not None
-        close_failed = False
+        # Cleanup must not hide an existing failure or external cancellation.
+        active_exception = sys.exc_info()[0]
         try:
-            with move_on_after(1, shield=True) as close_scope:
+            with move_on_after(_CLEANUP_SECONDS, shield=True) as close_scope:
                 await response.aclose()
-            close_failed = close_scope.cancel_called
+            if close_scope.cancel_called and active_exception is None:
+                raise ResponseError('upstream_error')
         except Exception:
-            close_failed = True
-        if close_failed and code is None and not active_exception:
-            code = 'upstream_error'
-    if code is not None:
-        raise ResponseError(code)
-    if not isinstance(value, dict):
-        raise ResponseError('invalid_response')
-    return value
-
-
-def _silence_http_logging() -> None:
-    """Suppress raw transport diagnostics in this dedicated MCP process."""
-    names = {'httpx', 'httpcore'}
-    names.update(
-        name for name in logging.Logger.manager.loggerDict
-        if name.startswith(('httpx.', 'httpcore.'))
-    )
-    for name in names:
-        logger = logging.getLogger(name)
-        logger.disabled = True
-        logger.setLevel(logging.CRITICAL + 1)
-        logger.propagate = False
-        # Descendants created later inherit the disabled output boundary.
-        if not logger.handlers:
-            logger.addHandler(logging.NullHandler())
+            if active_exception is None:
+                raise ResponseError('upstream_error') from None
 
 
 def _request_guard(settings: Settings):
-    """Enforce the literal method, origin, route and closed body at send."""
+    """Check destination at send; _query alone constructs the closed body."""
     origin = httpx.URL(settings.base_url)
 
     async def guard(request: httpx.Request) -> None:
@@ -174,17 +153,32 @@ def _request_guard(settings: Settings):
             or url.query or url.fragment or url.userinfo
         ):
             raise BlockedOperationError()
-        try:
-            body = json.loads(
-                request.content, object_pairs_hook=_unique_object,
-            )
-            if not isinstance(body, dict) or set(body) != {'page', 'limit'}:
-                raise ValueError('Invalid fields')
-            _validate_query(body['page'], body['limit'], settings.max_results)
-        except (ValueError, TypeError, KeyError, httpx.RequestNotRead):
-            raise BlockedOperationError() from None
-
     return guard
+
+
+def _page_metadata(
+    envelope: dict[str, object], requested: int,
+) -> tuple[int | None, int | None]:
+    """Validate published metadata without inventing absent totals."""
+    for key in ('page', 'totalPages', 'totalElements'):
+        value = envelope.get(key)
+        if value is not None and (type(value) is not int or value < 0):
+            raise ResponseError('invalid_response')
+        if key in envelope and value is None:
+            raise ResponseError('invalid_response')
+    if 'page' in envelope and envelope['page'] != requested:
+        raise ResponseError('invalid_response')
+    pages_value = envelope.get('totalPages')
+    elements_value = envelope.get('totalElements')
+    pages = pages_value if isinstance(pages_value, int) else None
+    elements = elements_value if isinstance(elements_value, int) else None
+    if pages is not None and (
+        pages < requested and not (requested == 1 and pages == 0)
+    ):
+        raise ResponseError('invalid_response')
+    if 'page' not in envelope:
+        return None, elements
+    return pages, elements
 
 
 class NetOneClient:
@@ -194,11 +188,11 @@ class NetOneClient:
     There is intentionally no public HTTP request or commercial operation.
     """
 
-    __slots__ = ('_http', '_max_results', '_deadline')
+    __slots__ = ('_http', '_max_results', '_max_pages', '_deadline')
 
     def __init__(self, settings: Settings) -> None:
-        _silence_http_logging()
         self._max_results = settings.max_results
+        self._max_pages = settings.max_pages
         self._deadline = settings.timeout_seconds * 4
         try:
             limits = httpx.Limits(
@@ -214,7 +208,6 @@ class NetOneClient:
                     'accept-encoding': 'identity',
                 },
                 timeout=httpx.Timeout(settings.timeout_seconds),
-                verify=True,
                 trust_env=False,
                 follow_redirects=False,
                 transport=transport,
@@ -236,29 +229,145 @@ class NetOneClient:
         if path is None:
             raise BlockedOperationError()
         _validate_query(page, limit, self._max_results)
-        code = None
         try:
             with fail_after(self._deadline):
-                async with self._http.stream(
+                request = self._http.build_request(
                     'POST', path, json={'page': page, 'limit': limit},
-                ) as response:
-                    result = await _read_json_response(response)
-                    if not isinstance(result.get('result'), list):
-                        raise ResponseError('invalid_response')
-                    return result
-        except TimeoutError:
+                )
+                response = await self._http.send(request, stream=True)
+                return await _read_json_response(response)
+        except (TimeoutError, httpx.TimeoutException):
             code = 'timeout'
-        except httpx.TimeoutException:
-            code = 'timeout'
+        except httpx.DecodingError:
+            code = 'invalid_response'
         except httpx.RequestError:
             code = 'connection_error'
-        except (BlockedOperationError, ResponseError):
+        except BlockedOperationError:
             raise
+        except ResponseError as error:
+            code = error.code
         except Exception:
             code = 'upstream_error'
-        if code is not None:
-            raise ResponseError(code)
-        raise ResponseError('upstream_error')
+        # Raise outside handlers so upstream exceptions do not retain context.
+        raise ResponseError(code)
+
+    async def _collect(
+        self, operation: str, *, page_size: int | None = None,
+    ) -> QueryResult:
+        """Collect internally; this does not authorize real calls or tools.
+
+        The row budget counts received rows, including duplicates. Only
+        page/limit enter the existing guarded POST path. No resume cursor,
+        tenant, arbitrary filter, URL or method is accepted.
+        """
+        if operation not in _QUERY_PATHS:
+            raise BlockedOperationError()
+        size = min(50, self._max_results) if page_size is None else page_size
+        _validate_query(1, size, self._max_results)
+        items: list[CatalogRecord] = []
+        seen: dict[tuple[str | None, str], list[dict[str, object]]] = {}
+        warnings: list[str] = []
+        pages_fetched = 0
+        rows_received = 0
+        total_pages = None
+        total_elements = None
+        complete = False
+        error_code = None
+
+        def warn(code: str) -> None:
+            if code not in warnings:
+                warnings.append(code)
+
+        async def collect_pages() -> None:
+            nonlocal pages_fetched, rows_received, total_pages
+            nonlocal total_elements, complete
+            for page in range(1, self._max_pages + 1):
+                # Changing limit mid-traversal can change offset semantics.
+                if self._max_results - rows_received < size:
+                    warn('result_limit_reached')
+                    return
+                limit = size
+                envelope = await self._query(operation, page, limit)
+                rows = envelope['result']
+                if not isinstance(rows, list) or len(rows) > limit:
+                    raise ResponseError('invalid_response')
+                pages_fetched += 1
+                rows_received += len(rows)
+                pages, elements = _page_metadata(envelope, page)
+                if (
+                    total_pages is not None and pages != total_pages
+                    or total_elements is not None
+                    and elements != total_elements
+                ):
+                    raise ResponseError('invalid_response')
+                # Reject a contradictory page before accepting any of its rows.
+                if pages == 0 and rows:
+                    raise ResponseError('invalid_response')
+                if elements is not None and (
+                    rows_received > elements
+                    or pages is not None and page >= pages
+                    and rows_received != elements
+                ):
+                    raise ResponseError('invalid_response')
+                total_pages, total_elements = pages, elements
+                normalized = [normalize_record(operation, row) for row in rows]
+                new_rows = 0
+                for row, record in zip(rows, normalized):
+                    key = (record.product_id, record.reduced_id)
+                    previous = seen.setdefault(key, [])
+                    if row in previous:
+                        warn('duplicate_rows_removed')
+                        continue
+                    if previous:
+                        warn('conflicting_rows_preserved')
+                    previous.append(row)
+                    items.append(record)
+                    new_rows += 1
+                    if record.last_changed_raw is not None:
+                        warn('timestamp_semantics_unverified')
+                if pages is None:
+                    warn('pagination_metadata_missing')
+                    return
+                # An empty first terminal page is a valid empty query; later
+                # empty/repeated pages cannot prove an advancing traversal.
+                if not new_rows and (page > 1 or pages > 1):
+                    warn('pagination_no_progress')
+                    return
+                if page >= pages:
+                    complete = True
+                    return
+                if rows_received >= self._max_results:
+                    warn('result_limit_reached')
+                    return
+            warn('page_limit_reached')
+
+        try:
+            with fail_after(self._deadline):
+                await collect_pages()
+        except ResponseError as error:
+            # A missing HTTP resource is not a valid empty product result.
+            error_code = error.code
+        except NormalizationError:
+            error_code = 'invalid_response'
+        except TimeoutError:
+            error_code = 'timeout'
+        if error_code is not None:
+            warn('collection_interrupted')
+        partial = not complete or 'conflicting_rows_preserved' in warnings
+        status = (
+            'partial' if partial else 'found' if items else 'not_found'
+        )
+        if error_code is not None and not items:
+            status = 'error'
+        return QueryResult(
+            status=status, items=tuple(items), partial=partial,
+            warnings=tuple(warnings), error=error_code, operation=operation,
+            retrieved_at=(datetime.now(timezone.utc).isoformat()
+                          if pages_fetched else None),
+            pages_fetched=pages_fetched, rows_received=rows_received,
+            total_pages=total_pages, total_elements=total_elements,
+            complete_dataset=complete and not partial,
+        )
 
     async def __aenter__(self) -> 'NetOneClient':
         try:
@@ -270,8 +379,10 @@ class NetOneClient:
     async def aclose(self) -> None:
         """Close the pool; callers must not log underlying exceptions."""
         try:
-            with CancelScope(shield=True):
+            with move_on_after(_CLEANUP_SECONDS, shield=True) as scope:
                 await self._http.aclose()
+            if scope.cancel_called:
+                raise NetOneClientError()
         except Exception:
             raise NetOneClientError() from None
 
@@ -279,4 +390,9 @@ class NetOneClient:
         self, exc_type: type[BaseException] | None,
         exc_value: BaseException | None, traceback: TracebackType | None,
     ) -> None:
-        await self.aclose()
+        try:
+            await self.aclose()
+        except NetOneClientError:
+            # The body failure/cancellation has priority over cleanup failure.
+            if exc_type is None:
+                raise

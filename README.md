@@ -1,21 +1,73 @@
 # NetOne MCP
 
-NetOne MCP is a planned read-only MCP server for authorized NetOne ERP queries. It will not modify commercial data.
+A Python MCP stdio foundation for authorized, strictly read-only NetOne ERP queries and deterministic catalog/inventory analysis. It must never modify commercial data.
 
 ## Current status
 
-The stdio server validates process-owned configuration before starting with an empty tool registry. The private HTTPX client uses an internal allowlist for three documented POST queries with closed page/limit filters, fixed origin and bounded response handling. It does not register commercial tools or make a request at startup. G0 and full G1 remain BLOCKED pending real-world validation; offline checks do not validate a real token, TLS handshake or operator installation. No real query is authorized merely by the internal implementation. See [the capability inventory](docs/api-capabilities.md) for the evidence and outstanding safety gates.
+**NOT_READY / COMMERCIAL_API_BLOCKED. No MCP commercial tools are registered.** Sprints 0–4 have documentary/offline implementation evidence; Sprint 5 is partial: S5.02–S5.14 have offline evidence, while S5.01 still needs installation-specific field confirmation. G0 and full G1 remain BLOCKED. Sprint 6 has not started.
 
-## Requirements and security
+The private client implements three documented query POSTs with fixed origin/Host and closed `page`/`limit` filters. Construction and startup make no ERP request. The internal implementation is not permission to call the ERP, log in or release a tool. See the [API evidence and contracts](docs/api-capabilities.md); synthetic checks do not validate a token, remote TLS, provider behavior or installation readiness.
 
-The project targets Python 3.14 or newer, below Python 4, with one virtual environment at `.venv`. A clean installation of the original six direct dependencies was verified on Windows with Python 3.14.3 in Sprint 1; Sprint 3 verifies the installed expanded manifest, not a new clean installation. Never share credentials, and do not overwrite an existing `.env`. The example file contains neutral placeholders only.
+## Architecture
 
-On the existing Windows environment, install with `.venv\Scripts\python.exe -m pip install -r requirements.txt` and start the empty stdio server with `.venv\Scripts\python.exe server.py`. Configuration must be valid before startup; configuration or client-lifecycle failures return exit code 1 with a sanitized message on stderr. This server does not query NetOne. AnyIO, already required by the SDK, is now a pinned direct dependency for cancellation-safe cleanup; current installed pins and `pip check` were verified, not a new clean installation in Sprint 3.
+- `config.py`: explicit process-owned settings loader and validation.
+- `server.py`: thin MCP stdio entrypoint, empty registry, one private client per lifespan.
+- `client.py`: HTTPX authentication, literal allowlist, bounded streaming/pagination and safe errors.
+- `catalog.py`: immutable normalized records consumed by private collection.
+- `tools.py`: documentation-only boundary; no query or analysis tool is exposed.
 
-Provide `TOKEN_NETONE` and an HTTPS `NETONE_BASE_URL` through operator configuration. Existing supported legacy URLs can supply the origin instead; all configured origins must agree and resource paths must match exactly. Process variables override the preserved root `.env`, without modifying either source. Login/password variables do not enable login. The example host is intentionally non-operational, and its empty token is not valid configuration.
+IDs/SKU/EAN preserve leading zeros. Decimal prices/quantities serialize as strings; absent/null/zero remain distinct. The projection includes identity, description, group/line, EAN, price, stock and raw last-change data, plus separate API SKU and price-table provenance. Photos, color, size, wholesale and discounts are excluded. Pagination is bounded and reports incomplete/conflicting data as partial; completeness is not an ERP-wide snapshot.
 
-See [configuration and migration](docs/configuration.md) for variables, defaults, allowed ranges, security boundaries and migration without rewriting `.env`. Local validation found that the existing legacy reduced-products URL is rejected; the file was preserved and its values were not displayed. Offline synthetic configuration passed, but this does not establish operational readiness for the current installation.
+LangChain/LangGraph are not required and are removed from the manifest while unused. A future real analysis consumer may justify an optional framework; basic operation needs no LLM key.
 
-The dedicated stdio process owns root/MCP logging: inherited handlers are replaced with a stderr-only sink rendering fixed diagnostics, without SDK payloads, validation input or tracebacks. HTTPX/httpcore raw diagnostics are suppressed separately. This deliberately reduces debug detail to prevent malformed client input from entering logs; it does not alter MCP protocol responses.
+## Install and start
 
-See [the runbook](docs/runbook.md) for current environment findings and [PRD.md](PRD.md) for the canonical project requirements and sprint checklist.
+Requires Python **>=3.14,<4**, one root `.venv` and one root `requirements.txt`. Create the environment only if absent; do not replace an existing one without authorization.
+
+Windows PowerShell:
+
+```powershell
+py -3.14 -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt
+.\.venv\Scripts\python.exe server.py
+```
+
+macOS/Linux:
+
+```bash
+python3.14 -m venv .venv
+./.venv/bin/python -m pip install -r requirements.txt
+./.venv/bin/python server.py
+```
+
+These are operator instructions, not new installation verification. Historical clean-install evidence covers the original Sprint 1 manifest on Windows/Python 3.14.3; other platforms and a clean install of the refactored manifest are not implied. The Windows launcher did not select that runtime in the earlier investigation; use an explicitly verified Python 3.14+ interpreter if needed.
+
+Provide `TOKEN_NETONE` and an operator-approved HTTPS `NETONE_BASE_URL`. Supported legacy URLs may derive the origin; all supplied origins must agree. Never overwrite, display or share an existing `.env`. Process overrides do not interpolate or mutate the file/environment. Login/password variables do not enable login. Example hosts/tokens are deliberately non-operational. See [configuration and migration](docs/configuration.md).
+
+Generic MCP client launch configuration (replace only with operator-approved local paths; keep credentials in secure process configuration):
+
+```json
+{
+  "mcpServers": {
+    "netone": {
+      "command": "<absolute-path-to-venv-python>",
+      "args": ["<absolute-path-to-server.py>"]
+    }
+  }
+}
+```
+
+Expected discovery is an empty tool list, not a working commercial query. stdout is MCP-only; stderr emits safe code/component/level diagnostics without raw SDK/HTTP messages, payloads, exception text or stacks. Loggers are not indiscriminately disabled. Application diagnostics may remain specific and sanitized.
+
+## Development and evidence
+
+Offline unit tests and mocked integration are allowed:
+
+```powershell
+.\.venv\Scripts\python.exe -B -m unittest discover -s tests -v
+.\.venv\Scripts\python.exe -m pip check
+```
+
+Use only synthetic settings/responses; no ERP or `.env` access for these checks. Test execution is not remote acceptance. Read-only Git inspection is allowed by PRD policy; version-changing/publishing actions require authorization. No Git action is part of this documentation consolidation.
+
+[Runbook](docs/runbook.md) contains operation, historical evidence links and the executed 51-test refactor validation with its limits. [PRD](PRD.md) owns scope and all sprint checklists. [Historical archives](docs/history/README.md) preserve prior evidence and superseded policies. The approved development policy is installed in `AGENTS.md`; the earlier protected-edit timeout was resolved after renewed approval.

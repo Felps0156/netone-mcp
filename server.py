@@ -12,10 +12,22 @@ from config import ConfigurationError, Settings, load_config
 
 
 class _SafeDiagnosticFormatter(logging.Formatter):
-    """Never render SDK messages, validation inputs or exception details."""
+    """Keep diagnostic identity without rendering untrusted log contents."""
 
     def format(self, record: logging.LogRecord) -> str:
-        return 'mcp_diagnostic: Diagnostic details suppressed for security.'
+        component = next((
+            name for name in ('mcp', 'httpx', 'httpcore')
+            if record.name == name or record.name.startswith(name + '.')
+        ), 'library')
+        level = {
+            logging.DEBUG: 'DEBUG', logging.INFO: 'INFO',
+            logging.WARNING: 'WARNING', logging.ERROR: 'ERROR',
+            logging.CRITICAL: 'CRITICAL',
+        }.get(record.levelno, 'UNKNOWN')
+        return (
+            f'level={level} component={component} '
+            f'code={component}_diagnostic'
+        )
 
 
 def _configure_safe_logging(level: str) -> None:
@@ -23,14 +35,15 @@ def _configure_safe_logging(level: str) -> None:
     handler = logging.StreamHandler(sys.stderr)
     handler.setFormatter(_SafeDiagnosticFormatter())
     logging.basicConfig(level=level, handlers=[handler], force=True)
-    names = {'mcp'}
+    names = {'mcp', 'httpx', 'httpcore'}
     names.update(
         name for name in logging.Logger.manager.loggerDict
-        if name.startswith('mcp.')
+        if name.startswith(('mcp.', 'httpx.', 'httpcore.'))
     )
     for name in names:
         logger = logging.getLogger(name)
         logger.handlers.clear()
+        logger.disabled = False
         logger.propagate = True
         logger.setLevel(logging.NOTSET)
 
