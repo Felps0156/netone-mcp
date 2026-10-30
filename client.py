@@ -280,7 +280,7 @@ class NetOneClient:
     async def _collect(
         self, operation: str, *, page_size: int | None = None,
         max_results: int | None = None, product_id: int | None = None,
-        product_mask: str | None = None,
+        product_mask: str | None = None, max_pages: int | None = None,
     ) -> QueryResult:
         """Collect internally; this does not authorize real calls or tools.
 
@@ -293,6 +293,14 @@ class NetOneClient:
         if operation not in _QUERY_PATHS:
             raise BlockedOperationError()
         _validate_product_filter(operation, product_id, product_mask)
+        if max_pages is not None and (
+            type(max_pages) is not int or not 1 <= max_pages <= 100
+        ):
+            raise BlockedOperationError()
+        page_budget = (
+            self._max_pages if max_pages is None
+            else min(max_pages, self._max_pages)
+        )
         if max_results is not None and (
             type(max_results) is not int or not 1 <= max_results <= 1000
         ):
@@ -320,7 +328,7 @@ class NetOneClient:
         async def collect_pages() -> None:
             nonlocal pages_fetched, rows_received, total_pages
             nonlocal total_elements, complete
-            for page in range(1, self._max_pages + 1):
+            for page in range(1, page_budget + 1):
                 # Changing limit mid-traversal can change offset semantics.
                 if budget - rows_received < size:
                     warn('result_limit_reached')

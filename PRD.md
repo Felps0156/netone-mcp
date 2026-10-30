@@ -1,7 +1,7 @@
 # PRD — NetOne MCP: Consulta e Análise Read-Only
 
-> **Versão:** 1.7.0 — Sprint 7 encerrada por aceite com ressalva explícita
-> **Estado:** NOT_READY para V1; Sprints 5, 6 e 7 concluídas. Sprint 7 aceita pelo mantenedor com exceção documentada para validação real de codigoSku técnico (DEC-027), não realizada. Código comercial/ID/EAN e busca textual têm evidências delimitadas; nenhuma tool MCP comercial registrada ou Sprint 8 iniciada.
+> **Versão:** 1.8.0 — Sprint 8 concluída com validação real delimitada
+> **Estado:** NOT_READY para V1; Sprints 5–8 concluídas. Sprint 7 mantém a ressalva de DEC-027 para codigoSku técnico sem validação real. Sprint 8 validada nas amostras restritas de DEC-029; registry MCP vazio e Sprint 9 não autorizada. Orçamento real consumido e encerrado.
 > **Regra fundamental:** nenhuma operação pode alterar dados comerciais do ERP.
 
 Este documento é a fonte de verdade para escopo, arquitetura, critérios e checklist. A revisão 1.2.0 substituiu restrições históricas de testes, Git somente leitura e frameworks obrigatórios. A revisão 1.2.1 registra autorização posterior explícita para leitura em memória da configuração e até três consultas de S5.01, sem exposição de segredos. Produtos/preços/estoque responderam com page=1 e limit=1; normalização e metadados das amostras aceitos. S5.01 e Sprint 5 concluídas, com 51 testes offline novamente aprovados. Não houve login, renovação, alteração do `.env`, novas tools ou avanço para Sprint 6. A autorização pontual não libera chamadas contínuas; evidências e limites em docs/runbook.md.
@@ -74,6 +74,7 @@ flowchart LR
 - `client.py`: HTTPX único, autenticação, guarda de origem/método/rota/schema, streaming, limites, erros, paginação e fechamento.
 - `catalog.py`: modelos imutáveis e normalização consumida pela coleta privada; sem persistência ou join preço/estoque.
 - `tools.py`: search_product_by_code é prioritária para código comercial (mascara remota e igualdade local); search_products faz substring casefold local, get_product_details usa ID remoto e search_product_by_sku/search_product_by_ean mantêm códigos técnicos distintos. Retornam a mesma projeção imutável com prioridade de apresentação, parcialidade/erro e proveniência; nenhuma registrada em MCP. Não aceitam configuração do operador como argumento do modelo.
+- Sprint 8 / DEC-029: `tools.py` acrescenta get_product_price por product_id textual exato local, check_inventory por reduced_id textual exato local e list_products desde page1/uma página default. Preço/estoque usam somente page/limit; nenhum filtro novo ou registro MCP. BRL somente com confirmação do operador, fonte explícita; depósito/frescor não inferidos. `_collect` aceita teto max_pages por chamada, limitado pela configuração, sem mutação compartilhada.
 - `analysis.py`: futuro e opcional, somente para análise real que justifique módulo separado. Sem grafo/adapter fictício.
 
 ## 7. Adaptação dos Padrões do SCSI
@@ -488,6 +489,24 @@ omitir produtos cujos cadastros não as mencionem. Sugestões do modelo
 cliente ainda dependem de integração futura e não são geradas pelo servidor.
 Teste sintético não prova cobertura ERP; nenhuma chamada real foi autorizada.
 
+DEC-029 — 1.8.0: mantenedor autorizou executar exclusivamente Sprint 8,
+escolheu opção 1 sem novos filtros HTTP e aprovou desenho/plano de
+2026-10-29. Preço e estoque por identidade exata local em coleta limitada;
+listagem uma página por padrão, mais páginas somente explícitas e limitadas.
+Real (BRL) confirmado pelo operador para esta instalação, não campo recebido
+da API nem conversão monetária; preservar proveniência da confirmação.
+Até cinco tentativas page1/limit1 após testes/revisão: duas prices
+(descoberta + função), duas stock (descoberta + função), uma products pela
+listagem. Leitura de configuração só em memória pelo loader, sem alteração
+do .env. Sem reuso de orçamento anterior, retries, redistribuição, login,
+rotação, mutação ERP, filtros novos, Git, registro MCP ou Sprint 9.
+Evidência documental de consulta conforme DEC-017 não prova efeitos internos;
+idsReduzidos de stock continua recusado pelo conflito schema/exemplo.
+Plano: docs/superpowers/plans/2026-10-29-sprint-8.md. Execução/consumo:
+cinco tentativas HTTP200 às23:25:50 UTC, cinco linhas recebidas; consumidores
+preço/estoque/listagem retornaram1 item parcial cada, JSON/projeção/cleanup
+aceitos. Orçamento encerrado; detalhes sanitizados na Sprint8 e runbook.
+
 ## 26. Critérios de Aceite
 
 ### 26.1 Critérios globais
@@ -550,7 +569,7 @@ flowchart LR
 
 ## 28. Sprints de Implementação em Checklist
 
-IDs/ordem e estados não relacionados são preservados. Sprints 0–4 têm entregas offline/documentais registradas; Sprint 5 concluída conforme DEC-022 e Sprint 6 conforme DEC-023. Sprint 7 concluída por aceite com ressalva explícita do mantenedor em DEC-027, com S7.11 revisada somente para registrar esse aceite; codigoSku técnico continua sem prova real. S0.11 é revisão documental, não prova remota; G2 aceito offline e G0/G1 limitados às operações observadas. Nenhuma etapa 8+ iniciada; registros anteriores preservam evidências e critérios de sua época.
+IDs/ordem e estados não relacionados são preservados. Sprints 0–4 têm entregas offline/documentais registradas; Sprint 5 concluída conforme DEC-022 e Sprint 6 conforme DEC-023. Sprint 7 concluída por aceite com ressalva explícita do mantenedor em DEC-027, com S7.11 revisada somente para registrar esse aceite; codigoSku técnico continua sem prova real. S0.11 é revisão documental, não prova remota; G2 aceito offline e G0/G1 limitados às operações observadas. Sprint 8 concluída conforme DEC-029 e evidências abaixo; Sprint 9+ não autorizada. Registros anteriores preservam evidências e critérios de sua época.
 
 Executar sequencialmente dentro do escopo autorizado, comprovar antes de marcar e manter tarefas condicionais bloqueadas. Commits são opcionais e dependem de autorização do responsável; não são unidade obrigatória de trabalho. Autorização de teste offline não libera consulta real nem tool.
 
@@ -809,25 +828,61 @@ Não inicia Sprint 8, não registra MCP nem altera NOT_READY para V1.
 ### Sprint 8 — Preço, estoque e listagem paginada
 
 **Objetivo:** permitir decisões comerciais confiáveis sem escrita.
-- [ ] S8.01 — Investigar consulta read-only de preço real, moeda e tabela de preço pelo método documentado.
-- [ ] S8.02 — Definir identificador necessário para preço.
-- [ ] S8.03 — Implementar `get_product_price` somente se justificado e autorizado.
-- [ ] S8.04 — Preservar valor decimal exato e `null` quando ausente.
-- [ ] S8.05 — Investigar consulta read-only de estoque e granularidade por reduzido/depósito/filial.
-- [ ] S8.06 — Confirmar que leitura não reserva nem movimenta estoque.
-- [ ] S8.07 — Implementar `check_inventory` somente com operação read-only comprovada e liberada.
-- [ ] S8.08 — Tratar `quantity=0` e `quantity=null` separadamente.
-- [ ] S8.09 — Retornar escopo e referência temporal se informados pela API.
-- [ ] S8.10 — Investigar consulta read-only de listagem e metadados de paginação.
-- [ ] S8.11 — Implementar `list_products` com teto de páginas e itens, se suportado.
-- [ ] S8.12 — Não consultar todas as páginas como comportamento padrão.
-- [ ] S8.13 — Classificar dados incompletos/limite como `partial`.
-- [ ] S8.14 — Realizar validação manual autorizada dos recursos liberados.
-- [ ] S8.15 — Atualizar inventário e registrar recusas de funcionalidades não suportadas.
+- [x] S8.01 — Investigar consulta read-only de preço real, moeda e tabela de preço pelo método documentado.
+- [x] S8.02 — Definir identificador necessário para preço.
+- [x] S8.03 — Implementar `get_product_price` somente se justificado e autorizado.
+- [x] S8.04 — Preservar valor decimal exato e `null` quando ausente.
+- [x] S8.05 — Investigar consulta read-only de estoque e granularidade por reduzido/depósito/filial.
+- [x] S8.06 — Confirmar que leitura não reserva nem movimenta estoque.
+- [x] S8.07 — Implementar `check_inventory` somente com operação read-only comprovada e liberada.
+- [x] S8.08 — Tratar `quantity=0` e `quantity=null` separadamente.
+- [x] S8.09 — Retornar escopo e referência temporal se informados pela API.
+- [x] S8.10 — Investigar consulta read-only de listagem e metadados de paginação.
+- [x] S8.11 — Implementar `list_products` com teto de páginas e itens, se suportado.
+- [x] S8.12 — Não consultar todas as páginas como comportamento padrão.
+- [x] S8.13 — Classificar dados incompletos/limite como `partial`.
+- [x] S8.14 — Realizar validação manual autorizada dos recursos liberados.
+- [x] S8.15 — Atualizar inventário e registrar recusas de funcionalidades não suportadas.
 
 **Entrega:** preço/estoque/listagem com precisão comprovada ou bloqueio formal.  
 
 **Aceite:** nenhum valor estimado é apresentado como fato comercial.
+
+**Evidência offline/documental:** O3/O4/O5 relidas após hidratação;
+desenho/plano aprovados, opção sem filtros novos. S8.06 usa a finalidade
+de consulta aceita em DEC-017 e revisão das rotas/body reais: não há
+chamada/payload de reserva ou movimentação, nem afirmação de prova dos
+efeitos internos não documentados do fornecedor. Moeda BRL confirmada pelo
+operador, não retornada por O5; tabelas varejo/atacado preservadas sem
+seleção/cálculo. Stock é físico menos reservas do depósito do usuário,
+identidade/filial e frescor desconhecidos; timestamp bruto/null preservado.
+16 testes novos RED→GREEN; suíte139 PASS em6.032s e pip check PASS antes
+da revisão independente. Cobertura: identidade exata/zeros, Decimal/null/
+zero, validação sem envio, limites isolados, concorrência, erro/vazio/
+parcialidade e stdio vazio. Revisão independente aprovou a aplicação;
+três achados importantes somente no probe de evidências foram reproduzidos
+e corrigidos antes de enviar: retenção de métricas em falha, match não
+obrigatório se amostra muda e comparação exata com a própria resposta do
+consumidor. Quatro regressões sintéticas do probe passaram após RED;
+suíte139 PASS em6.014s e pip check PASS após correções.
+
+**S8.14 — prova real única em29/10/2026,23:25:50 UTC:** cinco tentativas
+page1/limit1, todas HTTP200: descoberta prices + get_product_price;
+descoberta stock + check_inventory; list_products. Cinco linhas recebidas
+no total. Cada função retornou1 item, status partial, error=null,
+complete_dataset=false pelo teto; identidade/projeção, Decimal exato,
+null/ausência comparados em memória com a própria resposta do consumidor,
+JSON, contexto BRL/escopo e cleanup aceitos. Cinco fechamentos de resposta
+e fechamento do cliente concluídos. Nenhum valor privado foi retido;
+nenhum login, rotação, escrita ERP/.env, retry ou redirect ocorreu.
+Orçamento consumido e encerrado, sem autorização para nova chamada.
+
+**S8.15/encerramento:** inventário, README, runbook e instruções refletem
+os contratos e recusas: nenhum filtro stock ambíguo, seleção de depósito,
+moeda inferida da API, preço final/estimado, soma entre filiais, paginação
+global ou registro MCP. Amostras reais unitárias não provam percurso remoto
+multi-page/snapshot/frescor nem efeitos internos não documentados. Sprint 8
+concluída neste escopo; V1 NOT_READY e Sprint9 não iniciada.
 
 ### Sprint 9 — Registro e compatibilidade MCP
 
@@ -972,7 +1027,7 @@ Não inicia Sprint 8, não registra MCP nem altera NOT_READY para V1.
 - S5.01 concluída: após correção local pelo operador e renovação da autorização, produtos/preços/estoque responderam a três consultas delimitadas em 29/10/2026. Campos reais confirmados em amostras sanitizadas; normalização/metadados aceitos. Falha anterior de configuração é histórica, não bloqueio atual. `.env` não alterado pelo agente; evidência em `docs/runbook.md` e `docs/api-capabilities.md`.
 - G0/G1 PASS somente no recorte produtos/page-limit da Sprint 6 concluída. Implementação, 74 testes, pesquisa real delimitada e revisões independentes aprovados. Não estender a preços/estoque, filtros novos ou tools MCP. Instalação limpa permanece futuro aceite S13.02, e granularidade ampla de permissões segue desconhecida sem impedir a leitura já comprovada.
 - Conflitos documentais: nome de header gerado, stock IDs array, nomes/semântica timestamp, metadados/limites de paginação.
-- Identidade/unicidade, moeda/tabela, unidade/depósito e snapshot/visibilidade comercial permanecem desconhecidos.
+- Identidade/unicidade, seleção de tabela, unidade/depósito e snapshot/visibilidade comercial permanecem limitados/não comprovados globalmente. BRL foi confirmado pelo operador para esta instalação em DEC-029, não observado em campo da API; valores/tabelas nominais não são preço final.
 - Análise futura e necessidade de framework dependem de consumidor real e dados suficientes.
 - Licença/atribuição e outras plataformas/instalação limpa precisam de evidência aplicável.
 

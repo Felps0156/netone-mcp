@@ -4,7 +4,7 @@ A Python MCP stdio foundation for authorized, strictly read-only NetOne ERP quer
 
 ## Current status
 
-**NOT_READY for V1. No MCP commercial tools are registered.** Sprints 5, 6 and 7 are complete. Under PRD 1.7.0 / DEC-027, the maintainer explicitly accepted Sprint 7 with a documented exception: technical codigoSku has offline coverage but no real validation. S7.11 records the revised acceptance, not invented SKU success or mask equivalence. ID/EAN/commercial-code and text observations remain bounded; the current offline suite passes 116 tests. Sprints 8+ remain unstarted.
+**NOT_READY for V1. No MCP commercial tools are registered.** Sprints 5–8 are complete; Sprint 7 retains DEC-027's technical-codigoSku exception. PRD 1.8.0 / DEC-029 records Sprint 8's 139-test offline suite and five minimal real HTTP200 queries. Each new public consumer returned one item with correct partiality and accepted source fidelity/cleanup. The observation budget is closed; no further ERP call or Sprint 9 is authorized. Historical results below retain their original scope.
 
 The private client implements three documented query POSTs with fixed origin/Host and closed `page`/`limit` filters. Sprint 7 adds only a products-specific integer product_id encoded as idsProdutos=[product_id], not a caller-supplied filter dictionary. Construction and startup make no ERP request. `tools.search_products` is callable application functionality, not an MCP registration. Its completed Sprint 6 observation returned HTTP 200 twice, including one matching item with correct partiality. See the [sanitized evidence and limits](docs/api-capabilities.md); bounded samples do not prove complete pagination, all permissions or general readiness.
 
@@ -14,9 +14,9 @@ The private client implements three documented query POSTs with fixed origin/Hos
 - `server.py`: thin MCP stdio entrypoint, empty registry, one private client per lifespan.
 - `client.py`: HTTPX authentication, literal allowlist, bounded streaming/pagination and safe errors.
 - `catalog.py`: immutable normalized records consumed by private collection.
-- `tools.py`: bounded text search, ID-filtered details and exact local SKU/EAN application functions; no MCP query or analysis tool is registered.
+- `tools.py`: bounded text/code searches, ID-filtered details, local exact price/stock selection and bounded product listing; no MCP query or analysis tool is registered.
 
-IDs/SKU/EAN preserve leading zeros. Decimal prices/quantities serialize as strings; absent/null/zero remain distinct. The projection includes identity, description, group/line, EAN, price, stock and raw last-change data, plus separate API SKU and price-table provenance. Photos, color, size, wholesale and discounts are excluded. Pagination is bounded and reports incomplete/conflicting data as partial; completeness is not an ERP-wide snapshot.
+IDs/SKU/EAN preserve leading zeros. Decimal prices/quantities serialize as strings; absent/null/zero remain distinct. The projection includes identity, description, classification, EAN, retail/wholesale source prices and tables, quantity, notes, optional source block flag and raw last-change data. Photos, color, size and discount calculations are excluded. Pagination is bounded and reports incomplete/conflicting data as partial; completeness is not an ERP-wide snapshot.
 
 LangChain/LangGraph are not required and are removed from the manifest while unused. A future real analysis consumer may justify an optional framework; basic operation needs no LLM key.
 
@@ -112,6 +112,56 @@ No stock, sellability, currency, final price or discounts are inferred.
 No new HTTP consumer, MCP tool, Sprint8 work or technical-SKU acceptance.
 Eight new offline tests pass; the full suite passes 116 tests. No private
 source values or credentials are stored in the inventory or examples.
+
+### Sprint 8 application functions (not MCP tools)
+
+- `await tools.get_product_price(client, product_id, max_results=20,
+  currency=None)` selects exact normalized product IDs locally from bounded
+  prices pages, retaining all reduced variants. product_id is a string,
+  unlike the integer remote filter of get_product_details. No ID filter is
+  sent for prices. Retail/wholesale values and tables are source nominal
+  amounts, not final quotes, discount calculations or a table choice.
+- `currency='BRL'` may be supplied by a trusted caller with operator
+  confirmation. It produces currency_source=operator_confirmation, not an
+  API currency claim or conversion. The maintainer confirmed BRL for the
+  current installation. Generic callers default to unknown currency/null.
+- `await tools.check_inventory(client, reduced_id, max_results=20)` selects
+  exact normalized reduced IDs locally from bounded stock pages. Stock is
+  documented as physical minus reservations in the user's configured
+  deposit. inventory_scope discloses this selection while deposit_id and
+  branch_id remain null/unverified. No deposit/filter is sent or aggregated.
+  Zero, negative, null and absent quantities remain distinct. Raw item
+  timestamps are not stock freshness; retrieved_at is local observation.
+- Price/stock identities are strings1–256/nonblank/no Unicode C; equality
+  preserves zeros, spaces and case. max_results is a strict integer1–1000,
+  default20/capped by configuration, counting all received rows. A partial
+  miss never proves global absence; initial/later errors remain error/partial.
+  found means identity found, not a populated price or sellable quantity;
+  missing values produce price_missing/quantity_missing warnings.
+- `await tools.list_products(client, max_results=20, page_size=None,
+  max_pages=1)` starts at page1 and fetches one page by default. Explicit
+  max_pages1–100 is capped by configuration; page_size, when supplied, must
+  be a strict positive integer within the effective row budget. None uses
+  min(50, effective budget). Fixed page size never shrinks mid-traversal.
+  Limits, missing metadata and conflicts remain partial. No arbitrary
+  filters, resume cursor, global-catalog or snapshot claim is supported.
+
+All three use only the existing guarded POSTs with page/limit bodies,
+verified TLS, zero retries/redirects and existing byte/time/cleanup bounds.
+Calling them needs operator authorization; importing/startup makes no query.
+The stock ID-filter schema conflict remains unresolved and is not bypassed.
+Documented query intent is accepted under DEC-017, not proof of undisclosed
+server internals. No reservation/movement operation is implemented.
+
+The authorized one-shot check on 2026-10-29 used exactly five page1/limit1
+requests: two prices, two stock and one products. All returned HTTP200;
+get_product_price, check_inventory and list_products each returned one
+item, partial=true, complete_dataset=false, error=null. Exact source
+projection/numeric/null/absence checks used each consumer's own response
+in memory, not equality across changing reads. JSON and all cleanup
+completed. No commercial values were retained and no environment file was
+modified. This proves only these samples, not broad pagination/snapshot,
+deposit identity/freshness or server-internal effects. Budget is closed.
 
 ### Bounded product search (application function, not an MCP tool)
 

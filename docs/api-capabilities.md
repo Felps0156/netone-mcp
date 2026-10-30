@@ -1,6 +1,77 @@
 # NetOne API capability evidence
 
-Initial investigation: 2026-10-27. Current policy: PRD 1.7.0 / DEC-027. Sprints 5/6/7 are complete; Sprint 7 was explicitly accepted with an exception for unperformed real technical-codigoSku validation. Revised S7.11 records that waiver, not operational SKU success or mask equivalence. No MCP commercial tool is registered and V1 remains NOT_READY. See [the field inventory](product-field-priority.md): the 100-row profile and separate one-row metadata check are closed, without inferred frequencies/provider-wide semantics or further DTO changes. Earlier criteria/observations below are historical; DEC-027 governs current sprint acceptance.
+Initial investigation: 2026-10-27. Current policy: PRD 1.8.0 / DEC-029. Sprints 5–8 are complete; Sprint 7 retains DEC-027's technical-SKU exception. Sprint 8's application consumers have offline and minimal real evidence below. No MCP commercial tool is registered; V1 remains NOT_READY and Sprint 9 is not authorized. Earlier criteria/observations below are historical checkpoints; the current Sprint 8 section overrides earlier no-price/stock-consumer or no-Sprint8 statements only within its explicit scope. Every observation budget is closed. See [the field inventory](product-field-priority.md) for its distinct closed samples.
+
+## Sprint 8 — current application contract (DEC-029)
+
+O3/O4/O5 were refreshed anonymously after browser hydration on 2026-10-29.
+O5 still publishes idsProdutos/idsReduzidos arrays and retail/wholesale
+source tables/amounts but no currency. O4 still describes physical minus
+reservations and omission of idDeposito as selecting the configured user's
+deposit; its idsReduzidos schema/example disagreement remains. O3 retains
+page/limit and provider visibility restrictions. No Send action was used
+while reading documentation. No official numeric quota or snapshot was found.
+
+The approved option adds no HTTP filters: get_product_price selects exact
+normalized product_id strings locally on prices; check_inventory selects
+exact reduced_id strings locally on stock. Both accept identities1–256,
+nonblank/no Unicode C, preserved exactly, and strict max_results1–1000,
+default20/capped by configuration, counting all source rows. These are
+bounded local lookups, not indexed/global queries. Errors/partiality take
+precedence even when all rows are excluded. Existing DTO/Decimal/null/
+missing-field and duplicate/conflict semantics remain unchanged.
+
+Price retains source retail/wholesale tables and exact nominal amounts,
+never discounts/final quote/table selection. currency defaults to null with
+currency_unknown. A trusted caller may pass currency='BRL' based on the
+maintainer's installation confirmation; currency_source explicitly says
+operator_confirmation, not API evidence or currency conversion. Unsupported
+currency inputs are rejected before HTTP. Missing both price values on any
+matched record warns price_missing; identity found does not imply a quote.
+
+Inventory adds inventory_scope: selection=configured_user_deposit,
+deposit_id=null, branch_id=null, quantity_basis=physical_minus_reservations.
+Scope/freshness warnings are explicit, item timestamp stays raw and local
+retrieved_at is not freshness. No unit/availability/reservation/branch sum
+is inferred; null quantity warns quantity_missing, never becomes zero.
+No deposit lookup or idsReduzidos representation is chosen by analogy.
+
+list_products(client, max_results=20, *, page_size=None, max_pages=1) starts
+at page1, one page by default. Explicit max_pages1–100 is capped by config;
+page_size must fit the effective row budget; None uses min(50,budget).
+The collector's optional per-call max_pages=None preserves older callers,
+validates before HTTP and never mutates shared limits. Partial/missing or
+contradictory metadata, duplicates/conflicts, fixed sizes and source-row
+budgets retain their previous semantics. provider_visible_catalog_only is
+explicit; no initial-page/cursor/arbitrary filter or full ERP claim.
+
+DEC-017's acceptance of official query intent and the inspected read paths
+supports the no-reservation/movement design. It is not independent proof
+of undisclosed server effects. Only existing POST reduzidos/precos/estoque
+with page/limit are consumed here; auth/origin/TLS/guards, identity/1MiB,
+deadlines, zero retries/redirects and shielded cleanup are unchanged.
+All functions are application callables, not MCP registrations.
+
+Offline: 16 new focused tests passed; full suite139 PASS/6.032s before
+independent review; pip check passed. Independent application review
+passed139 tests/5.999s. Three Important probe-only evidence defects were
+reproduced and fixed before any send: record metrics before stopping,
+accept a valid partial miss if the sample changes, and compare fidelity
+against the current consumer response. Four synthetic probe regressions
+passed after RED, followed by139 project tests/6.014s and pip check PASS.
+
+Real S8.14: one-shot at23:25:50 UTC on2026-10-29, five page1/limit1
+attempts, all HTTP200:2 prices (discovery + get_product_price),2 stock
+(discovery + check_inventory),1 products (list_products). Five received
+rows in total; each public consumer returned1 item, partial=true,
+complete_dataset=false, error=null. Identity/projection, exact numeric
+strings/null/absence were checked in memory against the same consumer
+response; BRL operator context, scope, JSON and completed cleanup accepted.
+Five response closes and client close completed. No raw/private values,
+origins, credentials or arbitrary response keys were retained. No login,
+rotation, mutation request, env change, retry or redirect. Budget exhausted
+and closed. This is unitary sample evidence, not real multi-page/snapshot,
+deposit identity/freshness or proof of undisclosed internal effects.
 
 ## Commercial code priority — PRD 1.5.0 / DEC-025
 
@@ -39,7 +110,7 @@ checkpoint S7.11 remained open; later DEC-027 explicitly revised its
 acceptance criterion and closed the sprint with that known exception.
 No Sprint 8/9 started and no real SKU success is claimed.
 
-## Decision and scope
+## Historical decision and scope before DEC-029
 
 G0/G1 evidence covers products/page-limit and bounded local searches. DEC-024 admits the products-only integer ID filter; DEC-025 additionally admits the mutually exclusive products-only mascara string filter and exact local commercial-code selection. Each has its own completed bounded real observation, not release by association. Exact EAN was observed; technical SKU still lacks real acceptance. Under DEC-017, the maintainer accepts O3/O4/O5 as evidence of intended query semantics, not proof of no internal effects. GET is not a prerequisite; commercial mutation remains prohibited. No MCP tool, other filter or general price/stock consumer is released. DEC-026 enriches the existing product DTO, not price/stock transport or Sprint8.
 
@@ -410,7 +481,7 @@ Each request and the whole collection have a local total deadline of four times 
 
 The server formatter emits only `level=<...> component=mcp|httpx|httpcore|library code=<component>_diagnostic`, never `record.msg`, args, exception or stack. Existing handlers are normalized only for root and the relevant families; loggers are not disabled. Entrypoint configuration/client failures retain fixed safe stderr messages. LangChain/LangGraph pins were removed without uninstalling the existing environment; the five remaining direct pins are preserved. Final application-validation results belong in the coordinator's runbook record, not this inventory.
 
-## Gate record and unblock request
+## Historical gate record and unblock request before DEC-029
 
 Current decision: DEC-017 accepts query purpose with residual limitations; DEC-024/025 admit typed ID/mask filters and distinct exact-code consumers. Real ID/EAN/commercial-code observations succeeded; technical SKU proof remains absent. DEC-027 closes Sprint 7 by explicit maintainer acceptance with that exception, revising only S7.11's criterion. This is not full operational proof. Commercial MCP tools remain absent; no price/stock consumer, arbitrary filter, new ERP request or Sprint 8 work is authorized. V1 remains NOT_READY.
 

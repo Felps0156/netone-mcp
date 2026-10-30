@@ -2,7 +2,28 @@
 
 ## Scope and current status
 
-Read `PRD.md` before architectural/sprint work. PRD 1.7.0 / DEC-027 records Sprints 5, 6 and 7 complete. The maintainer explicitly accepted Sprint 7 with a documented exception: technical codigoSku has offline coverage but no real validation. S7.11 was revised to record this acceptance, not fabricated SKU proof or substitution by mascara. Real ID/EAN/commercial-code and text observations remain bounded; the current offline suite passes 116 tests. The registry remains empty until Sprint 9 and V1 is NOT_READY. All prior probe budgets are closed, including unused conditional allocations. No new ERP request, login, token rotation, environment-file modification, wider scan or Sprint 8+ is authorized. No private source value may be retained. Earlier open-S7.11 notes are historical under the original criterion; DEC-027 governs current acceptance.
+Read `PRD.md` before architectural/sprint work. PRD 1.8.0 / DEC-029 records Sprints 5–8 complete, with DEC-027's unchanged exception for technical codigoSku lacking real validation. Sprint 8 adds bounded local exact price/stock selection and one-page-default listing, without new HTTP filters. The current project suite passes 139 offline tests. Its single real probe consumed five page1/limit1 queries, all HTTP200, and is closed. No additional ERP request, login, token rotation, environment-file modification, wider scan or Sprint 9+ is authorized. The MCP registry stays empty and V1 NOT_READY. No private source value may be retained. Older observations/criteria remain historical, not renewed budgets.
+
+## Sprint 8 completed scope — budget closed
+
+The maintainer subsequently approved the Sprint 8 design and execution plan
+in docs/superpowers/specs/2026-10-29-sprint-8-design.md and
+docs/superpowers/plans/2026-10-29-sprint-8.md. This supersedes only the
+earlier prohibition on starting Sprint 8 or its price/stock consumers.
+Implement local exact identity selection on the existing page/limit-only
+prices/stock queries and bounded product listing, one page by default.
+No new HTTP filters, routes, MCP tools or Sprint 9 work are authorized.
+BRL is operator-confirmed installation context, not an API-returned field.
+After offline tests, independent review and verified probe fixes, the
+one-shot validation read configuration in memory through the existing
+loader and consumed five page1/limit1 queries: prices discovery + public
+price function, stock discovery + public inventory function, and public
+listing. Two prices, two stock, one products send; all HTTP200, each public
+function one matching item/partial/error null, same-response fidelity/JSON
+accepted and all response/client cleanup completed. Budget closed: no rerun.
+Persist only approved structural counts/invariants, never source values.
+No ERP mutation, login, token rotation, .env modification or Git commands.
+All earlier probe budgets remain closed. Mark only evidenced S8 tasks.
 
 ## Boundaries
 
@@ -20,7 +41,8 @@ subgroup, notes, wholesale_price_table, wholesale_price and strict optional
 boolean blocked. Existing functions share this immutable DTO. Filled
 fields precede null/blank without dropping keys, missing metadata, exact
 Decimal values, zero or false. Do not infer stock, sellability, currency,
-final prices or discounts; no new price/stock consumer or Sprint 8 work.
+final prices or discounts. DEC-026 itself did not authorize Sprint 8;
+the later DEC-029 consumers are governed by the completed scope above.
 The 100-row field profile used two page1/2 limit50 HTTP200 requests and
 is closed. A separately approved one-row page1/limit1 metadata check also
 finished with HTTP200 and completed cleanup; its budget is now closed.

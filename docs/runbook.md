@@ -2,7 +2,7 @@
 
 ## Current boundary
 
-PRD 1.7.0 / DEC-027 records Sprints 5/6/7 complete. The maintainer explicitly accepted Sprint 7 with an exception for the unperformed real technical-codigoSku validation, revising S7.11 without claiming operational proof. Earlier open-status notes below are historical checkpoints under the original criterion. ID/EAN/commercial-code and text observations remain bounded; the registry is empty and V1 NOT_READY. All probe budgets are closed. No additional ERP request, login, token rotation, environment-file modification, full-catalog scan, MCP registration or Sprint 8+ is authorized.
+PRD 1.8.0 / DEC-029 records Sprint 8 complete under its approved design/plan: local exact price/stock consumers and bounded listing, no new HTTP filters or MCP registration. The139-test project suite passes; its real probe consumed five page1/limit1 HTTP200 queries with source fidelity/JSON/cleanup accepted. BRL is operator-confirmed context, not provider-returned currency. All budgets are closed; no additional configuration read or ERP query is authorized. Sprints5–7 remain accepted with DEC-027's technical-SKU exception; older notes below are historical checkpoints. No ERP mutation, login, token rotation, environment-file modification, wider scan or Sprint9 is authorized. V1 remains NOT_READY.
 
 Current behavior and limits: [configuration](configuration.md). Endpoint contracts, field mapping and unresolved provider ambiguities: [API inventory](api-capabilities.md). Canonical sprint IDs/states/sequence: [PRD section 28](../PRD.md#28-sprints-de-implementação-em-checklist).
 
@@ -25,7 +25,7 @@ Historical outcome summary (not new verification):
 
 Use [README setup](../README.md#install-and-start) with one existing compatible root `.venv`. Do not recreate it unless absent or replacement is explicitly authorized. `pip install -r requirements.txt` changes the local environment and is an operator action, not a check to run silently. Start `server.py` only with valid operator-owned configuration. No LLM key is needed.
 
-For this offline refactor, tests must replace the loader/file access with synthetic settings and forbid HTTP sends. In a real operator session, configuration loading reads the root `.env`; this documentation does not authorize such access by the development agent. Never print settings, environment, headers or bodies for diagnosis.
+Offline tests must replace loader/file access with synthetic settings and forbid HTTP sends. DEC-029's separate memory-only loader read was consumed by the completed Sprint8 probe, without modification/disclosure; no subsequent reads are authorized. Never print settings, environment, headers or bodies for diagnosis.
 
 Expected initialize/tools-list response: valid protocol replies with an empty tool list. stdout is exclusively MCP JSON-RPC; safe code/component/level diagnostics go to stderr. Root DEBUG/malformed SDK input must not expose raw messages, validation values, exceptions or stacks. Do not solve logging failures by disabling the protocol or indiscriminately disabling loggers.
 
@@ -418,3 +418,75 @@ discover -s tests -v` passed 116 tests in 5.815s. Closure changes only
 documentation, not application behavior or tests. Sprint 8 remains
 unstarted, MCP registry empty and V1 NOT_READY. Any later real SKU check
 requires its own usable input and bounded authorization.
+
+## Sprint 8 execution and closed observation — PRD 1.8.0
+
+Approved [design](superpowers/specs/2026-10-29-sprint-8-design.md) and
+[plan](superpowers/plans/2026-10-29-sprint-8.md). Current workspace used
+without Git/worktree helpers under the explicit project restriction;
+allowlisted public-source snapshots/diffs and a managed-scratch ledger
+provided scope tracking. Baseline123 tests PASS/6.441s, Python3.14.3 and
+pip check PASS. Earlier116 counts predate expanded-search tests.
+
+Production changed only client.py (per-call page ceiling) and tools.py
+(price/inventory/list application consumers). Tests added16 methods in
+test_sprint8.py. config/catalog/server/manifest and earlier tests stayed
+unchanged. No installation, new dependency, persistence or MCP tool.
+
+TDD: page-cap keyword absent before implementation; price5, inventory4
+and list5 missing-function failures were observed before each consumer.
+Focused16 tests then passed, full139 PASS/6.032s and pip check PASS.
+Independent read-only review passed the application and independently
+ran139 tests/5.999s. It found three Important issues only in the prepared
+probe: discarded failure metrics, mandatory-match assumption on a changing
+sample and insufficient same-response precision/presence validation.
+All were fixed before any ERP send. Four synthetic scratch regressions
+first failed (including missing expected evidence), then passed/0.042s;
+the full project suite passed139/6.014s and pip check again. Fixes retain
+metrics before failure, continue valid misses without replay and compare
+the projection plus raw numeric/null/absence against the same consumer
+response held only in memory. No Important finding remains open.
+
+Real command: `.venv/Scripts/python.exe -B <managed-scratch>/probe.py`.
+Started2026-10-29T23:25:50 UTC, finished23:26:01 UTC. A permanent exclusive
+start marker forbids replay; the original request guard remained first,
+with an additional phase/path/page1/limit1/five-send restriction. Existing
+TLS, identity, body-size/deadline caps and zero retries/redirects retained.
+Private configuration loaded once in memory, never displayed or modified.
+
+| Phase | Requests | HTTP status | Observed public result |
+|---|---|---|---|
+| prices discovery + get_product_price | 2, each page1/limit1 | 200,200 | 1 exact local match, partial, error null |
+| stock discovery + check_inventory | 2, each page1/limit1 | 200,200 | 1 exact local match, partial, error null |
+| list_products | 1, page1/limit1 | 200 | 1 item, partial, error null |
+
+Total5 attempts/5 received rows; each consumer pages_fetched1,
+rows_received1, returned_count1, partial=true, complete_dataset=false.
+Source projection/numeric strings/null/absence and JSON accepted. Currency
+BRL source operator_confirmation and unknown-deposit scope accepted.
+Five response aclose calls completed, as did the underlying client close;
+these completion markers are stronger than is_closed alone. The sanitized
+report was read back and its counts/invariants checked programmatically.
+No IDs, amounts, quantities, descriptions, raw timestamps, private origin,
+credentials, settings, responses or unknown keys were persisted.
+
+Budget consumed and closed. No ERP mutation operation, login, token
+rotation, env-file modification, retry, redirect or extra discovery.
+No guarantee about undisclosed server internals, broader permissions,
+multi-page remote traversal, stable snapshot, deposit identity, units,
+freshness or stock availability is inferred. Synthetic tests cover the
+additional boundaries, not real ERP behavior. S8.01–S8.15 completed within
+this scope; technical SKU exception unchanged, V1 NOT_READY, registry empty
+and Sprint9 not started. The managed-scratch budget marker/evidence is
+retained instead of deleting the ledger because no Git history was created.
+
+Final controller verification after the real observation and reconciliation:
+`.venv/Scripts/python.exe -B -m unittest discover -s tests -v` passed139
+tests in5.996s; `.venv/Scripts/python.exe -m pip check` reported no broken
+requirements. The public-only audit parsed212 ordered PRD tasks: exactly15
+S8 states changed, all task texts/IDs/order and non-sprint acceptance
+checkboxes preserved. Foundation modules/direct pins and prior tests are
+byte-for-text identical to the public baseline; Python syntax/new-line
+lengths, current-document links and the real report invariants passed.
+Two pre-existing long lines in tools.py were left untouched. No configured
+external linter, clean install or other-platform validation was claimed.

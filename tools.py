@@ -1,4 +1,4 @@
-"""Bounded local product search; no MCP registration is approved here."""
+"""Bounded commercial application queries, without MCP registration."""
 
 from dataclasses import replace
 import re
@@ -207,3 +207,89 @@ async def search_product_by_ean(
 ) -> dict[str, object]:
     """Match ean exactly without trimming, coercion or checksum inference."""
     return await _search_exact_code(client, ean, max_results, 'ean')
+
+
+async def get_product_price(
+    client: NetOneClient, product_id: str, max_results: int = 20,
+    *, currency: Literal['BRL'] | None = None,
+) -> dict[str, object]:
+    """Select nominal source prices by exact local normalized product ID.
+
+    Currency is trusted operator context, not an API field or conversion.
+    A limited miss cannot establish global absence or a final quote.
+    """
+    _validate_code_input(product_id, max_results)
+    if currency is not None and (
+        not isinstance(currency, str) or currency != 'BRL'
+    ):
+        raise ValueError('Currency must be BRL or unknown.')
+    result = await client._collect('prices', max_results=max_results)
+    items = tuple(item for item in result.items
+                  if item.product_id == product_id)
+    output = _filtered_result(
+        result, items, 'local_exact_product_id_price_search',
+    )
+    warnings = [*result.warnings, 'local_exact_product_id_price_search',
+                'nominal_prices_not_final_quote']
+    if currency is None:
+        warnings.append('currency_unknown')
+    if any(item.price is None and item.wholesale_price is None
+           for item in items):
+        warnings.append('price_missing')
+    output.update(
+        currency=currency,
+        currency_source='operator_confirmation' if currency else None,
+        price_kind='source_retail_and_wholesale', warnings=warnings,
+    )
+    return output
+
+
+async def check_inventory(
+    client: NetOneClient, reduced_id: str, max_results: int = 20,
+) -> dict[str, object]:
+    """Select an exact local reduced identity in the user's stock scope.
+
+    Quantities are source physical-minus-reservations values, not a promise
+    of sellability. Deposit identity and stock freshness remain unverified.
+    """
+    _validate_code_input(reduced_id, max_results)
+    result = await client._collect('stock', max_results=max_results)
+    items = tuple(item for item in result.items
+                  if item.reduced_id == reduced_id)
+    output = _filtered_result(
+        result, items, 'local_exact_reduced_id_stock_search',
+    )
+    warnings = [*result.warnings, 'local_exact_reduced_id_stock_search',
+                'inventory_scope_unverified', 'inventory_freshness_unverified']
+    if any(item.quantity is None for item in items):
+        warnings.append('quantity_missing')
+    output.update(
+        inventory_scope={
+            'selection': 'configured_user_deposit', 'deposit_id': None,
+            'branch_id': None, 'quantity_basis': 'physical_minus_reservations',
+        },
+        warnings=warnings,
+    )
+    return output
+
+
+async def list_products(
+    client: NetOneClient, max_results: int = 20, *,
+    page_size: int | None = None, max_pages: int = 1,
+) -> dict[str, object]:
+    """List from page one, fetching at most one page unless explicitly set.
+
+    Limits count received rows, not distinct products. A complete traversal
+    describes only the provider-visible endpoint, not an ERP-wide snapshot.
+    """
+    if type(max_results) is not int or not 1 <= max_results <= 1000:
+        raise ValueError('max_results must be an integer from 1 to 1000.')
+    if type(max_pages) is not int or not 1 <= max_pages <= 100:
+        raise ValueError('max_pages must be an integer from 1 to 100.')
+    result = await client._collect(
+        'products', max_results=max_results,
+        page_size=page_size, max_pages=max_pages,
+    )
+    return replace(
+        result, warnings=(*result.warnings, 'provider_visible_catalog_only'),
+    ).as_json()
