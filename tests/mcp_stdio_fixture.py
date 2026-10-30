@@ -31,16 +31,15 @@ for key in tuple(os.environ):
         del os.environ[key]
 
 counts = {'requests': 0, 'responses_closed': 0, 'clients_closed': 0}
+search_pages = '--search-pages' in sys.argv
 
 
 class Stream(httpx.AsyncByteStream):
+    def __init__(self, data):
+        self.data = data
+
     async def __aiter__(self):
-        yield (
-            b'{"result":[{"idProduto":7,"idReduzido":"001",'
-            b'"mascara":"0007","descricao":"Synthetic item",'
-            b'"valor":123456789012345678.2300,"quantidade":0}],'
-            b'"page":1,"totalPages":1,"totalElements":1}'
-        )
+        yield self.data
 
     async def aclose(self):
         await anyio.sleep(0)
@@ -52,8 +51,31 @@ def send(request):
     assert request.method == 'POST'
     assert request.url.host == 'example.invalid'
     assert request.url.path == '/app-web/api/v2/produto/reduzidos'
-    assert json.loads(request.content) == {'page': 1, 'limit': 1}
-    return httpx.Response(200, stream=Stream())
+    body = json.loads(request.content)
+    data = (
+        b'{"result":[{"idProduto":7,"idReduzido":"001",'
+        b'"mascara":"0007","descricao":"Synthetic item",'
+        b'"valor":123456789012345678.2300,"quantidade":0}],'
+        b'"page":1,"totalPages":1,"totalElements":1}'
+    )
+    if search_pages:
+        page = counts['requests']
+        assert page in (1, 2)
+        assert body == {'page': page, 'limit': 50}
+        if page == 1:
+            data = json.dumps({
+                'result': [{'idProduto': 7, 'idReduzido': str(i),
+                            'descricao': 'Other'} for i in range(50)],
+                'page': 1, 'totalPages': 2, 'totalElements': 51,
+            }).encode()
+        else:
+            data = data.replace(
+                b'"page":1,"totalPages":1,"totalElements":1',
+                b'"page":2,"totalPages":2,"totalElements":51',
+            )
+    else:
+        assert body == {'page': 1, 'limit': 1}
+    return httpx.Response(200, stream=Stream(data))
 
 
 class Transport(httpx.MockTransport):

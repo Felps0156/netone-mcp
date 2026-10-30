@@ -28,6 +28,64 @@ EXPECTED_TOOLS = {
 
 
 class MCPToolsTests(unittest.IsolatedAsyncioTestCase):
+    async def test_search_default_reaches_second_page_and_output_cut_is_safe(self):
+        def send(request):
+            page = json.loads(request.content)['page']
+            rows = ([row(str(i), descricao='Other') for i in range(50)]
+                    if page == 1 else [
+                        row('target', descricao='Literal Café', valor=0,
+                            bloqueado=False),
+                        row('target2', descricao='Literal Café'),
+                    ])
+            return response(rows, page, 2, totalElements=52)
+
+        async with self.session(send) as (session, requests, _):
+            reply = await session.call_tool('search_products',
+                                            {'query': 'literal', 'max_items': 1})
+            self.assertFalse(reply.isError)
+            data = reply.structuredContent
+            self.assertEqual(data['items'][0]['reduced_id'], 'target')
+            self.assertEqual(data['items'][0]['price'], '0')
+            self.assertIs(data['items'][0]['blocked'], False)
+            self.assertEqual(data['matched_count'], 2)
+            self.assertTrue(data['collection_complete'])
+            self.assertTrue(data['output_truncated'])
+            self.assertEqual(data['status'], 'partial')
+            self.assertEqual(json.loads(reply.content[0].text), data)
+            self.assertEqual([json.loads(r.content) for r in requests], [
+                {'page': 1, 'limit': 50}, {'page': 2, 'limit': 50},
+            ])
+
+    async def test_text_json_is_compact_without_losing_structure(self):
+        async with self.session() as (session, _, _):
+            for name, arguments in (
+                ('list_products', {}), ('search_products', {'query': 'item'}),
+            ):
+                reply = await session.call_tool(name, arguments)
+                data = reply.structuredContent
+                text = reply.content[0].text
+                self.assertEqual(json.loads(text), data)
+                self.assertEqual(text, json.dumps(
+                    data, ensure_ascii=True, allow_nan=False,
+                    separators=(',', ':'),
+                ))
+                self.assertLess(len(text.encode()), len(json.dumps(data).encode()))
+
+    async def test_search_new_limits_and_lexical_mode_never_coerce_or_send(self):
+        async with self.session() as (session, requests, _):
+            for arguments in (
+                {'query': 'item', 'max_items': True},
+                {'query': 'item', 'max_items': '1'},
+                {'query': 'item', 'max_items': 0},
+                {'query': 'item', 'max_items': 1001},
+                {'query': 'item', 'mode': 'expanded'},
+                {'query': 'item', 'suggested_terms': ['other']},
+            ):
+                reply = await session.call_tool('search_products', arguments)
+                self.assertTrue(reply.isError)
+                self.assertIn('invalid_arguments:', reply.content[0].text)
+            self.assertEqual(requests, [])
+
     @asynccontextmanager
     async def session(self, handler=None, max_results=100):
         requests, closed, streams = [], [], []
@@ -95,7 +153,10 @@ class MCPToolsTests(unittest.IsolatedAsyncioTestCase):
                 self.assertEqual(schema['properties']['max_results'][
                     'minimum'], 1)
                 self.assertEqual(schema['properties']['max_results'][
-                    'default'], 20)
+                    'default'], 100 if tool.name == 'search_products' else 20)
+                if tool.name == 'search_products':
+                    self.assertEqual(schema['properties']['max_items'][
+                        'default'], 20)
                 self.assertFalse(set(schema['properties']) & {
                     'client', 'ctx', 'settings', 'token', 'endpoint', 'url',
                     'method', 'headers', 'tenant', 'currency',
@@ -135,6 +196,8 @@ class MCPToolsTests(unittest.IsolatedAsyncioTestCase):
                                      '/app-web/api/v2/produto/' + route)
                     body = json.loads(request.content)
                     expected: dict[str, object] = {'page': 1, 'limit': 20}
+                    if name == 'search_products':
+                        expected['limit'] = 50
                     if name == 'get_product_details':
                         expected['idsProdutos'] = [7]
                     if name == 'search_product_by_code':

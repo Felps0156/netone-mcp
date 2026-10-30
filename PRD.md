@@ -1,7 +1,7 @@
 # PRD — NetOne MCP: Consulta e Análise Read-Only
 
-> **Versão:** 1.9.2 — Planejamento da Sprint 9.5; Sprint 9 permanece concluída
-> **Estado:** NOT_READY para V1; Sprints 5–9 concluídas, preservada a ressalva DEC-027 para codigoSku técnico. Sete tools MCP registradas; S9.12 e G3 comprovados no recorte de DEC-031: descoberta e uma listagem real page1/limit1 HTTP200. Todos os orçamentos ERP encerrados; nenhuma nova chamada ou Sprint 10 autorizada.
+> **Versão:** 1.9.3 — Sprint 9.5 concluída no escopo offline; Sprint 9 preservada
+> **Estado:** NOT_READY para V1; Sprints 5–9.5 concluídas em seus escopos delimitados, preservada a ressalva DEC-027 para codigoSku técnico. Sete tools MCP registradas; S9.12 e G3 comprovados no recorte de DEC-031: descoberta e uma listagem real page1/limit1 HTTP200. Todos os orçamentos ERP encerrados; nenhuma nova chamada ou Sprint 10 autorizada.
 > **Regra fundamental:** nenhuma operação pode alterar dados comerciais do ERP.
 
 Este documento é a fonte de verdade para escopo, arquitetura, critérios e checklist. A revisão 1.2.0 substituiu restrições históricas de testes, Git somente leitura e frameworks obrigatórios. A revisão 1.2.1 registra autorização posterior explícita para leitura em memória da configuração e até três consultas de S5.01, sem exposição de segredos. Produtos/preços/estoque responderam com page=1 e limit=1; normalização e metadados das amostras aceitos. S5.01 e Sprint 5 concluídas, com 51 testes offline novamente aprovados. Não houve login, renovação, alteração do `.env`, novas tools ou avanço para Sprint 6. A autorização pontual não libera chamadas contínuas; evidências e limites em docs/runbook.md.
@@ -570,6 +570,29 @@ sem garantia global/snapshot/efeitos internos. Orçamento consumido e
 encerrado, sem repetição. O Minor de classificação de erros permanece
 documentado/não bloqueante; nenhuma mudança de código nesta validação.
 
+DEC-032 — 1.9.3: mantenedor solicitou executar Sprint9.5, escolheu opção1
+e aprovou o desenho em docs/superpowers/specs/2026-10-29-sprint-9-5-design.md
+e continuidade pelo plano correspondente. max_results mantém orçamento de
+linhas recebidas; default100 somente nas buscas literal/ampliada, teto de
+retorno independente max_items20, ambos inteiros estritos1–1000 e sujeitos
+aos limites existentes. Chamada explícita max_results20 mantém seu sentido.
+Coleta única, páginas fixas, sem parar no primeiro match; metadados de limites,
+matches antes do corte e completude da coleta separados da saída truncada.
+Busca literal MCP mantém substring/casefold; busca ampliada só na aplicação
+usa fronteiras lexicais/casefold/acentos em cópias, sem mudar fonte/códigos.
+Frase só separada por tipo revisado inicial inequívoco; restante restrição
+obrigatória da descrição; ambígua literal, sem sugestões relaxarem critérios.
+Lista permanece manopla/punho; direct/reviewed/suggested preservados.
+Sete tools, moeda desconhecida e DEC-027/030/031 inalterados. Projeção rasa
+evita cópia recursiva redundante e texto MCP compacto mantém ambas as
+representações equivalentes. O5 relida publica arrays numéricos de IDs,
+combinações/limites/garantias não especificados; O4 mantém conflito number/
+array. Filtros somente planejados no inventário, sem implementação ou prova
+remota. Aumento de cobertura padrão não é economia HTTP no mesmo prefixo;
+medidas sintéticas e regressão em docs/runbook.md. Sem .env real, ERP,
+login/rotação, Git, dependências, novas camadas/tools ou Sprint10. G3 não
+ampliado, V1 NOT_READY; orçamentos anteriores continuam encerrados.
+
 ## 26. Critérios de Aceite
 
 ### 26.1 Critérios globais
@@ -606,7 +629,7 @@ Se **não houver operação comercial read-only segura e validada**, o produto p
 | **F3 — Integração segura** | 4–6 | Cliente HTTP, normalização, consulta read-only pelo método aprovado se liberada | **G2** |
 | **F3 — Sprint 5 concluída** | 5 | Normalização/paginação offline e campos reais observados em três consultas delimitadas | **S5.01 concluída; G0/G1 geral não promovidos, sem tool** |
 | **F4 — Ferramentas MCP** | 7–9 | Tools úteis, registro MCP, stdio, sem escrita | **G3** |
-| **F4.5 — Otimização comercial** | 9.5 | Cobertura limitada, busca alternativa e retornos mais úteis; somente planejada | Aceite próprio da Sprint 9.5; não amplia G3 nem autoriza execução |
+| **F4.5 — Otimização comercial** | 9.5 | Busca local com inspeção/retorno distintos, alternativas lexicais somente na aplicação e filtros apenas planejados | Execução offline autorizada; aceite próprio sem ampliar G3/V1 |
 | **F5 — Análises** | 10 | Análise determinística; framework apenas se justificado | **G4** |
 | **F6 — Endurecimento** | 11–12 | Revisão segurança + documentação pública | **G5** |
 | **F7 — Validação e release** | 13–14 | Matriz de aceite, critérios e entrega documentada | **G6** |
@@ -999,9 +1022,11 @@ e busca ampliada continuam ausentes; Sprint10 não autorizada.
 
 ### Sprint 9.5 — Otimização das Consultas e Usabilidade Comercial
 
-**Estado:** planejada, não iniciada. Esta revisão autoriza somente a edição
-do PRD; não autoriza implementação, acesso ao `.env`, consultas ERP,
-login/rotação, Git, novos filtros HTTP, liberação MCP ou Sprint 10.
+**Estado:** concluída no escopo offline após execução autorizada, escolha da
+opção1 e aprovação do desenho/plano, conforme DEC-032. A revisão1.9.2
+autorizava somente planejamento; esta autorização posterior libera apenas
+as melhorias locais da sprint, não acesso ao `.env`, consultas ERP,
+login/rotação, Git, novos filtros HTTP, novas tools/modo lexical MCP ou Sprint 10.
 Os orçamentos anteriores continuam encerrados; os estados e critérios das
 demais sprints, G3 e V1 permanecem inalterados.
 
@@ -1010,7 +1035,7 @@ melhorar alternativas lexicais sem confirmar equivalências indevidas e
 reduzir trabalho desnecessário nas consultas comerciais e respostas MCP,
 com cobertura, custo e limitações explícitos.
 
-**Ponto de partida verificado no código:** `tools.search_products()` passa
+**Ponto de partida histórico antes da Sprint9.5:** `tools.search_products()` passa
 `max_results=20` ao coletor antes de filtrar; portanto não limita somente
 matches e pode omitir produtos nas páginas seguintes. `_collect()` já
 oferece paginação limitada, tamanho fixo e orçamentos isolados por chamada.
@@ -1038,33 +1063,33 @@ sprint; cada tarefa depende das decisões e verificações aplicáveis das
 anteriores. Para mudanças de comportamento, adicionar primeiro a regressão
 que falha, aplicar a alteração mínima e verificar o resultado offline.
 
-- [ ] S9.5.01 — Fixar o contrato incremental de limites em `tools.py` e `mcp_tools.py`: separar teto de itens retornados do orçamento de linhas inspecionadas, páginas e prazo; registrar nomes, tipos, defaults, tetos efetivos e compatibilidade com o significado atual de `max_results`, sem o reinterpretar silenciosamente. Definir uma busca padrão capaz de ultrapassar 20 linhas quando os tetos configurados permitirem, sem aumentar esses tetos ou editar configuração privada.
+- [x] S9.5.01 — Fixar o contrato incremental de limites em `tools.py` e `mcp_tools.py`: separar teto de itens retornados do orçamento de linhas inspecionadas, páginas e prazo; registrar nomes, tipos, defaults, tetos efetivos e compatibilidade com o significado atual de `max_results`, sem o reinterpretar silenciosamente. Definir uma busca padrão capaz de ultrapassar 20 linhas quando os tetos configurados permitirem, sem aumentar esses tetos ou editar configuração privada.
   - Verificação: exemplos sintéticos de chamada antiga/nova, configuração restritiva e busca sem matches mostram o máximo de trabalho admitido e a distinção entre limite solicitado, efetivo e executado. Aditivos têm defaults documentados e schemas fechados; decisões precedem edição de código.
-- [ ] S9.5.02 — Aplicar a política aprovada à busca literal reutilizando `_collect()`: inspecionar páginas seguintes dentro do orçamento, limitar a saída separadamente e manter tamanho de página fixo. Contar não matches e duplicatas no orçamento de inspeção; não transformar corte de matches ou parada antecipada em completude.
+- [x] S9.5.02 — Aplicar a política aprovada à busca literal reutilizando `_collect()`: inspecionar páginas seguintes dentro do orçamento, limitar a saída separadamente e manter tamanho de página fixo. Contar não matches e duplicatas no orçamento de inspeção; não transformar corte de matches ou parada antecipada em completude.
   - Verificação: `tests/test_tools.py` e `tests/test_client.py` encontram um produto somente na segunda página, além das primeiras 20 linhas, pela chamada pública padrão com configuração sintética suficiente; caps menores param corretamente. Corte de saída, teto de páginas/linhas e prazo preservam parcialidade e motivo explícito.
-- [ ] S9.5.03 — Definir e testar a composição de consultas alternativas em `search_products_expanded()`: separar tipo de produto de restrições textuais explícitas de marca/modelo numa frase composta; reaproveitar `required_terms` e `suggested_terms`, sem parser semântico ou inferência de campos estruturados. Quando a separação for ambígua, manter busca literal ou exigir restrição explícita, sem relaxá-la silenciosamente.
+- [x] S9.5.03 — Definir e testar a composição de consultas alternativas em `search_products_expanded()`: separar tipo de produto de restrições textuais explícitas de marca/modelo numa frase composta; reaproveitar `required_terms` e `suggested_terms`, sem parser semântico ou inferência de campos estruturados. Quando a separação for ambígua, manter busca literal ou exigir restrição explícita, sem relaxá-la silenciosamente.
   - Verificação: `tests/test_expanded_search.py` distingue consulta simples, composta e ambígua, descrição sem restrição e correspondência apenas em outro campo; nenhuma marca, modelo ou compatibilidade é confirmada sem evidência textual.
-- [ ] S9.5.04 — Refinar o matching lexical e a lista revisável já existente: definir fronteiras para termos de produto, pontuação, caixa, acentos e termos relacionados ambíguos; normalizar somente para comparação, nunca os valores retornados ou identificadores exatos. Acrescentar sinônimo somente com revisão e caso positivo/negativo justificável; manter origem direct/reviewed/suggested, sem persistir sugestões automaticamente.
+- [x] S9.5.04 — Refinar o matching lexical e a lista revisável já existente: definir fronteiras para termos de produto, pontuação, caixa, acentos e termos relacionados ambíguos; normalizar somente para comparação, nunca os valores retornados ou identificadores exatos. Acrescentar sinônimo somente com revisão e caso positivo/negativo justificável; manter origem direct/reviewed/suggested, sem persistir sugestões automaticamente.
   - Verificação: pares como manopla/punho, termo dentro de palavra não relacionada, LS2/LS20, hífens, acentos e metacaracteres têm expectativas exatas. Alternativas são possibilidades lexicais, não equivalência comercial ou busca semântica; restrição ausente continua não verificada.
-- [ ] S9.5.05 — Reutilizar na busca ampliada a política de inspeção/retorno aprovada, preservando uma única passagem para consulta original, sinônimos e sugestões. Evitar normalização e testes lexicais repetidos desnecessariamente; conservar alinhamento de `items`/`matches`, prioridade direta antes de alternativa e contagem de restrições não verificadas, sem duplicar itens por termo.
+- [x] S9.5.05 — Reutilizar na busca ampliada a política de inspeção/retorno aprovada, preservando uma única passagem para consulta original, sinônimos e sugestões. Evitar normalização e testes lexicais repetidos desnecessariamente; conservar alinhamento de `items`/`matches`, prioridade direta antes de alternativa e contagem de restrições não verificadas, sem duplicar itens por termo.
   - Verificação: testes com múltiplos termos e páginas confirmam os mesmos corpos/quantidade de requisições de uma única coleta equivalente, proveniência correta por item e parcialidade sob corte, duplicatas, conflitos e erro posterior. Não repetir a implementação já existente de passagem única; alterar apenas as lacunas demonstradas.
-- [ ] S9.5.06 — Reexaminar documentalmente O5 (`produto/precos`) para planejar filtragem remota por identidade: confirmar nome literal, tipo/formato de `idsProdutos`/`idsReduzidos`, combinações, paginação e identidade da resposta. Registrar fonte oficial, divergências e política para IDs textuais/zeros incompatíveis com um filtro numérico, sem coerção destrutiva nem equivalência entre produto e reduzido.
+- [x] S9.5.06 — Reexaminar documentalmente O5 (`produto/precos`) para planejar filtragem remota por identidade: confirmar nome literal, tipo/formato de `idsProdutos`/`idsReduzidos`, combinações, paginação e identidade da resposta. Registrar fonte oficial, divergências e política para IDs textuais/zeros incompatíveis com um filtro numérico, sem coerção destrutiva nem equivalência entre produto e reduzido.
   - Verificação: matriz curta de contrato publicado, evidência operacional existente e lacunas produz um plano de alteração mínima em `client.py`/`tools.py`, ou bloqueio explícito. A prova page/limit da Sprint 8 não valida um novo filtro de preço; nenhuma chamada ou filtro é implementado nesta tarefa.
-- [ ] S9.5.07 — Reexaminar O4 (`produto/estoque`) especificamente para resolver o conflito number/array de `idsReduzidos` e planejar consulta dirigida pelo reduced_id. Confrontar schema e exemplo oficiais; se continuarem divergentes, registrar a dúvida precisa, a evidência necessária e manter a seleção local limitada, sem escolher formato pelo legado ou copiar o filtro de produtos/preços.
+- [x] S9.5.07 — Reexaminar O4 (`produto/estoque`) especificamente para resolver o conflito number/array de `idsReduzidos` e planejar consulta dirigida pelo reduced_id. Confrontar schema e exemplo oficiais; se continuarem divergentes, registrar a dúvida precisa, a evidência necessária e manter a seleção local limitada, sem escolher formato pelo legado ou copiar o filtro de produtos/preços.
   - Verificação: decisão separada por endpoint, com fonte e critério de desbloqueio; nenhuma seleção de depósito/filial, nova rota ou promessa de frescor. Filtro remoto não confirmado permanece bloqueado e não impede as melhorias locais independentes.
-- [ ] S9.5.08 — Consolidar o plano de consultas comerciais a partir de S9.5.06–07: preferir filtro dirigido somente após contrato inequívoco, revisão da admissão específica e autorização de implementação/validação; enquanto isso, explicitar cobertura e limites do fallback local existente. Especificar body fechado, validação pré-envio, igualdade de identidade na resposta, paginação filtrada e isolamento concorrente para eventual alteração futura, sem implementar filtros nesta sprint de otimização local.
+- [x] S9.5.08 — Consolidar o plano de consultas comerciais a partir de S9.5.06–07: preferir filtro dirigido somente após contrato inequívoco, revisão da admissão específica e autorização de implementação/validação; enquanto isso, explicitar cobertura e limites do fallback local existente. Especificar body fechado, validação pré-envio, igualdade de identidade na resposta, paginação filtrada e isolamento concorrente para eventual alteração futura, sem implementar filtros nesta sprint de otimização local.
   - Verificação: casos planejados em `tests/test_sprint8.py`/`tests/test_client.py` cobrem preço por product_id, estoque por reduced_id, identidades incompatíveis sem envio, resposta de outra identidade, vazio/erro e múltiplas tabelas/reduzidos. Comparar custo esperado da consulta dirigida com o fallback, sem alegar ganho remoto medido ou fazer fallback automático após erro do filtro.
-- [ ] S9.5.09 — Melhorar a legibilidade dos retornos da aplicação para agentes: explicitar universo inspecionado, itens retornados, limites efetivos e motivo do corte, reutilizando `QueryResult` e metadados existentes; acrescentar somente informação necessária não representada. Separar ausência confirmada no percurso visível de busca inconclusiva, e completude da coleta de eventual truncamento da saída.
+- [x] S9.5.09 — Melhorar a legibilidade dos retornos da aplicação para agentes: explicitar universo inspecionado, itens retornados, limites efetivos e motivo do corte, reutilizando `QueryResult` e metadados existentes; acrescentar somente informação necessária não representada. Separar ausência confirmada no percurso visível de busca inconclusiva, e completude da coleta de eventual truncamento da saída.
   - Verificação: exemplos/testes de found, not_found, partial e error preservam códigos/avisos, dados úteis e erro posterior mesmo após filtragem sem matches. Permanecem todos os campos relevantes, `missing_fields`, Decimal como string exata, zeros, false, null/ausência, origem/tabelas e escopo; moeda MCP continua desconhecida e timestamp de coleta não vira frescor.
-- [ ] S9.5.10 — Ajustar descrições e schemas das tools existentes aos contratos aprovados e avaliar reutilização da busca ampliada na própria `search_products`, sem criar outra tool. Preservar modo literal e compatibilidade das chamadas atuais; qualquer novo modo lexical fica condicionado à revisão explícita da restrição DEC-030 e à evidência/autorização próprias, não liberado pelos testes sintéticos desta sprint.
+- [x] S9.5.10 — Ajustar descrições e schemas das tools existentes aos contratos aprovados e avaliar reutilização da busca ampliada na própria `search_products`, sem criar outra tool. Preservar modo literal e compatibilidade das chamadas atuais; qualquer novo modo lexical fica condicionado à revisão explícita da restrição DEC-030 e à evidência/autorização próprias, não liberado pelos testes sintéticos desta sprint.
   - Verificação: `tests/test_mcp_tools.py` confirma exatamente as sete tools atuais, inputs strict/extra forbid, limites descritos e nenhum argumento de configuração/HTTP. Sem liberação específica, melhorias da busca ampliada permanecem somente na aplicação e o MCP não as anuncia como disponíveis.
-- [ ] S9.5.11 — Reduzir custo de serialização MCP sem retirar informação: medir payload/serializações atuais e eliminar cópias ou formatação dispensáveis apenas onde demonstradas; avaliar JSON textual compacto mantendo `structuredContent` e texto JSON semanticamente equivalentes no SDK fixado. Não remover chaves null, avisos, campos comerciais ou uma representação MCP para alegar economia.
+- [x] S9.5.11 — Reduzir custo de serialização MCP sem retirar informação: medir payload/serializações atuais e eliminar cópias ou formatação dispensáveis apenas onde demonstradas; avaliar JSON textual compacto mantendo `structuredContent` e texto JSON semanticamente equivalentes no SDK fixado. Não remover chaves null, avisos, campos comerciais ou uma representação MCP para alegar economia.
   - Verificação: `tests/test_catalog.py`, `tests/test_product_fields.py` e `tests/test_mcp_tools.py` comparam valores/estrutura antes e depois, inclusive Decimal, caracteres especiais e erros/isError; contabilizar bytes sintéticos e trabalho evitado. Manter implementação atual onde não houver ganho demonstrável.
-- [ ] S9.5.12 — Medir e revisar custo das mudanças com fixtures sintéticas nos testes existentes: contar requisições, páginas, linhas, matches e bytes retornados para busca literal, alternativa e consultas comerciais. Distinguir aumento deliberado de cobertura de economia para o mesmo universo; não usar tempo de parede instável como único critério.
+- [x] S9.5.12 — Medir e revisar custo das mudanças com fixtures sintéticas nos testes existentes: contar requisições, páginas, linhas, matches e bytes retornados para busca literal, alternativa e consultas comerciais. Distinguir aumento deliberado de cobertura de economia para o mesmo universo; não usar tempo de parede instável como único critério.
   - Verificação: sinônimos não multiplicam coletas, limites cortam trabalho sem loops/retries extras, operações concorrentes não compartilham orçamento/filtros e variantes/tabelas relevantes não são perdidas por parada no primeiro match. Sem cache persistente, paralelismo HTTP novo, infraestrutura ou dependência de benchmark.
-- [ ] S9.5.13 — Completar a regressão incremental offline e MCP/stdio dos comportamentos alterados, estendendo os testes existentes em vez de reconstruir paginação, transporte ou registry. Incluir erros antes/depois de matches, metadados ausentes/contraditórios, página vazia/repetida, duplicatas/conflitos, tetos, sugestões inválidas e cancelamento com cleanup concluído.
+- [x] S9.5.13 — Completar a regressão incremental offline e MCP/stdio dos comportamentos alterados, estendendo os testes existentes em vez de reconstruir paginação, transporte ou registry. Incluir erros antes/depois de matches, metadados ausentes/contraditórios, página vazia/repetida, duplicatas/conflitos, tetos, sugestões inválidas e cancelamento com cleanup concluído.
   - Verificação: executar `.venv/Scripts/python.exe -B -m unittest discover -s tests -v`, configuração/streams sintéticos, envio HTTP real e `.env` real proibidos. Exercitar a busca além de 20 linhas via MCP registrado, fidelidade comercial e equivalência estruturado/texto; startup sem requisição e stdout protocolar permanecem intactos. Registrar comando e resultado reais, não antecipar contagem de testes.
-- [ ] S9.5.14 — Revisar os resultados e atualizar somente documentação afetada pelos contratos efetivamente alterados: exemplos sintéticos de limites/buscas e orientação de uso comercial em README/inventário/runbook, sem novo dossiê por tarefa. Registrar ganhos observados, trade-offs de cobertura e bloqueios dos filtros/liberação da busca ampliada; manter ressalvas DEC-027/030/031 e estados de outras sprints.
+- [x] S9.5.14 — Revisar os resultados e atualizar somente documentação afetada pelos contratos efetivamente alterados: exemplos sintéticos de limites/buscas e orientação de uso comercial em README/inventário/runbook, sem novo dossiê por tarefa. Registrar ganhos observados, trade-offs de cobertura e bloqueios dos filtros/liberação da busca ampliada; manter ressalvas DEC-027/030/031 e estados de outras sprints.
   - Verificação: auditoria de escopo e checklist, precisão/nulidade, sete tools e proteções read-only; filtros apenas planejados continuam descritos como não implementados. Sem nova prova operacional autorizada, declarar somente evidência offline, sem ampliar G3, afirmar cobertura ERP ou liberar V1/Sprint 10.
 
 **Entrega:** busca local com inspeção e retorno distinguidos, melhorias
@@ -1083,6 +1108,25 @@ fechados, zero retries/redirects, teto de bytes, prazos e cleanup permanecem.
 Nenhum filtro não comprovado, nova tool ou infraestrutura é introduzido.
 Bloqueio externo pode concluir a tarefa de investigação com seu plano e
 limitação explícitos, mas nunca conta como implementação/validação remota.
+
+**Fechamento S9.5.01–14:** opção1 e desenho/plano aprovados; regressões
+RED→GREEN e suíte final170 PASS em8.287s, pip check PASS. Fixture literal
+padrão encontrou linha51 via aplicação e MCP/stdio; duas páginas/51 linhas/
+um match também na ampliada com os mesmos corpos. Orçamento explícito20
+e configuração restritiva preservados; corte de saída não apaga completude
+da coleta ou erro posterior. Dados/Decimal/null/zero/false/missing_fields,
+sete tools, concorrência e cleanup sob cancelamento verificados offline.
+Serialização do mesmo payload sintético50 registros:27017→24783 bytes de
+JSON textual (8.27%), cópias de montantes200→0, sem retirar informação.
+Revisão independente não encontrou Critical/Important na classificação
+original; um achado de normalização Unicode foi reclassificado por poder
+produzir falso resultado comercial e corrigido com regressão RED→GREEN:
+consulta/restrição/sugestão vazia após normalização é recusada antes do envio,
+inclusive restrição derivada da frase. Suíte final e custo reconfirmados.
+Investigação O5/O4 e testes futuros documentados, sem novos filtros; conflito
+O4 continua bloqueado e não é validação remota. Auditoria preserva todas as
+tarefas alheias. Evidências finais em docs/runbook.md; G3/V1, DEC-027/030/031,
+orçamentos encerrados e proibição de Sprint10 permanecem inalterados.
 
 ### Sprint 10 — Análise determinística; framework opcional
 
@@ -1202,7 +1246,7 @@ limitação explícitos, mas nunca conta como implementação/validação remota
 
 ## 29. Pendências e Próximas Decisões
 
-- Revisão 1.9.2: Sprint 9.5 inserida entre 9 e 10, somente como planejamento de otimização e usabilidade comercial. Todas as tarefas novas permanecem abertas; implementação depende de autorização própria. Contratos de filtros de preço/estoque e eventual reutilização da busca ampliada no MCP têm decisões/evidências separadas; esta revisão não altera a liberação atual de filtros/tools, estados das demais sprints ou orçamentos encerrados.
+- Revisão1.9.2 inseriu Sprint9.5 somente como planejamento. Autorização posterior DEC-032 libera sua execução offline incremental pelo desenho/plano aprovados. Filtros de preço/estoque continuam apenas planejados; O4 permanece documentalmente ambígua e O5 depende de admissão/validação próprias. Busca ampliada continua fora do MCP. Nenhuma autorização ERP, ampliação de G3, V1 ou Sprint10.
 
 - Sprint9 concluída: integração offline e S9.12 real comprovadas conforme DEC-031, G3 PASS no recorte de descoberta e uma listagem page1/limit1. Orçamento consumido/encerrado; não autoriza consulta contínua ou conexão permanente ao Hermes. SKU técnico e busca ampliada permanecem fora do registry, Minor de diagnóstico documentado. Sprint10 não autorizada e V1 NOT_READY.
 

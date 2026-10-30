@@ -1,6 +1,9 @@
 # NetOne API capability evidence
 
-Initial investigation: 2026-10-27. Current policy: PRD 1.9.1 / DEC-031.
+Initial investigation: 2026-10-27. Sprint 9.5 offline contracts below supersede
+the earlier search defaults only; DEC-027/030/031 evidence remains bounded.
+PRD1.9.3 / DEC-032 records Sprint9.5 complete offline,170 tests PASS after
+independent review and a normalization-empty Unicode fix; pip check PASS.
 Sprints 5–8 are accepted within their bounded evidence; technical codigoSku
 remains unvalidated. Sprint 9 exposes seven previously observed application
 capabilities via MCP with offline integration and a separately authorized
@@ -11,7 +14,144 @@ supersedes earlier empty-registry/no-Sprint9 instructions only. Remaining
 sections are historical evidence checkpoints, not renewed budgets. See
 [the field inventory](product-field-priority.md) for its distinct samples.
 
-## Sprint 9 — approved MCP exposure (DEC-030)
+## Sprint 9.5 — local optimization contract
+
+The maintainer approved the [design](superpowers/specs/2026-10-29-sprint-9-5-design.md)
+and [plan](superpowers/plans/2026-10-29-sprint-9-5.md). This changes local
+search and serialization, not the HTTP allowlist or operational permissions.
+Earlier sections below retain their historical defaults/checkpoint evidence.
+
+### Inspected universe versus returned matches
+
+`search_products(client, query, max_results=100, *, max_items=20)` remains
+literal casefold substring matching in description/product_mask/sku, without
+accent folding. max_results still counts received source rows, including
+nonmatches and duplicates; an explicit legacy value20 still caps inspection
+at20. Only the omitted default changes to100. max_items independently caps
+returned matches; both accept strict integers1–1000. The configured row cap
+and page cap always prevail. Page size remains min(50,effective row budget),
+fixed throughout; insufficient residual budget stops rather than shrinking
+offsets. Deadline remains four configured phase-timeout seconds, with the
+existing bounded shielded cleanup allowance. No early stop at the first match.
+
+QueryResult adds inspection_limit, page_limit, page_size and deadline_seconds
+(null for manually constructed results without known budgets). All existing
+metadata and fields remain. Search adds requested_max_results,
+requested_max_items, output_limit=min(max_items,inspection_limit), matched_count
+before output cut, output_truncated and collection_complete. Actual executed
+work remains rows_received/pages_fetched/returned_count. A cut sets partial,
+complete_dataset=false and output_limit_reached, while collection_complete
+retains pre-cut collection completeness. Existing errors/warnings survive,
+including a later error when every source item is filtered out. A valid
+complete visible traversal alone supports not_found; no ERP-wide absence or
+stable snapshot follows from it. retrieved_at is not stock freshness.
+
+Synthetic examples: default with row cap100/page cap5 may read two50-row
+pages and return up to20 matches. max_results20 keeps a20-row ceiling.
+max_results100/max_items1 still inspects its bounded universe but returns
+one match; a config cap10 prevails over the requested100. Zero matches never
+enlarge a budget or trigger retries.
+
+Only search_products changes its MCP defaults and adds max_items. Its strict,
+extra-forbid schema exposes no lexical mode, suggestions or configuration.
+The other six tools retain max_results20 and their existing inputs; listing
+still defaults to one page. Technical SKU/expanded search are not registered.
+
+### Expanded lexical search — application only
+
+`search_products_expanded(client, query, *, required_terms=(),
+suggested_terms=(), max_results=100, max_items=20)` uses the same bounded
+single traversal. The explicit new output default20 replaces the former
+absence of a separate output ceiling. Terms/patterns are prepared once and
+each description is normalized once for comparison. Source values and exact
+identity lookups are unchanged.
+
+Only an unambiguous leading reviewed product type (manopla or punho) is
+separated from the remaining phrase. The suffix becomes an additional
+mandatory textual restriction alongside required_terms. For example,
+`manopla LS2` can find `Punho LS2`, but not LS20 or LS2 only in a mask.
+Unknown/ambiguous multiword phrases stay literal and do not use alternatives,
+including suggestions, with ambiguous_query_literal_only. Callers can instead
+supply a simple product type and explicit required_terms. No brand/model
+fields, compatibility, semantic parser or commercial equivalence are inferred.
+
+Expanded comparisons use NFKD/casefold without combining marks and Unicode
+word boundaries; internal punctuation is literal and regex-escaped.
+Queries, restrictions and suggestions that become blank after this
+normalization are rejected before collection, including derived restrictions. Hyphens
+can delimit a word; punho does not match empunho, LS2 does not match LS20,
+and plural variants are not inferred. The reviewed list remains only
+manopla/punho; suggestions stay suggested and are never persisted. Duplicate
+normalized terms preserve direct/reviewed/suggested precedence. Direct items
+sort first, then reviewed, then suggested, stably within each class. Output
+cuts preserve items/matches alignment; unmatched restrictions are counted as
+unverified, not established incompatibilities. Duplicates/conflicts remain
+conservative and the coverage/snapshot disclaimer remains explicit.
+
+### O5/O4 reinspection and future directed-query plan (no filter implemented)
+
+Anonymous rendered official documentation was reread on2026-10-29 after
+hydration; no Send action, configuration read or ERP call. The generic URL
+extractor was search-only, so the browser supplied the operation bodies.
+
+| Endpoint/source | Published request and response | Existing operational evidence | Decision/remaining gap |
+|---|---|---|---|
+| [O5 prices](https://net1ti.stoplight.io/docs/erp-api-v2/79683209728d7-busca-precos) | idsProdutos:array[number], idsReduzidos:array[number], mascara:string, ultimaAlteracaoTimestamp:string; page:number/default1, limit:number. Response idProduto/idReduzido:number, retail/wholesale amounts and table descriptions; pagination fields in schema but absent from displayed example. | S8.14 page1/limit1 only, local exact product_id selection. No real price-ID filter evidence. | Names/array shape are clear; combinations, batch/numeric ceilings, exact filter enforcement and termination guarantees are not specified. Plan one identity filter only; no implementation/admission/validation approval in this sprint. |
+| [O4 stock](https://net1ti.stoplight.io/docs/erp-api-v2/47f2f0f5255d2-busca-estoque) | idsReduzidos:number in schema, array in example; idDeposito:number, codigoSku:string, comAlteracaoDesdeTimestamp:string, page:number/default1 and limit:number. Response idReduzido:number; quantity is physical minus reservations. Pagination fields in schema, absent from example. | S8.14 page1/limit1 only, local exact reduced_id selection. | Filter remains BLOCKED: supplier must resolve number versus array and confirm identity/pagination behavior. No format chosen from legacy/O3/O5. Deposit omission selects user's configured deposit; identity/freshness remain unknown. |
+
+Future implementation requires separate endpoint admission, implementation
+and bounded real-validation permission. O5's minimal candidate body is
+page/limit/idsProdutos=[validated integer] for product identity, without
+idsReduzidos/mascara/timestamp combinations. O4's candidate body shape cannot
+be finalized until its conflict is resolved. No deposit/branch selection or
+new route is proposed. All future filters must be internally constructed,
+validated before send, fixed across pages and isolated concurrently, with
+atomic rejection of a page containing another normalized identity.
+
+The current textual product_id/reduced_id contracts remain lossless. A
+future numeric adapter must reject incompatible identifiers without sending:
+leading zeros, whitespace, signs, non-ASCII digits and noncanonical text must
+not be stripped/coerced into another identity. A canonical nonnegative
+integer subset with a defensive local bound may be proposed separately;
+number in published docs alone does not supply that bound. Unsupported
+identities require the caller to explicitly choose the existing bounded
+local lookup, never automatic fallback after a filtered-query failure.
+
+Planned regressions in test_client.py/test_sprint8.py: exact product versus
+reduced identity; invalid textual IDs/bool/out-of-range rejected pre-send;
+other identity rejects the whole page; terminal empty versus HTTP404/error;
+fixed filtered pagination; concurrent IDs/budgets; all matching reduced
+variants and source price tables preserved, not first-match/table selection.
+For a target absent from a prefix, local fallback still spends its bounded
+rows and remains partial. A directed filter could reduce candidate rows,
+but requests/pages depend on matching variants and provider behavior; there
+is no guaranteed one-request result or measured ERP speedup. O4 resolution
+is owned by the maintainer/provider; required proof is a coherent official
+contract or explicit supplier clarification, then separately approved checks.
+
+### Serialization and synthetic cost
+
+QueryResult no longer recursively copies records before serializing them;
+CatalogRecord projects immutable fields shallowly, converts Decimal to exact
+strings and returns fresh JSON containers. All prior values and populated-
+first presentation survive. MCP textual JSON is compact, ensure_ascii=true,
+allow_nan=false, with both structuredContent and equivalent text retained.
+No null/key/warning or commercial projection was removed.
+
+One fixed50-record synthetic payload with two Decimal amounts per record
+required200 amount deepcopy calls before and0 after. Comparing the same
+current payload, spaced JSON was27017 bytes and compact JSON24783 bytes:
+2234 bytes/8.27% less in the textual representation, not the whole MCP wire
+envelope. Search metadata/expanded provenance add their own bytes. Coverage
+fixture: explicit20 read1 page/20 rows/0 matches; default literal and expanded
+each read2 pages/51 rows/1 match with identical page/limit bodies. Expanded
+terms did not multiply HTTP work. This is more coverage, not fewer requests
+than the old20-row universe. Commercial fixtures retained3 price records and
+2 stock records from3 rows/one request each, including identity conflicts as
+partial rather than discarding variants. All figures are synthetic, not ERP
+measurements; final regression/review results are recorded in the runbook.
+
+## Sprint 9 — approved MCP exposure (DEC-030; historical defaults)
 
 | MCP tool | Guarded POST route suffix | Closed body | Existing real application evidence |
 |---|---|---|---|

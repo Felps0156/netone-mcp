@@ -16,12 +16,19 @@ from test_mcp_tools import EXPECTED_TOOLS
 
 class MCPStdioTests(unittest.IsolatedAsyncioTestCase):
     async def test_generic_stdio_client_discovers_executes_and_closes(self):
+        await self.exercise()
+
+    async def test_generic_stdio_default_search_reaches_second_page(self):
+        await self.exercise(search=True)
+
+    async def exercise(self, search=False):
         fixture = Path(__file__).with_name('mcp_stdio_fixture.py').resolve()
         # The runtime's TMPDIR is managed Hermes scratch, not system temp.
         with tempfile.TemporaryFile(mode='w+', encoding='utf-8') as stderr:
             with anyio.fail_after(20):
                 async with stdio_client(StdioServerParameters(
-                    command=sys.executable, args=['-B', str(fixture)],
+                    command=sys.executable,
+                    args=['-B', str(fixture)] + (['--search-pages'] if search else []),
                 ), errlog=stderr) as (reader, writer):
                     async with ClientSession(
                         reader, writer,
@@ -42,7 +49,8 @@ class MCPStdioTests(unittest.IsolatedAsyncioTestCase):
                             self.assertNotIn('PRIVATE',
                                              rejected.model_dump_json())
                         reply = await session.call_tool(
-                            'list_products', {'max_results': 1},
+                            'search_products' if search else 'list_products',
+                            {'query': 'Synthetic'} if search else {'max_results': 1},
                         )
                         self.assertFalse(reply.isError)
                         data = reply.structuredContent
@@ -56,13 +64,19 @@ class MCPStdioTests(unittest.IsolatedAsyncioTestCase):
                         self.assertIsNone(item['ean'])
                         self.assertEqual(json.loads(reply.content[0].text),
                                          data)
+                        if search:
+                            self.assertEqual(data['rows_received'], 51)
+                            self.assertEqual(data['pages_fetched'], 2)
+                            self.assertEqual(data['inspection_limit'], 100)
+                            self.assertTrue(data['collection_complete'])
             stderr.seek(0)
             diagnostic = stderr.read()
         summary = next(line.removeprefix('offline_fixture ')
                        for line in diagnostic.splitlines()
                        if line.startswith('offline_fixture '))
         self.assertEqual(json.loads(summary), {
-            'requests': 1, 'responses_closed': 1, 'clients_closed': 1,
+            'requests': 2 if search else 1,
+            'responses_closed': 2 if search else 1, 'clients_closed': 1,
         })
         for sentinel in ('PRIVATE', 'example.invalid', 'Traceback'):
             self.assertNotIn(sentinel, diagnostic)

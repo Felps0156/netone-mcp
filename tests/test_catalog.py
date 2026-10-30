@@ -9,6 +9,24 @@ from catalog import NormalizationError, QueryResult, normalize_record
 
 
 class CatalogTests(unittest.TestCase):
+    def test_serialization_does_not_deepcopy_immutable_source_amounts(self):
+        class Amount(Decimal):
+            def __deepcopy__(self, memo):
+                raise AssertionError('Redundant recursive copy')
+
+        record = normalize_record('products', {
+            'idProduto': '0001', 'idReduzido': '002',
+            'valor': Amount('1.2300'), 'quantidade': 0,
+            'bloqueado': False, 'observacao': 'Café "quoted"\n',
+        })
+        data = QueryResult(status='found', items=(record,)).as_json()
+        self.assertEqual(data['items'][0]['price'], '1.2300')
+        self.assertEqual(data['items'][0]['quantity'], '0')
+        self.assertIs(data['items'][0]['blocked'], False)
+        self.assertEqual(data['items'][0]['notes'], 'Café "quoted"\n')
+        self.assertIn('ean', data['items'][0]['missing_fields'])
+        json.dumps(data, allow_nan=False)
+
     def test_codes_text_decimal_null_and_missing_are_distinct(self):
         record = normalize_record('products', {
             'idProduto': '0001', 'idReduzido': '0002', 'mascara': '0003',

@@ -422,6 +422,8 @@ class NetOneClient:
             pages_fetched=pages_fetched, rows_received=rows_received,
             total_pages=total_pages, total_elements=total_elements,
             complete_dataset=complete and not partial,
+            inspection_limit=budget, page_limit=page_budget,
+            page_size=size, deadline_seconds=self._deadline,
         )
 
     async def __aenter__(self) -> 'NetOneClient':

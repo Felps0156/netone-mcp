@@ -2,6 +2,21 @@
 
 ## Scope and current status
 
+Sprint 9.5 is complete in its offline scope (PRD1.9.3 / DEC-032):170 tests
+passed after review and a normalization-empty Unicode regression fix;
+pip check passed. No new real evidence or budget was obtained.
+The maintainer subsequently authorized Sprint 9.5 offline execution and
+approved docs/superpowers/specs/2026-10-29-sprint-9-5-design.md and its plan.
+PRD DEC-032 governs local search/serialization changes: max_results still
+counts received rows, default100 only for literal/expanded searches, with
+independent max_items20. Existing explicit row budgets/configured caps remain.
+QueryResult exposes effective budgets; search separates collection completeness
+from output cuts. Expanded lexical matching/composition stays application-only;
+MCP still exposes exactly seven tools, with literal search and no lexical mode.
+Price/stock filters remain planning-only; stock number/array conflict persists.
+No real .env access, ERP query, login/rotation, Git, new HTTP filter, dependency,
+tool or Sprint10 is authorized. Prior real evidence/budgets below are unchanged.
+
 PRD 1.9.1 / DEC-031 records Sprint 9 complete. The maintainer authorized
 one list_products call through a generic MCP stdio client, page1/limit1,
 with existing configuration loaded only in memory through load_config.

@@ -5,7 +5,9 @@ A Python MCP stdio foundation for authorized, strictly read-only NetOne ERP quer
 ## Current status
 
 **NOT_READY for V1. Seven bounded read-only MCP tools are registered.**
-PRD 1.9.1 / DEC-031 records Sprint 9 complete: generic SDK discovery of
+Sprint 9.5 is complete within its offline local-search/serialization scope; the
+bounded real evidence remains PRD DEC-031, which records Sprint 9 complete:
+generic SDK discovery of
 seven tools and a separately authorized real list_products call through
 stdio, page1/limit1, HTTP200. One record returned partial=true/error=null;
 same-response fidelity, JSON and completed response/transport/client cleanup
@@ -34,7 +36,7 @@ do not prove global coverage, snapshot, permissions or general readiness.
 - `mcp_tools.py`: explicit seven-tool registry, strict closed input schemas and safe protocol errors through FastMCP's public list/call hooks.
 - `client.py`: HTTPX authentication, literal allowlist, bounded streaming/pagination and safe errors.
 - `catalog.py`: immutable normalized records consumed by private collection.
-- `tools.py`: unchanged bounded commercial application consumers, called by the MCP adapters without exposing the private client or settings.
+- `tools.py`: bounded commercial consumers with distinct search inspection/output limits, called by MCP adapters without exposing the private client or settings.
 
 IDs/SKU/EAN preserve leading zeros. Decimal prices/quantities serialize as strings; absent/null/zero remain distinct. The projection includes identity, description, classification, EAN, retail/wholesale source prices and tables, quantity, notes, optional source block flag and raw last-change data. Photos, color, size and discount calculations are excluded. Pagination is bounded and reports incomplete/conflicting data as partial; completeness is not an ERP-wide snapshot.
 
@@ -97,8 +99,13 @@ Only these tools are discoverable; all descriptions are in English:
 | check_inventory | reduced_id: string1–256 | Exact local identity; configured-user deposit, unknown identity/freshness |
 | list_products | none | Start at page1, at most one page by default |
 
-Every tool accepts strict max_results integer1–1000/default20, capped by
-configuration and counting all inspected source rows, not promised matches.
+Every tool accepts strict max_results integer1–1000, capped by configuration
+and counting all inspected source rows, not promised matches. search_products
+now defaults to100 inspected rows and adds max_items integer1–1000/default20
+for returned matches. Explicit max_results20 keeps its old inspection budget;
+the other six tools retain default20. The search's default can reach later
+pages when configured caps allow; this deliberately increases coverage/work,
+not a promise to search the entire catalog or return20 matches.
 Only list_products also accepts page_size integer1–1000/null and max_pages
 integer1–100/default1; both must fit configured/effective budgets. Types
 are not coerced. Codes preserve zeros, case, spaces and punctuation; blank
@@ -108,7 +115,7 @@ tenant, method, client and currency. MCP prices default to null currency
 with currency_unknown; installation-specific BRL confirmation is not a
 model argument or a provider field. No HTTP contract/filter changed.
 
-CallToolResult provides structuredContent and equivalent JSON text.
+CallToolResult provides structuredContent and equivalent compact JSON text.
 Application status error sets isError=true while preserving its safe code;
 partial and not_found remain valid structured results. Validation,
 unknown-tool and unexpected failures use fixed messages without input or
@@ -241,10 +248,11 @@ completed. No commercial values were retained and no environment file was
 modified. This proves only these samples, not broad pagination/snapshot,
 deposit identity/freshness or server-internal effects. Budget is closed.
 
-### Bounded product search (application function, not an MCP tool)
+### Bounded literal product search (application and registered MCP tool)
 
 For an operator-authorized caller holding the existing process-owned
-NetOneClient, use `await tools.search_products(client, query, max_results=20)`.
+NetOneClient, use `await tools.search_products(client, query, max_results=100,
+max_items=20)`.
 Do not pass settings, URLs, credentials or arbitrary filters as arguments.
 Calling the function performs real ERP queries and needs an authorized scope;
 importing it or starting stdio does not query the ERP.
@@ -254,18 +262,67 @@ product_mask and sku within a bounded product traversal. It does not send
 query/description filters to NetOne, perform semantic search, strip accents
 or claim exact-code lookup. query must contain 1–200 characters before
 trimming, be nonempty after trimming and contain no Unicode C-category
-characters. max_results is a strict integer 1–1000, default 20, also capped
+characters. max_results is a strict integer 1–1000, default 100, also capped
 by configured NETONE_MAX_RESULTS. It counts source rows inspected,
 including nonmatches/duplicates, not a promised number of matches.
+max_items is a separate strict integer1–1000/default20 returned-match ceiling.
+The whole bounded traversal is inspected before output selection; no extra
+collecting per term or stop at the first match is introduced. Explicit legacy
+max_results20 still inspects at most20 rows. list_products remains one page
+by default; price/stock/exact identifiers retain their existing row budgets.
 
 Results are JSON-compatible, with exact decimal strings and unchanged
 source values. items/returned_count count matches; rows_received counts
 the source rows read. local_text_search discloses matching semantics.
+inspection_limit/page_limit/page_size/deadline_seconds describe effective
+collection ceilings; requested_max_results/requested_max_items describe the
+search request and output_limit the effective return ceiling. matched_count
+is before output selection; returned_count is actual output. output_truncated
+and output_limit_reached identify a cut. collection_complete preserves pre-cut
+completeness; a cut makes partial=true and complete_dataset=false even when
+collection_complete=true. Errors and useful data survive later failures.
 A limited traversal remains partial even with zero matches. not_found is
 only possible after a valid complete traversal of the provider-visible
 endpoint universe; it does not assert absence from the entire ERP.
 Errors remain error/partial with a safe code, never an empty success.
 Remote multi-page behavior and snapshot consistency remain unproved.
+
+Synthetic examples (not permission to query ERP): the default with a100-row
+cap can inspect page1/limit50 and page2/limit50 and find a record at row51;
+max_results20 cannot. A config cap10 always prevails. max_items1 limits
+output without changing the inspection budget. A partial miss is inconclusive.
+
+### Expanded lexical search (application only, not an MCP mode)
+
+`await tools.search_products_expanded(client, 'manopla LS2', max_results=100,
+max_items=20)` may also find a textual `Punho LS2`, using only the reviewed
+manopla/punho pair in one collection. required_terms and suggested_terms
+remain explicit options. An unambiguous leading reviewed type is separated
+from the remaining mandatory description restriction; unknown or ambiguous
+phrases stay literal without alternatives/suggestions. For more control,
+pass query='manopla', required_terms=('LS2',). This is lexical matching,
+not semantic search, confirmed compatibility or synonym equivalence.
+
+Expanded comparisons fold case/accents only in comparison copies and require
+word boundaries: LS2 does not match LS20 and punho does not match empunho.
+Internal punctuation/metacharacters are literal. Source strings and exact
+codes remain unchanged. Direct matches precede reviewed/suggested matches,
+with aligned per-item provenance; missing description restrictions are counted
+as unverified. Suggestions never enter the reviewed list automatically.
+MCP search_products remains literal; no new tool or lexical mode is released.
+
+Price/stock remote filters remain unimplemented: O5 documents ID arrays but
+requires separate admission/validation; O4 still conflicts between number in
+the schema and array in its example. Current exact local selection is bounded,
+not a directed/global identity lookup. Never strip leading zeros to force an
+identity into a numeric filter. See the [filter plan and cost evidence](docs/api-capabilities.md#o5o4-reinspection-and-future-directed-query-plan-no-filter-implemented).
+
+Synthetic serialization comparison on the same50-record payload: compact
+text24783 bytes versus spaced27017 bytes (8.27% less), with equivalent JSON
+and all prior values retained. Redundant amount deepcopy calls dropped200→0.
+This is not total MCP wire savings or measured ERP speed. Literal/expanded
+fixtures each used2 requests/51 rows/1 match; the old20-row budget used1
+request/20 rows/0 matches. More coverage is deliberately more work.
 
 ### Product details and exact codes (Sprint 7 application functions)
 

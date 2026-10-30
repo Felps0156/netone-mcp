@@ -50,6 +50,71 @@ class ProductToolsTestCase(unittest.IsolatedAsyncioTestCase):
 
 
 class SearchProductsTests(ProductToolsTestCase):
+    async def test_default_search_reaches_second_page_beyond_twenty(self):
+        def pages(request):
+            page = json.loads(request.content)['page']
+            rows = ([row(str(i), descricao='Other') for i in range(50)]
+                    if page == 1 else [row('target', descricao='Match')])
+            return response(rows, page, 2, totalElements=51)
+
+        self.handler = pages
+        result = await self.search(self.client, 'Match')
+        self.assertEqual([item['reduced_id'] for item in result['items']],
+                         ['target'])
+        self.assertEqual(self.bodies(), [
+            {'page': 1, 'limit': 50}, {'page': 2, 'limit': 50},
+        ])
+        self.assertEqual(result['rows_received'], 51)
+        self.assertEqual(result['inspection_limit'], 100)
+        self.assertEqual(result['page_limit'], 5)
+        self.assertEqual(result['page_size'], 50)
+        self.assertEqual(result['deadline_seconds'], 60)
+        self.assertEqual(result['requested_max_results'], 100)
+        self.assertEqual(result['requested_max_items'], 20)
+        self.assertEqual(result['matched_count'], 1)
+        self.assertTrue(result['collection_complete'])
+        self.assertFalse(result['output_truncated'])
+
+    async def test_output_cut_keeps_collection_completeness_and_counts(self):
+        self.handler = lambda req: response([
+            row('1', descricao='Match', bloqueado=False, valor=0),
+            row('2', descricao='Match'),
+        ], totalElements=2)
+        result = await self.search(self.client, 'Match', max_items=1)
+        self.assertEqual(result['returned_count'], 1)
+        self.assertEqual(result['matched_count'], 2)
+        self.assertEqual(result['status'], 'partial')
+        self.assertTrue(result['collection_complete'])
+        self.assertTrue(result['output_truncated'])
+        self.assertFalse(result['complete_dataset'])
+        self.assertIn('output_limit_reached', result['warnings'])
+        self.assertIs(result['items'][0]['blocked'], False)
+        self.assertEqual(result['items'][0]['price'], '0')
+
+    async def test_output_limits_validate_before_send(self):
+        for value in (True, 0, 1001, None, '1', 1.0):
+            with self.subTest(value=value):
+                with self.assertRaises(ValueError):
+                    await self.search(self.client, 'Match', max_items=value)
+        self.assertEqual(self.requests, [])
+
+    async def test_old_explicit_budget_and_restrictive_config_stay_bounded(self):
+        self.handler = lambda req: response([
+            row(str(i), descricao='Other')
+            for i in range(json.loads(req.content)['limit'])
+        ], 1, 2)
+        for instance, kwargs, expected in (
+            (self.client, {'max_results': 20}, 20),
+            (self.make_client(max_results=10), {}, 10),
+        ):
+            result = await self.search(instance, 'Match', **kwargs)
+            self.assertEqual(self.bodies()[-1], {'page': 1, 'limit': expected})
+            self.assertEqual(result['inspection_limit'], expected)
+            self.assertEqual(result['rows_received'], expected)
+            self.assertEqual(result['returned_count'], 0)
+            self.assertEqual(result['status'], 'partial')
+            self.assertFalse(result['collection_complete'])
+
     async def test_invalid_queries_never_send_or_echo_input(self):
         invalid = (
             '', '   ', 'X' * 201, 'SECRET\n', '\tSECRET',
@@ -82,7 +147,7 @@ class SearchProductsTests(ProductToolsTestCase):
         result = await self.search(self.client, '  mAtCh  ')
         self.assertEqual(result['status'], 'found')
         self.assertEqual(result['returned_count'], 1)
-        self.assertEqual(self.bodies(), [{'page': 1, 'limit': 20}])
+        self.assertEqual(self.bodies(), [{'page': 1, 'limit': 50}])
         request = self.requests[0]
         self.assertEqual(request.method, 'POST')
         self.assertEqual(request.url.host, 'example.invalid')
@@ -150,7 +215,7 @@ class SearchProductsTests(ProductToolsTestCase):
             self.assertEqual(instance._max_results, configured)
         self.handler = lambda request: response([row(descricao='Match')])
         await self.search(self.client, 'Match')
-        self.assertEqual(self.bodies()[-1], {'page': 1, 'limit': 20})
+        self.assertEqual(self.bodies()[-1], {'page': 1, 'limit': 50})
 
     async def test_budget_counts_nonmatches_and_stops_first_page(self):
         self.handler = lambda request: response([
@@ -174,7 +239,7 @@ class SearchProductsTests(ProductToolsTestCase):
 
         self.handler = pages
         instance = self.make_client(max_results=200)
-        result = await self.search(instance, 'Match', 125)
+        result = await self.search(instance, 'Match', 125, max_items=1000)
         self.assertEqual(self.bodies(), [
             {'page': 1, 'limit': 50}, {'page': 2, 'limit': 50},
         ])

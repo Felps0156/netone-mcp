@@ -2,7 +2,7 @@
 
 from dataclasses import replace
 import re
-from typing import Literal
+from typing import Literal, cast
 import unicodedata
 
 from client import NetOneClient
@@ -34,8 +34,40 @@ def _validate_code_input(code: object, max_results: object) -> None:
         raise ValueError('max_results must be an integer from 1 to 1000.')
 
 
+def _validate_search_limits(max_results: object, max_items: object) -> None:
+    for value in (max_results, max_items):
+        if type(value) is not int or not 1 <= value <= 1000:
+            raise ValueError('Search limits must be integers from 1 to 1000.')
+
+
+def _search_result(
+    result: QueryResult, items: tuple[CatalogRecord, ...], warning: str,
+    max_results: int, max_items: int,
+) -> dict[str, object]:
+    """Separate source traversal completeness from output truncation."""
+    truncated = len(items) > max_items
+    selected = replace(
+        result,
+        status=('error' if result.status == 'error' else 'partial')
+        if truncated else result.status,
+        partial=result.partial or truncated,
+        complete_dataset=result.complete_dataset and not truncated,
+        warnings=(*result.warnings, 'output_limit_reached')
+        if truncated else result.warnings,
+    )
+    output = _filtered_result(selected, items[:max_items], warning)
+    output.update(
+        requested_max_results=max_results, requested_max_items=max_items,
+        output_limit=min(max_items, result.inspection_limit or max_results),
+        matched_count=len(items), output_truncated=truncated,
+        collection_complete=result.complete_dataset,
+    )
+    return output
+
+
 async def search_products(
-    client: NetOneClient, query: str, max_results: int = 20,
+    client: NetOneClient, query: str, max_results: int = 100,
+    *, max_items: int = 20,
 ) -> dict[str, object]:
     """Filter a bounded product traversal, not a remote text-search result.
 
@@ -49,9 +81,7 @@ async def search_products(
         or any(unicodedata.category(char).startswith('C') for char in query)
     ):
         raise ValueError('Query must be 1 to 200 characters without controls.')
-    if type(max_results) is not int or not 1 <= max_results <= 1000:
-        raise ValueError('max_results must be an integer from 1 to 1000.')
-
+    _validate_search_limits(max_results, max_items)
     needle = query.strip().casefold()
     result = await client._collect('products', max_results=max_results)
     items = tuple(
@@ -61,7 +91,9 @@ async def search_products(
             for value in (item.description, item.product_mask, item.sku)
         )
     )
-    return _filtered_result(result, items, 'local_text_search')
+    return _search_result(
+        result, items, 'local_text_search', max_results, max_items,
+    )
 
 
 # Related names are possible alternatives, not proof of product equivalence.
@@ -74,7 +106,7 @@ _REVIEWED_RELATED_TERMS = {
 def _search_term(value: object) -> str:
     if (
         not isinstance(value, str) or not 1 <= len(value) <= 200
-        or not value.strip()
+        or not value.strip() or not _lexical_text(value).strip()
         or any(unicodedata.category(char).startswith('C') for char in value)
     ):
         raise ValueError('Search terms must be 1 to 200 characters without controls.')
@@ -87,10 +119,38 @@ def _search_terms(values: object) -> tuple[str, ...]:
     return tuple(_search_term(value) for value in values)
 
 
+def _lexical_text(value: str) -> str:
+    """Fold comparison copies only; source text and exact codes stay intact."""
+    return ''.join(
+        char for char in unicodedata.normalize('NFKD', value.casefold())
+        if not unicodedata.category(char).startswith('M')
+    )
+
+
+def _lexical_pattern(value: str) -> re.Pattern[str]:
+    return re.compile(r'(?<!\w)' + re.escape(_lexical_text(value)) + r'(?!\w)')
+
+
+def _composed_query(original: str) -> tuple[str, tuple[str, ...], bool]:
+    """Split only an unambiguous reviewed leading type, never infer a brand."""
+    parts = original.split(maxsplit=1)
+    if len(parts) == 1:
+        return original, (), True
+    normalized = _lexical_text(original)
+    occurrences = sum(
+        len(_lexical_pattern(term).findall(normalized))
+        for term in _REVIEWED_RELATED_TERMS
+    )
+    if _lexical_text(parts[0]) in _REVIEWED_RELATED_TERMS and occurrences == 1:
+        return parts[0], (_search_term(parts[1]),), True
+    return original, (), False
+
+
 async def search_products_expanded(
     client: NetOneClient, query: str, *,
     required_terms: tuple[str, ...] = (),
     suggested_terms: tuple[str, ...] = (),
+    max_results: int = 100, max_items: int = 20,
 ) -> dict[str, object]:
     """Search a product term and separate textual restrictions, locally.
 
@@ -100,52 +160,60 @@ async def search_products_expanded(
     original = _search_term(query)
     required = _search_terms(required_terms)
     suggested = _search_terms(suggested_terms)
-    reviewed = _REVIEWED_RELATED_TERMS.get(original.casefold(), ())
+    _validate_search_limits(max_results, max_items)
+    product_term, restrictions, alternatives = _composed_query(original)
+    required = (*required, *restrictions)
+    reviewed = _REVIEWED_RELATED_TERMS.get(_lexical_text(product_term), ())
+    if not alternatives:
+        reviewed, suggested = (), ()
     terms: list[tuple[str, str]] = []
     seen: set[str] = set()
-    for kind, candidates in (
-        ('direct', (original,)), ('reviewed', reviewed),
+    for kind, term_candidates in (
+        ('direct', (product_term,)), ('reviewed', reviewed),
         ('suggested', suggested),
     ):
-        for candidate in candidates:
-            key = candidate.casefold()
+        for candidate in term_candidates:
+            key = _lexical_text(candidate)
             if key not in seen:
                 seen.add(key)
                 terms.append((candidate, kind))
-    result = await client._collect('products')
+    patterns = [(term, kind, _lexical_pattern(term)) for term, kind in terms]
+    required_patterns = [_lexical_pattern(term) for term in required]
+    result = await client._collect('products', max_results=max_results)
     if 'duplicate_rows_removed' in result.warnings:
         result = replace(result, status='partial', partial=True,
                          complete_dataset=False)
-    items: list[CatalogRecord] = []
-    matches: list[dict[str, object]] = []
+    candidates: list[tuple[CatalogRecord, dict[str, object], int]] = []
     unverified = 0
     for item in result.items:
-        description = (item.description or '').casefold()
-        matched = [(term, kind) for term, kind in terms
-                   if term.casefold() in description]
+        description = _lexical_text(item.description or '')
+        matched = [(term, kind) for term, kind, pattern in patterns
+                   if pattern.search(description) is not None]
         if matched and any(
-            re.search(r'(?<!\w)' + re.escape(term.casefold()) + r'(?!\w)',
-                      description) is None for term in required
+            pattern.search(description) is None for pattern in required_patterns
         ):
             unverified += 1
             continue
         if matched:
-            items.append(item)
-            matches.append({
+            candidates.append((item, {
                 'matched_terms': [term for term, _ in matched],
                 'match_type': matched[0][1],
-            })
-    output = _filtered_result(result, tuple(items), 'local_related_text_search')
-    output['matches'] = matches
+            }, {'direct': 0, 'reviewed': 1, 'suggested': 2}[matched[0][1]]))
+    candidates.sort(key=lambda candidate: candidate[2])
+    output = _search_result(
+        result, tuple(item for item, _, _ in candidates),
+        'local_related_text_search', max_results, max_items,
+    )
+    output['matches'] = [match for _, match, _ in candidates[:max_items]]
     output['search_terms'] = [
         {'term': term, 'type': kind} for term, kind in terms
     ]
     output['required_terms'] = list(required)
     output['unverified_restriction_count'] = unverified
-    output['warnings'] = [
-        *result.warnings, 'local_related_text_search',
-        'traversal_not_snapshot_or_semantic_coverage',
-    ]
+    warnings = cast(list[str], output['warnings'])
+    warnings.append('traversal_not_snapshot_or_semantic_coverage')
+    if not alternatives:
+        warnings.append('ambiguous_query_literal_only')
     return output
 
 

@@ -2,6 +2,12 @@
 
 ## Current boundary
 
+Sprint9.5 / DEC-032 authorizes only the approved offline local optimization
+design/plan. Search defaults and new metadata below supersede the earlier
+search contracts, not DEC-027/030/031's real evidence or exhausted budgets.
+MCP remains exactly seven tools, literal search only; price/stock filters
+are plans, not implementation. Expanded lexical search is application-only.
+
 PRD 1.9.1 / DEC-031 records Sprint 9's completed MCP integration:
 seven evidenced application consumers are registered, excluding technical
 SKU and expanded search. S9.12's separately authorized single real listing
@@ -16,6 +22,103 @@ the Sprint9 section governs current discovery. BRL remains installation
 context in the application, not a generic MCP currency or API field.
 
 Current behavior and limits: [configuration](configuration.md). Endpoint contracts, field mapping and unresolved provider ambiguities: [API inventory](api-capabilities.md). Canonical sprint IDs/states/sequence: [PRD section 28](../PRD.md#28-sprints-de-implementação-em-checklist).
+
+## Sprint 9.5 — offline execution evidence
+
+The maintainer chose option1 and approved the
+[design](superpowers/specs/2026-10-29-sprint-9-5-design.md) and
+[plan](superpowers/plans/2026-10-29-sprint-9-5.md). Work used the current
+workspace, a public allowlisted baseline and contextual diffs in managed
+scratch, not Git/worktree helpers. No private configuration file or ERP was
+read; only synthetic Settings/streams were used in execution. No dependency
+install, login, rotation, new route/filter/tool, or Sprint10 work.
+
+Executed baseline command:
+`.venv/Scripts/python.exe -B -m unittest discover -s tests -v`
+returned149 tests PASS in7.268s. `.venv/Scripts/python.exe -B -m pip check`
+returned `No broken requirements found.`
+
+Incremental RED→GREEN evidence:
+
+- Literal second-page fixture failed to return target before the default
+  change; new output-limit/metadata cases initially failed because the input
+  and fields did not exist. After implementation,31 tool tests and46 client
+  tests passed. Explicit20 and restrictive configuration retain row ceilings.
+- Expanded composed phrase initially omitted reviewed alternatives, accepted
+  embedded words/plurals and missed accent-normalized comparison; independent
+  output limit was unsupported. The focused12-test set passed after minimal
+  changes, then the whole158-test checkpoint passed in8.143s.
+- Serialization regression detected a redundant deepcopy of an immutable
+  synthetic Decimal subclass. The regression passed after shallow field
+  projection. Existing field fidelity/null/zero/false tests passed unchanged.
+- MCP regressions initially failed the default schema, second-page lookup
+  and compact text requirement. The focused12 MCP tests passed after input/
+  description/serialization updates. Input limits remain strict/extra-forbid.
+- Generic SDK stdio second-page search initially returned an error because
+  the old synthetic fixture admitted only page1/limit1. Extending that fixture
+  supplied two guarded page/limit responses. The actual application/server/
+  SDK path then found row51, preserved exact Decimal/zero/null and observed
+  two response closes plus one client close. Existing one-page listing proof
+  remains a separate synthetic scenario; stdout stayed protocol-only.
+
+Full implementation checkpoint, same unittest command:169 tests PASS in
+7.996s; pip check passed. Coverage includes later errors with/without matches
+and output cuts, ambiguous phrases with suggestions, LS2/LS20 and literal
+metacharacters, restrictive/explicit budgets, duplicated/conflicting records,
+missing/contradictory metadata, empty/repeated pages, concurrent literal/
+expanded budgets and deadlines/cancellation with response cleanup completed.
+Existing MCP protocol-cancellation/client-cleanup tests remain green. No
+static type-checker or clean-install acceptance is implied by these results.
+
+### Reproducible synthetic cost and remaining external work
+
+Final independent review ran169 tests PASS in8.052s and pip check PASS;
+it reproduced all synthetic cost figures and found no Critical/Important
+issues under its original grading. One Unicode edge case was reported as
+Minor: a combining-mark-only term normalized to empty and matched records
+without textual evidence. The coordinator treated the false commercial
+result as requiring correction, not deferred polish. A failing regression
+covered query, required/suggested terms, an implicit phrase restriction and
+an ignored suggestion in an ambiguous phrase. Validation now rejects empty
+or whitespace-only lexical comparison terms before collection. The focused
+RED run failed as expected; final full suite170 PASS in8.287s and pip check
+PASS, followed by repeated identical cost measurements. No finding remains
+deferred from this review. Static typing, clean installation and provider
+behavior were not revalidated; all new evidence remains offline.
+
+Same-universe comparison used fixed in-memory rows and counted requests,
+pages, received rows, matches and compact payload bytes, not wall time:
+
+| Consumer/scenario | Requests/pages | Rows | Matches/returned | Compact payload bytes |
+|---|---|---|---|---|
+| Literal explicit20, absent target in prefix | 1/1 | 20 | 0/0 | 542 |
+| Literal default100, target at51 | 2/2 | 51 | 1/1 | 1046 |
+| Expanded100, three deduplicated terms, same target | 2/2 | 51 | 1/1 | 1347 |
+| Local price exact identity, variants/tables/conflict | 1/1 | 3 | 3/3 | 2105 |
+| Local stock exact reduced identity/conflict | 1/1 | 3 | 2/2 | 1640 |
+
+Literal/expanded100 sent identical bodies page1/limit50 and page2/limit50.
+The old20-row prefix is less work and lower coverage, not an equivalent
+universe for a speedup claim. Expanded provenance costs extra payload bytes;
+terms do not multiply collections. Price/stock keep all matching variants
+and conflicting records as partial, not first-match selection.
+
+For50 synthetic records/two Decimal amounts each, the baseline serializer
+called amount deepcopy200 times (record traversal twice); current serializer
+called it0 times. All prior result values compared equal. The exact same
+current result was27017 bytes with spaced JSON and24783 compact:2234 bytes/
+8.27% saved in textual JSON only, excluding MCP wire-envelope overhead. Both
+structuredContent/text remain; no null/field/warning was dropped. Synthetic
+measurements are fixtures, not installation-specific values or ERP timing.
+
+O5/O4 official pages were read anonymously after hydration. O5 publishes
+product/reduced numeric arrays; combinations/ceilings and exact enforcement
+remain unverified. O4 still publishes number versus array for idsReduzidos.
+The [inventory](api-capabilities.md#o5o4-reinspection-and-future-directed-query-plan-no-filter-implemented)
+records the minimal future body/test plan, lossless identifier restrictions,
+owner and unblock evidence. Current price/stock remain page/limit-only local
+selection. No filter implementation, real query or lexical MCP release follows
+from this investigation. G3 scope/V1 NOT_READY and closed budgets unchanged.
 
 ## Evidence retained, not re-executed
 

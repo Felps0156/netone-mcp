@@ -1,6 +1,6 @@
 """Normalize documented query fields without inferring commercial facts."""
 
-from dataclasses import asdict, dataclass
+from dataclasses import dataclass, fields
 from decimal import Decimal
 from typing import Literal
 
@@ -106,7 +106,7 @@ class CatalogRecord:
 
     def as_json(self) -> dict[str, object]:
         """Present populated business fields first, retaining every value."""
-        data = asdict(self)
+        data = {field.name: getattr(self, field.name) for field in fields(self)}
         for key, value in data.items():
             if isinstance(value, Decimal):
                 data[key] = str(value)
@@ -173,9 +173,15 @@ class QueryResult:
     total_pages: int | None = None
     total_elements: int | None = None
     complete_dataset: bool = False
+    inspection_limit: int | None = None
+    page_limit: int | None = None
+    page_size: int | None = None
+    deadline_seconds: int | None = None
 
     def as_json(self) -> dict[str, object]:
-        data = asdict(self)
+        # Avoid recursively copying records that are serialized below once.
+        data = {field.name: getattr(self, field.name) for field in fields(self)
+                if field.name not in ('items', 'warnings')}
         data['items'] = [item.as_json() for item in self.items]
         data['warnings'] = list(self.warnings)
         data['returned_count'] = len(self.items)
