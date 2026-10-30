@@ -15,7 +15,12 @@ passed. S9.12 is complete; G3 PASS within this bounded scope, not universal
 ERP/tool coverage. Sprints 5–8 retain their bounded evidence, including
 DEC-027's unvalidated technical SKU.
 All real-query budgets remain closed: no new ERP/configuration access,
-login, token rotation, Git action or Sprint 10 is authorized.
+login, token rotation or Git action is authorized. The later Sprint 10
+approval (DEC-033) permits application-only deterministic analyses and
+synthetic validation, not real queries or additional MCP tools.
+Sprint10 is complete in that offline scope:190 tests and pip check pass,
+independent review found no issues, and G4 passes for bounded synthetic
+analysis only. No real analysis acceptance or V1 release is claimed.
 
 The Sprint 9 section below governs current registration. Earlier evidence
 sections retain their original no-registration boundaries as history,
@@ -37,10 +42,11 @@ do not prove global coverage, snapshot, permissions or general readiness.
 - `client.py`: HTTPX authentication, literal allowlist, bounded streaming/pagination and safe errors.
 - `catalog.py`: immutable normalized records consumed by private collection.
 - `tools.py`: bounded commercial consumers with distinct search inspection/output limits, called by MCP adapters without exposing the private client or settings.
+- `analysis.py`: immutable identity preparation and pure aggregation for the two application-only analysis consumers below; no framework or I/O.
 
 IDs/SKU/EAN preserve leading zeros. Decimal prices/quantities serialize as strings; absent/null/zero remain distinct. The projection includes identity, description, classification, EAN, retail/wholesale source prices and tables, quantity, notes, optional source block flag and raw last-change data. Photos, color, size and discount calculations are excluded. Pagination is bounded and reports incomplete/conflicting data as partial; completeness is not an ERP-wide snapshot.
 
-LangChain/LangGraph are not required and are removed from the manifest while unused. A future real analysis consumer may justify an optional framework; basic operation needs no LLM key.
+LangChain/LangGraph are not required and are removed from the manifest while unused. The direct analysis pipeline does not justify a framework; queries and analyses need no LLM key.
 
 ## Install and start
 
@@ -145,6 +151,69 @@ one-shot budget is consumed and closed, not ongoing query permission.
 See the [runbook](docs/runbook.md).
 
 ## Development and evidence
+
+### Sprint 10 — deterministic application analyses
+
+These functions are available to an authorized application caller, not
+registered MCP tools. Calling them against a real client requires a new
+authorized ERP scope; the current sprint used synthetic data only.
+
+- `await tools.analyze_inventory(client, threshold=Decimal('3'),
+  max_results=100, max_pages=1)` counts known/unknown quantities and low stock
+  (`quantity <= threshold`), zero, negative and above-threshold reduced IDs.
+  Zero/negative counts overlap low stock; unknown is never zero or classified.
+  The default3 is an approved local rule, not a provider rule. Threshold may
+  be a strict nonnegative int or finite nonnegative Decimal (import Decimal
+  from decimal), with at most100 coefficient digits and exponent -100..100.
+  Strings, floats and bools are rejected; exact Decimal scale is retained.
+- `await tools.analyze_product_catalog(client, max_results=100, max_pages=1)`
+  counts distinct product IDs among analyzed reduced identities, field
+  presence for commercial code/description/technical SKU/EAN, source blocked
+  states and exact group/subgroup/line distributions. It does not infer stock,
+  sellability, barcode validity, prices or compatibility.
+
+Both perform one bounded collection using only existing page/limit POSTs
+(stock or products). max_results is a strict integer1–1000/default100 counting
+received rows, including duplicates, not requested distinct products;
+max_pages is strict1–100/default1. Configured caps always prevail. Fixed
+page size is min(50,effective row budget); one default page can therefore
+inspect at most50 rows despite the100-row budget. Later pages require an
+explicit max_pages and enough budget for another full fixed-size page.
+No new environment variable, filter, join, repeated collection or HTTP
+parallelism is added.
+
+Counts use exact reduced_id strings, preserving zeros/spaces/case. Identical
+projected records count once; any differing record within an identity group
+excludes the whole group from metrics. Source items remain untouched.
+records_analyzed is the denominator of per-reduced metrics;
+distinct_product_count counts distinct product_id within that universe,
+not ERP-wide products. rows_received counts raw rows, source_record_count
+and returned_count normalized source records. distinct_reduced_ids includes
+conflicting identities; conflicting_identity_count counts excluded groups.
+duplicate_records_excluded counts only repeats observable after collector
+deduplication, not an inferred count of discarded raw rows.
+
+collection_complete preserves the original collector's completeness.
+Analytical complete_dataset additionally requires no error, observed duplicate
+or conflicting identity. analysis_scope is sample when incomplete, otherwise
+visible_endpoint, never a stable snapshot or global ERP claim. metrics_complete
+is separate: no conflicting identities and, for stock, no unknown quantities
+among analyzed identities. It can be true for a partial sample or valid empty
+universe; it never establishes collection completeness. For catalog it means
+field states can be classified, not that the fields are populated.
+threshold is an exact string for stock/null for catalog; criteria documents
+the calculation rules. Initial/later errors remain error/partial and retain
+their safe codes and useful records. All original fields, missing_fields,
+Decimal strings and observation timestamps remain. Classifications separate
+absent/null/blank counts from actual source-text value/count entries.
+
+Stock deposit/branch identity and freshness remain unknown. No cross-unit or
+cross-deposit quantity sums, stock valuation, replenishment recommendation or
+delivery promise is produced. The historical O4 ID-filter conflict does not
+affect page/limit analysis and remains unresolved. Frameworks/adapters were
+evaluated and deliberately omitted: the direct pipeline already serves both
+functions. Synthetic execution evidence and review are in the runbook; no
+real analysis acceptance, new MCP registration or V1 release is implied.
 
 ### Priority: commercial product code (operator's business SKU)
 

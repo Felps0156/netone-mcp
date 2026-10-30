@@ -14,6 +14,49 @@ supersedes earlier empty-registry/no-Sprint9 instructions only. Remaining
 sections are historical evidence checkpoints, not renewed budgets. See
 [the field inventory](product-field-priority.md) for its distinct samples.
 
+## Sprint 10 — application-only deterministic analyses
+
+DEC-033 supersedes previous no-Sprint10 boundaries only for the approved
+offline design/plan. Sprint10 is complete with190 offline tests/pip check
+passing and no findings in independent review; G4 is limited to synthetic
+analysis, not new operational evidence. `tools.analyze_inventory` collects stock and
+`tools.analyze_product_catalog` collects products via the unchanged guarded
+POST/page/limit path. Neither is registered in MCP. Existing O3/O4 admission
+and historical field observations support bounded metrics on present data,
+not new remote proof, ERP-wide completeness or a changed HTTP filter.
+
+Both use max_results1–1000/default100 and max_pages1–100/default1, strict and
+capped by configuration. Default fixed size min(50,budget) means at most50
+rows in the one default page. No selected deposit, join, prices query or
+automatic retry/fallback. Inventory threshold defaults to3 (local approved
+rule), configurable per call as nonnegative strict int/finite Decimal, at
+most100 coefficient digits and exponent -100..100; no float/string/bool.
+
+Metrics count exact unambiguous reduced IDs, not response rows. Any differing
+normalized record for the same reduced ID excludes its whole group, including
+product-ID disagreement; identical projected records count once. All source
+items and metadata remain. Stock counts known/unknown/null/absent quantities,
+<=threshold, zero, negative and >threshold; no unit/deposit sums. Catalog
+counts distinct product IDs, four-state presence for mask/description/SKU/EAN,
+blocked states and exact group/subgroup/line distributions. Null/absent/blank
+are separate from real classification values; false/zero remain populated.
+
+records_analyzed counts accepted identities; rows_received counts raw rows;
+source_record_count/returned_count count normalized items. Duplicate counts
+only include projected repeats still observable after collection. Analytical
+complete_dataset requires collection_complete plus no error/duplicate/conflict.
+analysis_scope is sample or visible_endpoint, never global ERP or snapshot.
+metrics_complete means no identity conflict and, for stock, known quantities
+for every analyzed identity; it does not establish collection completeness or
+populated catalog fields. Per-result criteria states denominators and rules.
+
+Sufficiency is conditional per metric: unknown quantity cannot be classified
+under threshold, source product quantity is not stock, blocked is not
+sellability, and observation time is not freshness. Deposit/branch identities
+remain unknown. The O4 filter number/array conflict and O5 directed-filter
+plan below are unchanged. See [application contracts](../README.md#sprint-10--deterministic-application-analyses)
+and [offline evidence](runbook.md#sprint-10--offline-application-analysis-evidence).
+
 ## Sprint 9.5 — local optimization contract
 
 The maintainer approved the [design](superpowers/specs/2026-10-29-sprint-9-5-design.md)

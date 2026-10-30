@@ -1,12 +1,17 @@
 """Bounded commercial application queries, without MCP registration."""
 
 from dataclasses import replace
+from decimal import Decimal
 import re
 from typing import Literal, cast
 import unicodedata
 
 from client import NetOneClient
 from catalog import CatalogRecord, QueryResult
+from analysis import (
+    analysis_result, catalog_metrics, inventory_metrics, prepare_universe,
+    validate_threshold,
+)
 
 
 def _filtered_result(
@@ -361,3 +366,52 @@ async def list_products(
     return replace(
         result, warnings=(*result.warnings, 'provider_visible_catalog_only'),
     ).as_json()
+
+
+def _validate_analysis_limits(max_results: object, max_pages: object) -> None:
+    if type(max_results) is not int or not 1 <= max_results <= 1000:
+        raise ValueError('max_results must be an integer from 1 to 1000.')
+    if type(max_pages) is not int or not 1 <= max_pages <= 100:
+        raise ValueError('max_pages must be an integer from 1 to 100.')
+
+
+async def analyze_inventory(
+    client: NetOneClient, *, threshold: Decimal | int = Decimal('3'),
+    max_results: int = 100, max_pages: int = 1,
+) -> dict[str, object]:
+    """Count known stock quantities within a bounded configured-user scope.
+
+    Low stock means quantity <= threshold, not sellability or a reorder
+    recommendation. Unknown quantities and conflicting identities are never
+    classified as zero. This application function is not an MCP tool.
+    """
+    amount = validate_threshold(threshold)
+    _validate_analysis_limits(max_results, max_pages)
+    result = await client._collect(
+        'stock', max_results=max_results, max_pages=max_pages,
+    )
+    universe = prepare_universe(result.items)
+    return analysis_result(
+        result, universe, analysis_type='inventory',
+        metrics=inventory_metrics(universe, amount), threshold=amount,
+    )
+
+
+async def analyze_product_catalog(
+    client: NetOneClient, *, max_results: int = 100, max_pages: int = 1,
+) -> dict[str, object]:
+    """Count explicit field states and classifications, not ERP-wide quality.
+
+    Counts use unambiguous reduced identities, retaining source records and
+    collection failures. No stock or price is inferred from product fields.
+    This application function is not an MCP tool.
+    """
+    _validate_analysis_limits(max_results, max_pages)
+    result = await client._collect(
+        'products', max_results=max_results, max_pages=max_pages,
+    )
+    universe = prepare_universe(result.items)
+    return analysis_result(
+        result, universe, analysis_type='product_catalog',
+        metrics=catalog_metrics(universe),
+    )

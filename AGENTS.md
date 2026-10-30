@@ -2,6 +2,25 @@
 
 ## Scope and current status
 
+Sprint10 / PRD1.10.0 DEC-033: maintainer chose application-only option1,
+approved docs/superpowers/specs/2026-10-30-sprint-10-design.md with low-stock
+default3, then the native execution plan. Implemented tools.analyze_inventory
+and tools.analyze_product_catalog with typed pure aggregation in analysis.py;
+independent final review found no Critical/Important/Minor issues.
+S10.01–15 are complete in their offline scope. Threshold is configurable per call,
+known quantity <=3 by default, never an ERP-derived rule. Exact reduced
+identities count once; conflicting groups are excluded from metrics while
+source records remain. Null/absent quantities stay unknown. No unit/deposit
+sums, LLM/framework, join, new HTTP filters/dependencies or MCP tools.
+Default max_results100/max_pages1 remains capped by existing configuration;
+collection completeness, analytical completeness and metric sufficiency are
+distinct. All new verification uses synthetic settings/transports, with
+190 tests PASS and pip check PASS, independently rerun during review. G4
+passes only for bounded synthetic analyses, not operational evidence. This later
+approval supersedes only earlier no-Sprint10 statements below (historical
+scope checkpoints). All real .env/ERP budgets remain closed, no login/
+rotation, Git, Sprint11+ or V1 release; registry stays exactly seven tools.
+
 Sprint 9.5 is complete in its offline scope (PRD1.9.3 / DEC-032):170 tests
 passed after review and a normalization-empty Unicode regression fix;
 pip check passed. No new real evidence or budget was obtained.

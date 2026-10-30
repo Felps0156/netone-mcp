@@ -15,13 +15,95 @@ passed via generic MCP stdio, page1/limit1, HTTP200, one partial item and
 completed response/transport/client cleanup. G3 PASS in that bounded scope;
 Sprint9 complete, V1 NOT_READY. The memory-only loader read and one-query
 budget are consumed and closed; no further .env access, ERP query, login,
-token rotation, .env write, Git action or Sprint10 is authorized.
+token rotation, .env write or Git action is authorized. DEC-033 subsequently
+authorizes Sprint10 application-only analysis and synthetic verification;
+earlier no-Sprint10 statements below are historical checkpoint boundaries.
+This does not authorize Sprint11+, real analysis queries or MCP registration.
 All earlier observation budgets remain closed. Earlier no-registration/
 no-Sprint9 statements and test counts below describe historical checkpoints;
 the Sprint9 section governs current discovery. BRL remains installation
 context in the application, not a generic MCP currency or API field.
 
 Current behavior and limits: [configuration](configuration.md). Endpoint contracts, field mapping and unresolved provider ambiguities: [API inventory](api-capabilities.md). Canonical sprint IDs/states/sequence: [PRD section 28](../PRD.md#28-sprints-de-implementação-em-checklist).
+
+## Sprint 10 — offline application analysis evidence
+
+The maintainer chose application-only option1, approved the
+[design](superpowers/specs/2026-10-30-sprint-10-design.md) with threshold3,
+then approved the [native execution plan](superpowers/plans/2026-10-30-sprint-10.md).
+Work stays in the existing checkout with a24-file allowlisted public-source
+snapshot in managed scratch, not Git/worktree helpers. Production changes
+are limited to tools.py and the justified new analysis.py; HTTP/configuration/
+normalization/server/registry and requirements remain unchanged.
+
+Executed `.venv/Scripts/python.exe -B -m unittest discover -s tests -v`:
+baseline170 PASS/8.453s, Task1 checkpoint176 PASS/8.721s, Task2 checkpoint183
+PASS/10.074s and implementation checkpoint190 PASS/8.416s. Interpreter:
+the root .venv Python3.14.3, not the unrelated Python on PATH.
+`.venv/Scripts/python.exe -m pip check`: `No broken requirements found.`
+
+TDD: six pure-metric cases first failed because analysis was absent; seven
+public-consumer cases first failed because functions were absent. Both sets
+passed after implementation. A multi-page fixture initially incorrectly
+expected a second size2 page with only1 residual row available; corrected
+the fixture to budget100/size50 without changing production pagination.
+An adversarial test reproduced a projected duplicate after a nonfirst
+conflicting record being undercounted (0 versus1). Per-identity sets corrected
+the count while still excluding the entire conflicting group; regression
+passed. Other adversarial cases characterize existing protected transport.
+
+Coverage includes threshold3/boundary Decimal/zero/negative/null/absence,
+noncoercing input rejection before send, IDs with leading zeros, duplicate/
+conflicting reduced identities including another product ID, classification
+sentinel collision avoidance, missing/contradictory metadata, repeated pages,
+initial/later HTTP401/403/404/429/500 and timeout, restrictive configured caps,
+concurrent different thresholds/budgets, and cancellation of both consumers
+with response stream aclose completion observed before unwind. Existing
+MCP/stdio and client-cleanup tests remain green and registry stays exactly7.
+
+Manual synthetic demonstration executed both actual public functions through
+NetOneClient/guard/normalizer and an in-memory MockTransport. Fresh imports
+forbade client construction, DNS and protected .env reads; execution used an
+empty process environment, blocked configuration reader and synthetic Settings
+only. No LLM key or provider request. One page1/limit50 stock response with5
+rows returned known3/unknown2, low_stock2 at threshold3, zero1, above1;
+complete_dataset=true for the fixture but metrics_complete=false because two
+quantities were unknown. One page1/limit50 products response with2 reduced
+variants returned one distinct product and classified description populated1/
+null1. Both were found in the fixture's visible_endpoint scope. Exactly two
+mock requests, two response closes, transport close completion and closed
+client were observed. Synthetic fixture source remains netone_api in the
+unchanged result envelope; the harness labels the observation SYNTHETIC ONLY.
+
+No quantity/unit/deposit sums, inferred stock from products, ERP-wide metrics,
+snapshot/freshness guarantees or sellability conclusions. Low stock <=3 is a
+local approved analysis rule; missing quantities remain unknown. Error codes,
+items/Decimal/null/zero/false/missing_fields and collection limits survive.
+metrics_complete never establishes full collection; consult analysis_scope
+and complete_dataset before interpreting any count beyond the sample.
+
+Independent final review reran190 tests PASS/8.758s and pip check PASS,
+then two additional in-memory adversarial cases PASS/0.031s (classification
+sentinel strings with cross-product conflicts; exact IDs with zeros/case/
+spaces and all quantities unknown). No Critical/Important/Minor findings.
+The reviewer verified24 baseline files,226 unchanged ordered sprint tasks
+at the review checkpoint and54 local file links (not anchors). No ERP/configuration read, dependency
+install, login/rotation, Git or Sprint11+; all older real budgets remain closed.
+S10.01–15 are complete; G4 passes only for the bounded synthetic analysis
+scope. G3 and V1 are not promoted; no real analysis proof is claimed.
+
+Final coordinator verification after documentation closure and line-length
+formatting:190 tests PASS/8.653s, pip check PASS. The public-source audit
+confirmed exactly15 state changes S10.01–15 (15/15 complete) among226 ordered
+sprint tasks, with all task text/order and unrelated/global checkboxes
+unchanged. Only the six planned existing files and four new artifacts differ
+from the baseline scope; prior tests, HTTP/configuration/normalization/server/
+registry and manifest remain unchanged. Syntax compilation,54 local file
+links and the two new section anchors passed. No static type-checker or clean
+installation claim is implied. Review boundaries retained: real ERP behavior
+was not judged or queried, and historical RED/baseline/demo observations
+remain the coordinator's executed evidence, not independently re-created
+operational proofs. No deferred review findings.
 
 ## Sprint 9.5 — offline execution evidence
 

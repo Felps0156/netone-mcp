@@ -1,7 +1,7 @@
 # PRD — NetOne MCP: Consulta e Análise Read-Only
 
-> **Versão:** 1.9.3 — Sprint 9.5 concluída no escopo offline; Sprint 9 preservada
-> **Estado:** NOT_READY para V1; Sprints 5–9.5 concluídas em seus escopos delimitados, preservada a ressalva DEC-027 para codigoSku técnico. Sete tools MCP registradas; S9.12 e G3 comprovados no recorte de DEC-031: descoberta e uma listagem real page1/limit1 HTTP200. Todos os orçamentos ERP encerrados; nenhuma nova chamada ou Sprint 10 autorizada.
+> **Versão:** 1.10.0 — Sprint 10 concluída no escopo offline da aplicação
+> **Estado:** NOT_READY para V1; Sprints 5–10 concluídas em seus escopos delimitados, preservada a ressalva DEC-027 para codigoSku técnico. Sprint 10 verificada/revisada somente na aplicação, sem registro MCP das análises ou nova prova ERP. Sete tools MCP e G3 no recorte de DEC-031 preservados. Todos os orçamentos ERP encerrados; nenhuma nova chamada ou Sprint 11+ autorizada.
 > **Regra fundamental:** nenhuma operação pode alterar dados comerciais do ERP.
 
 Este documento é a fonte de verdade para escopo, arquitetura, critérios e checklist. A revisão 1.2.0 substituiu restrições históricas de testes, Git somente leitura e frameworks obrigatórios. A revisão 1.2.1 registra autorização posterior explícita para leitura em memória da configuração e até três consultas de S5.01, sem exposição de segredos. Produtos/preços/estoque responderam com page=1 e limit=1; normalização e metadados das amostras aceitos. S5.01 e Sprint 5 concluídas, com 51 testes offline novamente aprovados. Não houve login, renovação, alteração do `.env`, novas tools ou avanço para Sprint 6. A autorização pontual não libera chamadas contínuas; evidências e limites em docs/runbook.md.
@@ -82,7 +82,7 @@ flowchart LR
 - `catalog.py`: modelos imutáveis e normalização consumida pela coleta privada; sem persistência ou join preço/estoque.
 - `tools.py`: funções comerciais preservadas; search_product_by_code é prioritária para código comercial, distinta de codigoSku. DEC-030 expõe sete funções via MCP, sem argumentos de configuração. search_product_by_sku e search_products_expanded continuam somente na aplicação, sem registro por falta de prova operacional própria. Projeção, parcialidade, precisão e proveniência permanecem iguais.
 - Sprint 8 / DEC-029: get_product_price por product_id textual exato local, check_inventory por reduced_id textual exato local e list_products desde page1/uma página default. Preço/estoque usam somente page/limit, sem filtro novo. DEC-030 registra estes consumidores em MCP; moeda MCP permanece null/desconhecida, sem universalizar BRL da instalação. Depósito/frescor não inferidos; limites por chamada não mutam estado compartilhado.
-- `analysis.py`: futuro e opcional, somente para análise real que justifique módulo separado. Sem grafo/adapter fictício.
+- `analysis.py`: preparação tipada de identidades e agregação pura consumidas por duas análises em tools.py (DEC-033). Sem grafo, adapter fictício, I/O ou registro MCP.
 
 ## 7. Adaptação dos Padrões do SCSI
 
@@ -293,9 +293,11 @@ Erros de entrada/tool desconhecida/falha inesperada têm texto/código fixos.
 - Indicadores gerais só se `complete_dataset=true`; caso contrário identificar claramente “amostra”.
 - Tratar itens duplicados e múltiplos reduzidos de forma explícita, sem contagem inflada.
 
-## 14. Análise Determinística Futura
+## 14. Análise Determinística na Aplicação
 
-Coletar páginas autorizadas → validar universo → normalizar → agregar → formatar com proveniência. Fluxo direto por padrão; grafo/framework opcional somente se múltiplas etapas reais o justificarem. Sem LLM, autonomia ou métricas globais de amostra parcial. Nenhum fluxo de análise é implementado nesta refatoração.
+DEC-033 implementa coleta limitada → normalização existente → preparação de identidades → agregação → envelope com proveniência. tools.analyze_inventory usa stock e tools.analyze_product_catalog usa products, uma coleta por chamada. Sem LLM, grafo/framework, join, autonomia ou métricas globais de amostra parcial; análises não registradas no MCP. Quantidade conhecida <=3 é estoque baixo por padrão local aprovado, configurável por chamada, nunca regra inferida do ERP. Quantidades desconhecidas não são zero; não somar unidades ou depósitos. Identidades reduced_id exatas conflitantes são excluídas dos indicadores, mas registros fonte permanecem no retorno.
+
+max_results1–1000/default100 conta linhas recebidas e max_pages1–100/default1 limita páginas, ambos estritos e sujeitos à configuração existente; página fixa min(50, orçamento efetivo). Threshold aceita int estrito/Decimal finito não negativo, até100 algarismos no coeficiente e expoente -100..100; sem bool/float/string. records_analyzed conta identidades não conflitantes; source_record_count/returned_count contam registros normalizados e rows_received linhas brutas. collection_complete preserva o coletor; complete_dataset analítico exige coleta completa, sem erro, duplicatas observadas ou conflitos. analysis_scope é sample ou visible_endpoint, nunca garantia de snapshot/cobertura global. metrics_complete informa dados suficientes por métrica, separado da completude do percurso. Catálogo conta presença/ausência/null/branco, bloqueio e classificações exatas, sem inferir estoque ou sellability. Critérios completos no desenho aprovado e README.
 
 ## 15. Autenticação, Autorização e Isolamento
 
@@ -593,6 +595,33 @@ medidas sintéticas e regressão em docs/runbook.md. Sem .env real, ERP,
 login/rotação, Git, dependências, novas camadas/tools ou Sprint10. G3 não
 ampliado, V1 NOT_READY; orçamentos anteriores continuam encerrados.
 
+DEC-033 — 1.10.0: mantenedor solicitou exclusivamente Sprint10, escolheu
+opção1 (aplicação sem novas tools MCP), aprovou desenho com limiar padrão3
+e plano de execução nativa com revisão independente final. Desenho/plano:
+docs/superpowers/specs/2026-10-30-sprint-10-design.md e
+docs/superpowers/plans/2026-10-30-sprint-10.md. Autoriza implementação e
+verificação offline sintética, não acesso ao .env/ERP, Git, login/rotação,
+dependências, filtros novos ou Sprint11+. Supersede somente proibições
+anteriores de iniciar10; essas restrições descrevem os checkpoints históricos
+de DEC-030–032 e Sprints9/9.5, não bloqueio atual do escopo aprovado.
+analysis.py justifica-se por preparação/agregação compartilhadas por dois
+consumidores reais; fluxo direto dispensa frameworks/adaptadores opcionais.
+Suficiência é por métrica: O3/O4 já admitidas e amostras históricas de campos
+sustentam contagens limitadas, não completude real/global nem novo filtro.
+Orçamentos anteriores continuam encerrados. Limiar3 é configuração local,
+não campo/regra do fornecedor. Tratamento de conflitos/duplicatas/presença
+e denominadores conforme seção14; nenhuma soma entre unidades/depósitos ou
+conclusão global de amostra. Baseline170 PASS/8.453s; implementação190
+PASS/8.416s e pip check PASS antes da revisão. Demonstração sintética sem
+configuração/LLM executou ambas as funções por transporte em memória,
+com duas respostas e transporte/cliente fechados com conclusão observada.
+Revisão independente final:190 PASS/8.758s, pip check PASS, dois cenários
+adversariais adicionais em memória PASS; nenhum Critical/Important/Minor.
+S10.01–15 concluídas no escopo offline; G4 PASS para métricas sintéticas
+limitadas, não validação operacional. G3/V1 e DEC-027/030/031 permanecem
+inalterados, sem prova operacional das análises. Fechamento/auditoria e
+última regressão do coordenador registrados no runbook.
+
 ## 26. Critérios de Aceite
 
 ### 26.1 Critérios globais
@@ -650,13 +679,13 @@ flowchart LR
 - **G1:** Python, configuração, token e proteções de segredo validados. PASS no escopo produtos/page-limit: Python 3.14.3, validações/secrecy offline e acesso real S5.01 por token/TLS verificado. Não significa instalação limpa ou granularidade ampla de permissões.
 - **G2:** transporte não permite operações proibidas e produz erros consistentes.
 - **G3:** cliente MCP descobre somente tools liberadas e pode executá-las quando há endpoint comprovado.
-- **G4:** métricas só usam dados suficientes e relatam parcialidade; framework opcional se justificado.
+- **G4:** métricas só usam dados suficientes e relatam parcialidade; framework opcional se justificado. PASS no escopo offline sintético da Sprint10/DEC-033, sem indicadores reais ou globais comprovados.
 - **G5:** documentação genérica, proteção de secrets e runbook completos.
 - **G6:** todos os critérios aplicáveis confirmados ou impedimentos explicitados; jamais falso sucesso.
 
 ## 28. Sprints de Implementação em Checklist
 
-IDs/ordem e estados não relacionados são preservados. Sprints 0–4 têm entregas offline/documentais; Sprint 5 concluída conforme DEC-022, Sprint 6 conforme DEC-023, Sprint 7 com ressalva DEC-027 e Sprint 8 conforme DEC-029. G2 aceito offline e G0/G1 limitados às operações observadas. Sprint 9 concluída conforme DEC-030/031: integração offline e prova única real de listagem via MCP, G3 PASS nesse recorte. Sprint 10+ não autorizada. Registros anteriores preservam evidências e critérios de sua época.
+IDs/ordem e estados não relacionados são preservados. Sprints 0–4 têm entregas offline/documentais; Sprint 5 concluída conforme DEC-022, Sprint 6 conforme DEC-023, Sprint 7 com ressalva DEC-027 e Sprint 8 conforme DEC-029. G2 aceito offline e G0/G1 limitados às operações observadas. Sprint 9 concluída conforme DEC-030/031: integração offline e prova única real de listagem via MCP, G3 PASS nesse recorte. Sprint10 autorizada exclusivamente offline na aplicação conforme DEC-033; Sprint11+ não autorizada. Registros anteriores preservam evidências e critérios de sua época.
 
 Executar sequencialmente dentro do escopo autorizado, comprovar antes de marcar e manter tarefas condicionais bloqueadas. Commits são opcionais e dependem de autorização do responsável; não são unidade obrigatória de trabalho. Autorização de teste offline não libera consulta real nem tool.
 
@@ -1131,25 +1160,44 @@ orçamentos encerrados e proibição de Sprint10 permanecem inalterados.
 ### Sprint 10 — Análise determinística; framework opcional
 
 **Objetivo:** oferecer análises comerciais derivadas, sem LLM obrigatório.
-- [ ] S10.01 — Confirmar que dados suficientes podem ser obtidos por operação read-only permitida.
-- [ ] S10.02 — Definir métricas calculáveis sem inferência de campos ausentes.
-- [ ] S10.03 — Definir regra configurável de “low stock” sem alterar ERP.
-- [ ] S10.04 — Definir estado tipado do fluxo e tamanho máximo do universo.
-- [ ] S10.05 — Criar `analysis.py` somente quando houver múltiplas etapas reais.
-- [ ] S10.06 — Implementar fluxo determinístico de coleta/normalização/agregação; grafo somente quando justificado.
-- [ ] S10.07 — Avaliar adaptadores opcionais de tools somente quando agregarem valor real.
-- [ ] S10.08 — Garantir que o fluxo use exclusivamente cliente HTTP allowlisted.
-- [ ] S10.09 — Calcular contagens e indicadores com atenção a reduzidos duplicados.
-- [ ] S10.10 — Registrar `records_analyzed`, `complete_dataset` e critérios de cálculo.
-- [ ] S10.11 — Impedir conclusões globais quando a consulta for parcial.
-- [ ] S10.12 — Implementar `analyze_inventory` se consulta de estoque read-only estiver liberada.
-- [ ] S10.13 — Implementar `analyze_product_catalog` se consulta de catálogo read-only estiver liberada.
-- [ ] S10.14 — Executar verificação manual com dados autorizados ou sintéticos claramente rotulados.
-- [ ] S10.15 — Comprovar execução sem chave de LLM; se bloqueado, documentar requisito pendente.
+**Escopo atual DEC-033:** desenho/plano aprovados, limiar padrão3; análise
+somente na aplicação, testes/demonstração sintéticos, sem ERP/.env ou novas
+tools MCP. Verificação/revisão offline concluídas; não é liberação V1.
+- [x] S10.01 — Confirmar que dados suficientes podem ser obtidos por operação read-only permitida.
+- [x] S10.02 — Definir métricas calculáveis sem inferência de campos ausentes.
+- [x] S10.03 — Definir regra configurável de “low stock” sem alterar ERP.
+- [x] S10.04 — Definir estado tipado do fluxo e tamanho máximo do universo.
+- [x] S10.05 — Criar `analysis.py` somente quando houver múltiplas etapas reais.
+- [x] S10.06 — Implementar fluxo determinístico de coleta/normalização/agregação; grafo somente quando justificado.
+- [x] S10.07 — Avaliar adaptadores opcionais de tools somente quando agregarem valor real.
+- [x] S10.08 — Garantir que o fluxo use exclusivamente cliente HTTP allowlisted.
+- [x] S10.09 — Calcular contagens e indicadores com atenção a reduzidos duplicados.
+- [x] S10.10 — Registrar `records_analyzed`, `complete_dataset` e critérios de cálculo.
+- [x] S10.11 — Impedir conclusões globais quando a consulta for parcial.
+- [x] S10.12 — Implementar `analyze_inventory` se consulta de estoque read-only estiver liberada.
+- [x] S10.13 — Implementar `analyze_product_catalog` se consulta de catálogo read-only estiver liberada.
+- [x] S10.14 — Executar verificação manual com dados autorizados ou sintéticos claramente rotulados.
+- [x] S10.15 — Comprovar execução sem chave de LLM; se bloqueado, documentar requisito pendente.
 
 **Entrega:** análises determinísticas úteis, ou bloqueio técnico detalhado.  
 
 **Aceite:** nenhuma análise inventa métricas ou depende de modelos de IA.
+
+**Fechamento S10.01–15 / DEC-033:** suficiência por métrica sustentada por
+operações O3/O4 já admitidas e campos observados anteriormente, com novas
+funções verificadas exclusivamente por fixtures sintéticas. analysis.py
+prepara identidades e agrega sem I/O; tools.py reutiliza cliente guardado
+e normalização existente. Adaptadores/frameworks avaliados e dispensados
+por falta de valor adicional no fluxo direto, não implementados por
+checklist. Estoque baixo <=3 configurável; null/ausente não classificados,
+conflitos excluídos sem apagar fonte e duplicatas não inflacionam métricas.
+Completude de coleta/análise/suficiência separadas, amostra explícita e
+nenhuma soma de unidades/depósitos ou inferência de sellability/frescor.
+190 testes offline aprovados, pip check PASS e demonstração manual sintética
+das duas funções sem configuração/LLM com cleanup concluído. Revisão
+independente sem achados; evidências/última regressão/auditoria no runbook.
+G4 PASS somente offline; sete tools/G3 preservados, V1 NOT_READY. Sem
+ERP/.env, Git, dependências, novos filtros/tools ou Sprint11+.
 
 ### Sprint 11 — Revisão de segurança e qualidade
 
@@ -1246,15 +1294,15 @@ orçamentos encerrados e proibição de Sprint10 permanecem inalterados.
 
 ## 29. Pendências e Próximas Decisões
 
-- Revisão1.9.2 inseriu Sprint9.5 somente como planejamento. Autorização posterior DEC-032 libera sua execução offline incremental pelo desenho/plano aprovados. Filtros de preço/estoque continuam apenas planejados; O4 permanece documentalmente ambígua e O5 depende de admissão/validação próprias. Busca ampliada continua fora do MCP. Nenhuma autorização ERP, ampliação de G3, V1 ou Sprint10.
+- Revisão1.9.2 inseriu Sprint9.5 somente como planejamento; DEC-032 registra seu encerramento offline. DEC-033 autoriza Sprint10 somente na aplicação, com limiar3 e verificação sintética. Filtros de preço/estoque continuam apenas planejados; O4 permanece documentalmente ambígua e O5 depende de admissão/validação próprias. Busca ampliada/análises continuam fora do MCP. Nenhuma autorização ERP, ampliação de G3/V1 ou Sprint11+.
 
-- Sprint9 concluída: integração offline e S9.12 real comprovadas conforme DEC-031, G3 PASS no recorte de descoberta e uma listagem page1/limit1. Orçamento consumido/encerrado; não autoriza consulta contínua ou conexão permanente ao Hermes. SKU técnico e busca ampliada permanecem fora do registry, Minor de diagnóstico documentado. Sprint10 não autorizada e V1 NOT_READY.
+- Sprint9 concluída: integração offline e S9.12 real comprovadas conforme DEC-031, G3 PASS no recorte de descoberta e uma listagem page1/limit1. Orçamento consumido/encerrado; não autoriza consulta contínua ou conexão permanente ao Hermes. SKU técnico e busca ampliada permanecem fora do registry, Minor de diagnóstico documentado. Sprint10 conforme DEC-033; V1 NOT_READY.
 
 - S5.01 concluída: após correção local pelo operador e renovação da autorização, produtos/preços/estoque responderam a três consultas delimitadas em 29/10/2026. Campos reais confirmados em amostras sanitizadas; normalização/metadados aceitos. Falha anterior de configuração é histórica, não bloqueio atual. `.env` não alterado pelo agente; evidência em `docs/runbook.md` e `docs/api-capabilities.md`.
 - G0/G1 PASS somente no recorte produtos/page-limit da Sprint 6 concluída. Implementação, 74 testes, pesquisa real delimitada e revisões independentes aprovados. Não estender a preços/estoque, filtros novos ou tools MCP. Instalação limpa permanece futuro aceite S13.02, e granularidade ampla de permissões segue desconhecida sem impedir a leitura já comprovada.
 - Conflitos documentais: nome de header gerado, stock IDs array, nomes/semântica timestamp, metadados/limites de paginação.
 - Identidade/unicidade, seleção de tabela, unidade/depósito e snapshot/visibilidade comercial permanecem limitados/não comprovados globalmente. BRL foi confirmado pelo operador para esta instalação em DEC-029, não observado em campo da API; valores/tabelas nominais não são preço final.
-- Análise futura e necessidade de framework dependem de consumidor real e dados suficientes.
+- Análises de Sprint10 usam fluxo direto justificado e suficiência por métrica; evidência atual sintética não prova indicadores reais/globais ou autoriza consulta ERP.
 - Licença/atribuição e outras plataformas/instalação limpa precisam de evidência aplicável.
 
 - Checkpoint histórico anterior à Sprint 6: 51 testes offline passaram; uma falha importante de prioridade de exceções no cleanup, encontrada na revisão, foi reproduzida e corrigida. Naquele checkpoint não houve segunda revisão independente, instalação limpa ou aceite remoto. A Sprint 6 verificou a suíte total de 74 testes e acrescentou revisão independente por etapa e do conjunto, além da observação real delimitada de produtos; não comprova instalação limpa nem aceite amplo da V1.
