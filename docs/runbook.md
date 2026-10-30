@@ -2,7 +2,18 @@
 
 ## Current boundary
 
-PRD 1.8.0 / DEC-029 records Sprint 8 complete under its approved design/plan: local exact price/stock consumers and bounded listing, no new HTTP filters or MCP registration. The139-test project suite passes; its real probe consumed five page1/limit1 HTTP200 queries with source fidelity/JSON/cleanup accepted. BRL is operator-confirmed context, not provider-returned currency. All budgets are closed; no additional configuration read or ERP query is authorized. Sprints5–7 remain accepted with DEC-027's technical-SKU exception; older notes below are historical checkpoints. No ERP mutation, login, token rotation, environment-file modification, wider scan or Sprint9 is authorized. V1 remains NOT_READY.
+PRD 1.9.1 / DEC-031 records Sprint 9's completed MCP integration:
+seven evidenced application consumers are registered, excluding technical
+SKU and expanded search. S9.12's separately authorized single real listing
+passed via generic MCP stdio, page1/limit1, HTTP200, one partial item and
+completed response/transport/client cleanup. G3 PASS in that bounded scope;
+Sprint9 complete, V1 NOT_READY. The memory-only loader read and one-query
+budget are consumed and closed; no further .env access, ERP query, login,
+token rotation, .env write, Git action or Sprint10 is authorized.
+All earlier observation budgets remain closed. Earlier no-registration/
+no-Sprint9 statements and test counts below describe historical checkpoints;
+the Sprint9 section governs current discovery. BRL remains installation
+context in the application, not a generic MCP currency or API field.
 
 Current behavior and limits: [configuration](configuration.md). Endpoint contracts, field mapping and unresolved provider ambiguities: [API inventory](api-capabilities.md). Canonical sprint IDs/states/sequence: [PRD section 28](../PRD.md#28-sprints-de-implementação-em-checklist).
 
@@ -27,14 +38,20 @@ Use [README setup](../README.md#install-and-start) with one existing compatible 
 
 Offline tests must replace loader/file access with synthetic settings and forbid HTTP sends. DEC-029's separate memory-only loader read was consumed by the completed Sprint8 probe, without modification/disclosure; no subsequent reads are authorized. Never print settings, environment, headers or bodies for diagnosis.
 
-Expected initialize/tools-list response: valid protocol replies with an empty tool list. stdout is exclusively MCP JSON-RPC; safe code/component/level diagnostics go to stderr. Root DEBUG/malformed SDK input must not expose raw messages, validation values, exceptions or stacks. Do not solve logging failures by disabling the protocol or indiscriminately disabling loggers.
+Expected initialize/tools-list: valid protocol replies with exactly
+search_products, search_product_by_code, get_product_details,
+search_product_by_ean, get_product_price, check_inventory and list_products.
+Startup/discovery make no ERP request; authorized tools/call does. stdout
+is exclusively MCP JSON-RPC; safe code/component/level diagnostics go to
+stderr. Malformed SDK input must not expose raw values/exceptions/stacks.
+Do not disable the protocol or indiscriminately disable loggers.
 
 ## Troubleshooting
 
 | Symptom | Safe response |
 |---|---|
 | `configuration_error` | Inspect fixed variable/constraint code only; operator corrects secure launch settings, preserving file; do not request secret/URL in chat |
-| Empty tool list | Expected foundation state, not failed discovery; do not register candidates to make a demo work |
+| Empty/unexpected tool list | Compare with the seven-tool DEC-030 allowlist and correct server/interpreter; never register blocked candidates to make a demo work |
 | 401 / 403 | Distinct authentication/authorization failures; never convert to no results, log in or regenerate token automatically |
 | 404 | Endpoint failure, not valid empty catalog |
 | 429 / timeout / 5xx | Fixed error or partial prior data; no retry, Retry-After replay, redirect or route/method fallback |
@@ -52,7 +69,14 @@ Windows/Git Bash paths (PowerShell uses equivalent backslashes):
 .venv/Scripts/python.exe -m pip check
 ```
 
-The coordinator checks imports/syntax without configuration reads, effective remaining pins, public file scope/links, baseline preservation and an actual stdio subprocess with synthetic loader, LLM variables removed and HTTP sends forbidden. Windows event-loop socketpair setup must not be accidentally blocked before event-loop creation. Required behavior: two normal initialize/tools-list replies, zero tools, no synthetic secret/origin or raw SDK/HTTP data in stderr; malformed-protocol scenarios must remain safe too.
+The coordinator checks imports/syntax without configuration reads, pins,
+public scope/links, baseline preservation and actual stdio with synthetic
+loader and external HTTP sends forbidden. Preserve Windows event-loop
+socketpair setup. Require initialize/tools-list replies with exactly seven
+approved tools and no synthetic secret/origin or raw diagnostic content.
+The generic SDK-client test additionally executes tools/call on synthetic
+HTTP, preserving source values and observing completed cleanup. Malformed
+protocol, strict input and cancellation scenarios must remain safe.
 
 Tests cover config origin/legacy migration/private hosts, guard/schema/status/JSON/Decimal/bytes, fixed-size pagination and contradictory/no-progress pages, initial/later errors, deadline, cancellation and shielded cleanup. Success of a mock is not VM09 remote acceptance. PRD retains VM01–VM20 for applicable operational acceptance.
 
@@ -490,3 +514,152 @@ byte-for-text identical to the public baseline; Python syntax/new-line
 lengths, current-document links and the real report invariants passed.
 Two pre-existing long lines in tools.py were left untouched. No configured
 external linter, clean install or other-platform validation was claimed.
+
+## Sprint 9 — offline MCP integration (PRD 1.9.0)
+
+Historical checkpoint before DEC-031's separately authorized real MCP
+acceptance below. Open S9.12/G3 statements in this section record that
+earlier state, not the current operational result.
+
+Approved [design](superpowers/specs/2026-10-29-sprint-9-design.md) and
+[plan](superpowers/plans/2026-10-29-sprint-9.md), executed inline in the
+current workspace without Git helpers. A public-only baseline and ledger
+are retained in managed scratch. No real .env read/write, ERP call,
+login/rotation, installation, new filter/route or Sprint10 was performed.
+
+The official versioned SDK README was read in the browser after extraction
+failed (search-only backend):
+https://github.com/modelcontextprotocol/python-sdk/tree/v1.30.0 . It states
+v1.x remains maintained for critical/security fixes; v2 is the stable major.
+Installed mcp1.30.0 FastMCP.list_tools/call_tool, Context.request_context,
+CallToolResult, ClientSession/stdio_client and lifecycle APIs were inspected
+and exercised. Existing pins are retained, not assumed latest/clean-installed.
+
+Production changes: server.py instantiates NetOneMCP from mcp_tools.py;
+config.py/client.py/catalog.py/tools.py/requirements.txt are unchanged.
+Public tool hooks use the explicit seven-entry registry and strict
+Pydantic models instead of SDK argument preprocessing/error echo. Error
+content is fixed; application payloads preserve Decimal strings, null,
+counts, warnings, status and partiality. No currency/model config input.
+
+| Executed check | Result and scope |
+|---|---|
+| Baseline full unittest |139 PASS/6.067s; offline only |
+| New MCP memory-session tests before implementation | RED: missing registry/consumers and unknown-tool name echo;7 methods,8 failures/5 exception-group errors |
+| Initial focused GREEN |7 PASS/0.622s; all seven real application consumers over synthetic guarded HTTP |
+| Existing server tests after registry change |3 expected empty-registry assertion failures; expectations reconciled to exact seven-tool allowlist |
+| Initial integrated GREEN |147 PASS/7.602s, including generic SDK stdio execution |
+| Additional schema/cancellation checks | Initial cancellation timeout: cancelling local SDK task alone sends no protocol notification; source inspection confirmed this. Fixture sends explicit notifications/cancelled, then response cleanup completes. No production change |
+| Focused MCP tests |10 PASS/1.366s; strict types/extras, exact codes, initial/later errors, discovery/schema limits, protocol cancellation, stdio execution/cleanup |
+| Full pre-review suite |149 PASS/7.567s |
+| `.venv/Scripts/python.exe -m pip check` |No broken requirements found; no environment change |
+
+The generic SDK stdio test executes initialize/list/call with synthetic
+settings, blocked real .env access and external HTTP sends, no LLM keys
+or LangChain/LangGraph. Invalid extras/types produce no send. One valid
+listing returns a synthetic exact large Decimal, zero quantity and null
+EAN, with structured/text agreement. Fixture observes one request, one
+completed response close and one completed transport/client close. Raw
+stdio tests also preserve malformed initialize recovery and delayed-handler
+EOF regression, clean stdout and safe DEBUG stderr.
+
+Editor diagnostics were inconsistent with the inspected pinned APIs
+(snake_case/v2-style suggestions versus camelCase/v1). The editor's actual
+interpreter was not checked. Root-.venv uses inspected mcp1.30.0 and passes.
+No editor
+configuration or alternate environment was changed; no external type-check
+pass is claimed.
+
+S9.01–S9.11/S9.13–S9.14 have offline evidence; S9.12 remains open because
+no real query through an authorized MCP client was allowed or performed.
+G3 offline PASS, operational PENDING. To finish that acceptance requires
+a separately approved numeric request/row budget and memory-only loader
+access, not reuse of earlier budgets. SKU technical/expanded search remain
+unregistered; V1 NOT_READY and Sprint9 not declared complete.
+
+### Independent review and final scope audit
+
+The independent read-only reviewer ran149 tests PASS/7.895s, compared the
+public baseline and confirmed212 ordered PRD tasks, with only the13
+approved S9 states changed. No Critical or Important findings.
+
+One Minor is deferred: mcp_tools.py's broad ValueError handler can label
+an internal ValueError as invalid_arguments, while an incompatible listing
+page_size/effective row budget raises BlockedOperationError and becomes
+tool_error. The coordinator reproduced both through an MCP memory session:
+zero sends, both isError=true, fixed safe messages and no sentinel leak.
+This affects error-code diagnosis, not rejection/read-only/data fidelity.
+Exact code-classification regressions and a narrower validation boundary
+remain a known follow-up; this is not described as corrected.
+
+The reviewer did not certify real configuration/credentials/DNS/TLS/token,
+ERP/MCP operational acceptance or internal effects, broad pagination/
+snapshot/coverage/deposit/currency/availability, SKU/expanded-search real
+acceptance, upstream maintenance independently, SDK-v2 migration/static
+typing, clean install/other platforms, Git or Sprint10/V1. These are
+deliberately unclaimed boundaries, not additional authorization or newly
+invented prerequisites for this offline delivery.
+
+Final controller full suite:149 PASS/8.651s; pip check reported no broken
+requirements. Public-baseline audit passed:13/14 S9 tasks marked, only
+S9.12 open; all212 IDs/order/texts preserved, unrelated task states and
+non-sprint acceptance checkboxes identical. Core application/pins and
+immutable history unchanged; allowed-source syntax, new production/test
+79-column style, current links and silent imports without configuration
+reads or HTTP construction passed. No external linter/type-check result,
+Git cleanliness, secret-file checksum or operational success is inferred.
+
+## S9.12 — successful one-shot real MCP acceptance (PRD 1.9.1)
+
+The maintainer explicitly approved the previously proposed minimum: one
+list_products query via a generic MCP client, one page and at most one
+record, using existing configuration through load_config only in memory.
+No login, token renewal, environment-file write, mutation request, Git,
+persistent Hermes connection or Sprint10 was authorized.
+
+Command: `.venv/Scripts/python.exe -B <managed-scratch>/s9_probe.py`.
+Before the real attempt, the same probe ran three synthetic cases: normal
+success PASS; deliberately corrupted monetary projection correctly FAIL;
+HTTP500 correctly FAIL while retaining attempt/status/error/cleanup counts.
+The project suite passed149 tests/7.340s. An exclusive s9-real.started
+marker was created before launch; it remains and prevents replay.
+
+Started2026-10-30T01:47:59.198618Z, finished01:48:00.168265Z. ClientSession
+with stdio_client initialized the actual server, discovered exactly seven
+approved tools and called list_products once with max_results=1,
+page_size=1, max_pages=1. The original request guard remained first; an
+additional probe guard enforced only POST /app-web/api/v2/produto/reduzidos
+with exactly page1/limit1 and at most one attempt. No discovery ERP request.
+
+Observed: one guarded attempt, HTTP200, one row received and one item
+returned, pages_fetched1, partial=true, status=partial, error=null,
+complete_dataset=false. The limit correctly prevents a completeness claim.
+Exact normalized projection, Decimal strings, null/absent fields and
+missing-field metadata were compared in memory against the same consumer
+response. StructuredContent and JSON text agreed across the MCP boundary.
+One response aclose, one underlying transport aclose and one client aclose
+completed; no closed-state-only inference. TLS/identity/byte/time bounds,
+zero retries/redirects and the original application functions remained.
+
+The safe report was read back and its counts/invariants verified. Only
+fixed statuses, timestamps of the test, counts and booleans were retained;
+no IDs, product descriptions/codes, monetary/stock values, source timestamps,
+private origins, credentials/settings, raw response or arbitrary keys.
+The report and permanent one-shot marker are retained in managed scratch,
+not raw ERP data. No .env write, login, rotation or mutation operation.
+
+S9.12 marked complete; all14 Sprint9 tasks are now accepted. G3 PASS for
+seven-tool discovery and this real listing through generic MCP, not every
+tool's real MCP execution or broad operational availability. V1 remains
+NOT_READY; technical SKU and expanded search stay excluded. The known
+Minor diagnostic-classification issue remains deferred/non-blocking.
+This one-request budget is consumed and closed. No rerun, ongoing queries,
+new configuration read or Sprint10 follows from this successful result.
+
+Post-observation controller verification: full149 tests PASS/7.294s;
+pip check: no broken requirements found. Closure audit PASS:212 task IDs/
+texts/order preserved, only S9.12 newly marked relative to the pre-closure
+snapshot,14/14 S9 tasks complete; all unrelated task states and global
+acceptance checkboxes unchanged. Core application/pins/history and new
+runtime/test sources match their reviewed public snapshots; current local
+links and every safe real-report invariant passed. No further ERP send.

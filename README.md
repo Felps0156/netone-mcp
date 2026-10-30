@@ -4,17 +4,37 @@ A Python MCP stdio foundation for authorized, strictly read-only NetOne ERP quer
 
 ## Current status
 
-**NOT_READY for V1. No MCP commercial tools are registered.** Sprints 5–8 are complete; Sprint 7 retains DEC-027's technical-codigoSku exception. PRD 1.8.0 / DEC-029 records Sprint 8's 139-test offline suite and five minimal real HTTP200 queries. Each new public consumer returned one item with correct partiality and accepted source fidelity/cleanup. The observation budget is closed; no further ERP call or Sprint 9 is authorized. Historical results below retain their original scope.
+**NOT_READY for V1. Seven bounded read-only MCP tools are registered.**
+PRD 1.9.1 / DEC-031 records Sprint 9 complete: generic SDK discovery of
+seven tools and a separately authorized real list_products call through
+stdio, page1/limit1, HTTP200. One record returned partial=true/error=null;
+same-response fidelity, JSON and completed response/transport/client cleanup
+passed. S9.12 is complete; G3 PASS within this bounded scope, not universal
+ERP/tool coverage. Sprints 5–8 retain their bounded evidence, including
+DEC-027's unvalidated technical SKU.
+All real-query budgets remain closed: no new ERP/configuration access,
+login, token rotation, Git action or Sprint 10 is authorized.
 
-The private client implements three documented query POSTs with fixed origin/Host and closed `page`/`limit` filters. Sprint 7 adds only a products-specific integer product_id encoded as idsProdutos=[product_id], not a caller-supplied filter dictionary. Construction and startup make no ERP request. `tools.search_products` is callable application functionality, not an MCP registration. Its completed Sprint 6 observation returned HTTP 200 twice, including one matching item with correct partiality. See the [sanitized evidence and limits](docs/api-capabilities.md); bounded samples do not prove complete pagination, all permissions or general readiness.
+The Sprint 9 section below governs current registration. Earlier evidence
+sections retain their original no-registration boundaries as history,
+not current discovery instructions or renewed real-call budgets.
+
+The private client implements three documented query POSTs with fixed
+origin/Host and closed page/limit bodies. Products may additionally use
+either integer idsProdutos=[product_id] or a validated mascara string,
+never both; prices/stock remain page/limit only. No arbitrary filter dict
+is accepted. Construction/startup make no ERP request. See the
+[sanitized evidence and limits](docs/api-capabilities.md); bounded samples
+do not prove global coverage, snapshot, permissions or general readiness.
 
 ## Architecture
 
 - `config.py`: explicit process-owned settings loader and validation.
-- `server.py`: thin MCP stdio entrypoint, empty registry, one private client per lifespan.
+- `server.py`: thin MCP stdio entrypoint, one private client per lifespan.
+- `mcp_tools.py`: explicit seven-tool registry, strict closed input schemas and safe protocol errors through FastMCP's public list/call hooks.
 - `client.py`: HTTPX authentication, literal allowlist, bounded streaming/pagination and safe errors.
 - `catalog.py`: immutable normalized records consumed by private collection.
-- `tools.py`: bounded text/code searches, ID-filtered details, local exact price/stock selection and bounded product listing; no MCP query or analysis tool is registered.
+- `tools.py`: unchanged bounded commercial application consumers, called by the MCP adapters without exposing the private client or settings.
 
 IDs/SKU/EAN preserve leading zeros. Decimal prices/quantities serialize as strings; absent/null/zero remain distinct. The projection includes identity, description, classification, EAN, retail/wholesale source prices and tables, quantity, notes, optional source block flag and raw last-change data. Photos, color, size and discount calculations are excluded. Pagination is bounded and reports incomplete/conflicting data as partial; completeness is not an ERP-wide snapshot.
 
@@ -57,7 +77,65 @@ Generic MCP client launch configuration (replace only with operator-approved loc
 }
 ```
 
-Expected discovery is an empty tool list, not a working commercial query. stdout is MCP-only; stderr emits safe code/component/level diagnostics without raw SDK/HTTP messages, payloads, exception text or stacks. Loggers are not indiscriminately disabled. Application diagnostics may remain specific and sanitized.
+Expected discovery is exactly the seven tools below. stdout is MCP-only;
+stderr emits safe code/component/level diagnostics without raw SDK/HTTP
+messages, payloads, exception text or stacks. Loggers are not disabled.
+Discovery does not send an ERP query; tools/call does and requires the
+operator's authorization. Do not launch a real query to repeat offline QA.
+
+## Sprint 9 MCP interface
+
+Only these tools are discoverable; all descriptions are in English:
+
+| Tool | Required input | Behavior |
+|---|---|---|
+| search_products | query: string1–200 | Bounded local casefold substring in description/mask/technical SKU |
+| search_product_by_code | code: string1–256 | Preferred business code/SKU: remote mascara filter + exact local equality |
+| get_product_details | product_id: integer0–9223372036854775807 | Remote documented product-ID filter; normalized reduced variants |
+| search_product_by_ean | ean: string1–256 | Exact local EAN within bounded pages |
+| get_product_price | product_id: string1–256 | Exact local normalized identity; nominal prices, unknown currency |
+| check_inventory | reduced_id: string1–256 | Exact local identity; configured-user deposit, unknown identity/freshness |
+| list_products | none | Start at page1, at most one page by default |
+
+Every tool accepts strict max_results integer1–1000/default20, capped by
+configuration and counting all inspected source rows, not promised matches.
+Only list_products also accepts page_size integer1–1000/null and max_pages
+integer1–100/default1; both must fit configured/effective budgets. Types
+are not coerced. Codes preserve zeros, case, spaces and punctuation; blank
+and Unicode C-category input is rejected. Query matching trims only input.
+Extra arguments are rejected, including URL, endpoint, token, headers,
+tenant, method, client and currency. MCP prices default to null currency
+with currency_unknown; installation-specific BRL confirmation is not a
+model argument or a provider field. No HTTP contract/filter changed.
+
+CallToolResult provides structuredContent and equivalent JSON text.
+Application status error sets isError=true while preserving its safe code;
+partial and not_found remain valid structured results. Validation,
+unknown-tool and unexpected failures use fixed messages without input or
+exception echo. Cancel a running call with MCP notifications/cancelled;
+cancelling only a local SDK task does not send that notification in1.30.0.
+Read-only hints are advisory, not credentials or a guarantee of server
+internals, repeat safety, availability or delivery. API text is data,
+never instructions.
+
+Technical search_product_by_sku and search_products_expanded are excluded:
+neither has its own real-function acceptance. No analysis/write tool,
+arbitrary HTTP/SQL or settings selection is exposed. Existing application
+functions remain available independently, with their prior limitations.
+
+SDK mcp==1.30.0 is retained. The [official versioned source](https://github.com/modelcontextprotocol/python-sdk/tree/v1.30.0)
+identifies v1.x as a maintained line receiving critical/security fixes,
+not the latest stable major. Installed public APIs and protocol behavior
+were verified; no upgrade/install or clean-install claim is implied.
+
+Offline checks:149 tests PASS before independent review; pip check PASS.
+The generic SDK stdio test uses synthetic settings/responses only and
+observes one response close and one client close completing after a single
+query. That synthetic check is distinct from the subsequent S9.12 real
+observation: one products request, one received/returned row, partial,
+HTTP200 and completed cleanup, with no private values retained. The
+one-shot budget is consumed and closed, not ongoing query permission.
+See the [runbook](docs/runbook.md).
 
 ## Development and evidence
 

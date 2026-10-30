@@ -14,6 +14,7 @@ from unittest.mock import patch
 
 import server
 from config import ConfigurationError
+from test_mcp_tools import EXPECTED_TOOLS
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -158,13 +159,13 @@ class ServerTests(unittest.TestCase):
             process.args, process.returncode, ''.join(stdout), ''.join(stderr),
         )
 
-    def test_stdio_has_empty_registry_and_no_network_or_llm(self):
+    def test_stdio_has_approved_registry_and_no_network_or_llm(self):
         result = self.stdio()
         self.assertEqual(result.returncode, 0, result.stderr)
         replies = [json.loads(line) for line in result.stdout.splitlines()]
         self.assertEqual({reply['id'] for reply in replies}, {1, 2})
         tools = next(r['result']['tools'] for r in replies if r['id'] == 2)
-        self.assertEqual(tools, [])
+        self.assertEqual({tool['name'] for tool in tools}, EXPECTED_TOOLS)
         self.assertNotIn(
             'SYNTHETIC_PRIVATE_TOKEN', result.stdout + result.stderr,
         )
@@ -175,7 +176,9 @@ class ServerTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0)
         replies = [json.loads(line) for line in result.stdout.splitlines()]
         self.assertTrue(any(r['id'] == 99 and 'error' in r for r in replies))
-        self.assertTrue(any(r['id'] == 2 and r['result']['tools'] == []
+        self.assertTrue(any(r['id'] == 2 and {
+            tool['name'] for tool in r['result']['tools']
+        } == EXPECTED_TOOLS
                             for r in replies))
         self.assertNotIn(
             'SENSITIVE_INPUT_SENTINEL', result.stdout + result.stderr,
@@ -211,7 +214,8 @@ raise SystemExit(server.main())
         self.assertEqual({reply['id'] for reply in replies}, {99, 1, 2})
         self.assertIn('error', replies[0])
         self.assertIn('result', replies[1])
-        self.assertEqual(replies[2]['result']['tools'], [])
+        self.assertEqual({tool['name'] for tool in replies[2]['result']['tools']},
+                         EXPECTED_TOOLS)
         for sentinel in (
             'SENSITIVE_INPUT_SENTINEL', 'SYNTHETIC_PRIVATE_TOKEN',
             'example.invalid', 'Traceback',

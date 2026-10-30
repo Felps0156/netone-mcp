@@ -1,10 +1,17 @@
 # PRD — NetOne MCP: Consulta e Análise Read-Only
 
-> **Versão:** 1.8.0 — Sprint 8 concluída com validação real delimitada
-> **Estado:** NOT_READY para V1; Sprints 5–8 concluídas. Sprint 7 mantém a ressalva de DEC-027 para codigoSku técnico sem validação real. Sprint 8 validada nas amostras restritas de DEC-029; registry MCP vazio e Sprint 9 não autorizada. Orçamento real consumido e encerrado.
+> **Versão:** 1.9.1 — Sprint 9 concluída com prova MCP real delimitada
+> **Estado:** NOT_READY para V1; Sprints 5–9 concluídas, preservada a ressalva DEC-027 para codigoSku técnico. Sete tools MCP registradas; S9.12 e G3 comprovados no recorte de DEC-031: descoberta e uma listagem real page1/limit1 HTTP200. Todos os orçamentos ERP encerrados; nenhuma nova chamada ou Sprint 10 autorizada.
 > **Regra fundamental:** nenhuma operação pode alterar dados comerciais do ERP.
 
 Este documento é a fonte de verdade para escopo, arquitetura, critérios e checklist. A revisão 1.2.0 substituiu restrições históricas de testes, Git somente leitura e frameworks obrigatórios. A revisão 1.2.1 registra autorização posterior explícita para leitura em memória da configuração e até três consultas de S5.01, sem exposição de segredos. Produtos/preços/estoque responderam com page=1 e limit=1; normalização e metadados das amostras aceitos. S5.01 e Sprint 5 concluídas, com 51 testes offline novamente aprovados. Não houve login, renovação, alteração do `.env`, novas tools ou avanço para Sprint 6. A autorização pontual não libera chamadas contínuas; evidências e limites em docs/runbook.md.
+
+A revisão 1.9.0 registra a aprovação posterior da integração MCP incremental
+offline e da revisão das restrições documentais para essa finalidade.
+Proibições de Sprint 9/registry e contagens de testes nas decisões e provas
+anteriores descrevem seus checkpoints históricos; DEC-030 governa o estado
+histórico anterior à prova operacional. DEC-031 registra a autorização
+posterior única e seu consumo; nenhuma chamada adicional fica autorizada.
 
 A revisão 1.3.0 registra a conclusão da Sprint 6 em 29/10/2026, com desenho/plano aprovados: pesquisa textual local e limitada sobre produtos, sem filtro textual remoto inventado, sem registro MCP e sem iniciar Sprints 7–9. Implementação verificada por 74 testes offline e duas consultas reais adicionais de produtos page=1/limit=1, ambas HTTP 200; a função retornou um match parcial corretamente. Valores privados permaneceram somente em memória. Os critérios escritos de G0/G1 são reavaliados por operação com a evidência existente, não por um novo requisito genérico de reaceite, instalação limpa ou permissões amplas. Revisões independentes por etapa e do conjunto aprovadas, sem achados críticos/importantes; dois achados menores corrigidos e regressão/auditoria finais aprovadas.
 
@@ -70,11 +77,11 @@ flowchart LR
 ```
 
 - `config.py`: único loader/validador; `Settings` imutável com token `SecretStr`, origem/token fora do repr; não serializar settings.
-- `server.py`: valida antes do stdio, `create_server(settings)` injeta um cliente privado por lifespan; não faz HTTP no startup. Registry vazio.
+- `server.py`: valida antes do stdio, `create_server(settings)` injeta um cliente privado por lifespan; não faz HTTP no startup. `mcp_tools.py` especializa as fronteiras públicas list_tools/call_tool do FastMCP com registry fechado, schemas estritos e erros fixos.
 - `client.py`: HTTPX único, autenticação, guarda de origem/método/rota/schema, streaming, limites, erros, paginação e fechamento.
 - `catalog.py`: modelos imutáveis e normalização consumida pela coleta privada; sem persistência ou join preço/estoque.
-- `tools.py`: search_product_by_code é prioritária para código comercial (mascara remota e igualdade local); search_products faz substring casefold local, get_product_details usa ID remoto e search_product_by_sku/search_product_by_ean mantêm códigos técnicos distintos. Retornam a mesma projeção imutável com prioridade de apresentação, parcialidade/erro e proveniência; nenhuma registrada em MCP. Não aceitam configuração do operador como argumento do modelo.
-- Sprint 8 / DEC-029: `tools.py` acrescenta get_product_price por product_id textual exato local, check_inventory por reduced_id textual exato local e list_products desde page1/uma página default. Preço/estoque usam somente page/limit; nenhum filtro novo ou registro MCP. BRL somente com confirmação do operador, fonte explícita; depósito/frescor não inferidos. `_collect` aceita teto max_pages por chamada, limitado pela configuração, sem mutação compartilhada.
+- `tools.py`: funções comerciais preservadas; search_product_by_code é prioritária para código comercial, distinta de codigoSku. DEC-030 expõe sete funções via MCP, sem argumentos de configuração. search_product_by_sku e search_products_expanded continuam somente na aplicação, sem registro por falta de prova operacional própria. Projeção, parcialidade, precisão e proveniência permanecem iguais.
+- Sprint 8 / DEC-029: get_product_price por product_id textual exato local, check_inventory por reduced_id textual exato local e list_products desde page1/uma página default. Preço/estoque usam somente page/limit, sem filtro novo. DEC-030 registra estes consumidores em MCP; moeda MCP permanece null/desconhecida, sem universalizar BRL da instalação. Depósito/frescor não inferidos; limites por chamada não mutam estado compartilhado.
 - `analysis.py`: futuro e opcional, somente para análise real que justifique módulo separado. Sem grafo/adapter fictício.
 
 ## 7. Adaptação dos Padrões do SCSI
@@ -230,6 +237,17 @@ Todos os resultados comerciais devem usar estrutura coerente com MCP/SDK escolhi
 | `analyze_product_catalog` | `max_items`, filtros | Qualidade e contagens | Consulta read-only + dados suficientes |
 
 **Não registrar ferramentas não liberadas.** Se operações distintas dependem de mesma consulta, evitar redundância superficial: pode-se manter preço e estoque dentro de `get_product_details` ou `search_products`, desde que a experiência MCP permaneça clara.
+
+Registry atual DEC-030: search_products, search_product_by_code,
+get_product_details, search_product_by_ean, get_product_price,
+check_inventory e list_products. As assinaturas e limites efetivos são os
+de tools.py, não as propostas históricas da tabela: detalhes usam inteiro;
+preço/estoque, identidades textuais; listagem começa sempre em page1.
+search_product_by_code recebe code textual1–256 e max_results1–1000/default20.
+Schemas fechados/estritos, sem coerção ou argumento URL/segredo/moeda.
+CallToolResult contém structuredContent e texto JSON equivalente; status
+error implica isError=true; partial/not_found continuam resultados válidos.
+Erros de entrada/tool desconhecida/falha inesperada têm texto/código fixos.
 
 ### 13.3 Regras por ferramenta
 
@@ -507,6 +525,51 @@ cinco tentativas HTTP200 às23:25:50 UTC, cinco linhas recebidas; consumidores
 preço/estoque/listagem retornaram1 item parcial cada, JSON/projeção/cleanup
 aceitos. Orçamento encerrado; detalhes sanitizados na Sprint8 e runbook.
 
+DEC-030 — 1.9.0: mantenedor aprovou o plano incremental da Sprint 9 e a
+revisão restrita das regras anteriores de registry vazio/não iniciar9.
+Execução offline no workspace atual, sem Git, .env real, ERP, login,
+rotação ou Sprint10. Preservar servidor stdio/lifespan e funções atuais;
+adaptadores em mcp_tools.py com allowlist explícita das sete capacidades
+com observação própria anterior: texto, código comercial, detalhes ID,
+EAN, preço, estoque e listagem. Não registra SKU técnico (DEC-027 não é
+prova real) nem busca ampliada (somente evidência sintética).
+SDK oficial mcp==1.30.0 preservado: documentação upstream v1.30.0 declara
+linha1.x em manutenção com correções críticas/segurança; não significa
+versão estável mais recente. APIs instaladas inspecionadas e exercitadas;
+nenhuma atualização/instalação. Fronteira pública FastMCP especializada
+evita pré-parse/coerção implícitos e erros SDK com argumentos/exceção.
+Inputs fechados/strict; dados comerciais só no retorno autorizado, não
+nos diagnósticos. Não aceita moeda do modelo; preço MCP usa null e aviso.
+Anotações readOnly=true/destructive=false/idempotent=false/openWorld=true
+não concedem permissão ERP nem garantem efeitos internos/replay.
+Suíte149 PASS em7.567s antes da revisão; cliente SDK genérico inicializa,
+descobre sete tools e executa listagem sintética via stdio, com precisão e
+cleanup concluído. S9.12 continua aberta: prova operacional via cliente
+autorizado exigiria nova autorização delimitada, inexistente neste recorte.
+G3 descoberta/execução offline PASS; G3 operacional PENDING, Sprint9 ainda
+não concluída, V1 NOT_READY. Desenho/plano em docs/superpowers/.
+
+DEC-031 — 1.9.1: o mantenedor autorizou a consulta mínima proposta para
+concluir S9.12: uma chamada list_products por cliente MCP genérico stdio,
+page1/limit1, configuração existente somente em memória via loader, sem
+login/rotação, alteração de .env, mutação ERP, Git ou Sprint10. Não renova
+orçamentos anteriores. Probe próprio validado offline (sucesso, corrupção
+monetária detectada e HTTP500 com métricas/cleanup preservados), seguido
+de149 testes PASS/7.340s antes do envio. Marcador exclusivo impede replay.
+Em2026-10-30T01:47:59Z (29/10 no fuso do operador), cliente SDK descobriu
+exatamente as sete tools e chamou list_products uma vez com max_results1,
+page_size1/max_pages1. Uma tentativa POST reduzidos page1/limit1, HTTP200,
+uma linha recebida/retornada, status partial, error=null e
+complete_dataset=false pelo limite. Projeção/valores Decimal/null/ausência
+comparados somente em memória com a própria resposta; JSON estruturado e
+texto equivalentes. Um fechamento de resposta, transporte e cliente
+concluídos. Guardas originais, TLS, limites, zero retries/redirects mantidos;
+nenhum valor privado retido. S9.12 [x], G3 PASS no escopo verificado e
+Sprint9 concluída; V1 NOT_READY, sem teste real de todas as tools via MCP,
+sem garantia global/snapshot/efeitos internos. Orçamento consumido e
+encerrado, sem repetição. O Minor de classificação de erros permanece
+documentado/não bloqueante; nenhuma mudança de código nesta validação.
+
 ## 26. Critérios de Aceite
 
 ### 26.1 Critérios globais
@@ -569,7 +632,7 @@ flowchart LR
 
 ## 28. Sprints de Implementação em Checklist
 
-IDs/ordem e estados não relacionados são preservados. Sprints 0–4 têm entregas offline/documentais registradas; Sprint 5 concluída conforme DEC-022 e Sprint 6 conforme DEC-023. Sprint 7 concluída por aceite com ressalva explícita do mantenedor em DEC-027, com S7.11 revisada somente para registrar esse aceite; codigoSku técnico continua sem prova real. S0.11 é revisão documental, não prova remota; G2 aceito offline e G0/G1 limitados às operações observadas. Sprint 8 concluída conforme DEC-029 e evidências abaixo; Sprint 9+ não autorizada. Registros anteriores preservam evidências e critérios de sua época.
+IDs/ordem e estados não relacionados são preservados. Sprints 0–4 têm entregas offline/documentais; Sprint 5 concluída conforme DEC-022, Sprint 6 conforme DEC-023, Sprint 7 com ressalva DEC-027 e Sprint 8 conforme DEC-029. G2 aceito offline e G0/G1 limitados às operações observadas. Sprint 9 concluída conforme DEC-030/031: integração offline e prova única real de listagem via MCP, G3 PASS nesse recorte. Sprint 10+ não autorizada. Registros anteriores preservam evidências e critérios de sua época.
 
 Executar sequencialmente dentro do escopo autorizado, comprovar antes de marcar e manter tarefas condicionais bloqueadas. Commits são opcionais e dependem de autorização do responsável; não são unidade obrigatória de trabalho. Autorização de teste offline não libera consulta real nem tool.
 
@@ -887,24 +950,51 @@ concluída neste escopo; V1 NOT_READY e Sprint9 não iniciada.
 ### Sprint 9 — Registro e compatibilidade MCP
 
 **Objetivo:** servidor descoberto e utilizável por clientes MCP genéricos.
-- [ ] S9.01 — Selecionar SDK MCP mantido e verificar APIs da versão instalada.
-- [ ] S9.02 — Implementar inicialização do servidor em `server.py`.
-- [ ] S9.03 — Configurar transporte stdio como único transporte padrão.
-- [ ] S9.04 — Garantir stdout exclusivamente para envelopes MCP.
-- [ ] S9.05 — Enviar logs seguros somente para stderr.
-- [ ] S9.06 — Registrar tools somente após validação de capacidades read-only por método + rota + schema.
-- [ ] S9.07 — Definir nomes e descrições em inglês sem ambiguidade.
-- [ ] S9.08 — Definir schemas MCP para inputs com tipos/limites.
-- [ ] S9.09 — Garantir retorno estruturado/erro compatível com SDK.
-- [ ] S9.10 — Não disponibilizar tool que receba endpoint, URL, token, segredo ou método HTTP.
-- [ ] S9.11 — Verificar descoberta de tools com cliente MCP compatível.
-- [ ] S9.12 — Verificar funcionamento de uma tool liberada via cliente autorizado, se G0 passar.
-- [ ] S9.13 — Verificar ausência de ferramentas de escrita na listagem.
-- [ ] S9.14 — Registrar G3, inclusive limitações por ferramentas bloqueadas.
+- [x] S9.01 — Selecionar SDK MCP mantido e verificar APIs da versão instalada.
+- [x] S9.02 — Implementar inicialização do servidor em `server.py`.
+- [x] S9.03 — Configurar transporte stdio como único transporte padrão.
+- [x] S9.04 — Garantir stdout exclusivamente para envelopes MCP.
+- [x] S9.05 — Enviar logs seguros somente para stderr.
+- [x] S9.06 — Registrar tools somente após validação de capacidades read-only por método + rota + schema.
+- [x] S9.07 — Definir nomes e descrições em inglês sem ambiguidade.
+- [x] S9.08 — Definir schemas MCP para inputs com tipos/limites.
+- [x] S9.09 — Garantir retorno estruturado/erro compatível com SDK.
+- [x] S9.10 — Não disponibilizar tool que receba endpoint, URL, token, segredo ou método HTTP.
+- [x] S9.11 — Verificar descoberta de tools com cliente MCP compatível.
+- [x] S9.12 — Verificar funcionamento de uma tool liberada via cliente autorizado, se G0 passar.
+- [x] S9.13 — Verificar ausência de ferramentas de escrita na listagem.
+- [x] S9.14 — Registrar G3, inclusive limitações por ferramentas bloqueadas.
 
 **Entrega:** servidor MCP stdio interoperável.  
 
 **Aceite:** descoberto por cliente genérico e sem escape para escrita.
+
+**Evidência offline S9.01–S9.11/S9.13–S9.14:** SDK oficial/instalado
+inspecionado; servidor mantém stdio, um cliente por lifespan, startup sem
+envio e logging sanitizado. Registry explícito das sete funções de DEC-030;
+schemas strict/extra forbid e limites tipados, sem configuração do modelo.
+Testes de sessão MCP em memória exercitam todas as sete funções pelo
+coletor/guard/transporte sintético, erros seguros, igualdade literal,
+parcialidade/erro posterior, Decimal, null e cancelamento MCP com cleanup.
+Cliente SDK ClientSession/stdio_client em subprocesso descobre exatamente
+sete tools e executa listagem com resposta sintética: um request, um
+fechamento de resposta e um de cliente concluídos. Nenhum ERP ou .env real.
+Suíte149 PASS/7.567s antes da revisão e pip check PASS; evidência final e
+revisão independente no runbook. Na regressão de cancelamento, cancelar
+apenas a tarefa do cliente não enviava notifications/cancelled no SDK;
+o teste passou ao enviar a notificação MCP explícita, sem mudar produção.
+
+**S9.12/G3 — concluída conforme DEC-031:** após autorização própria,
+cliente MCP SDK via stdio descobriu sete tools e executou uma listagem real
+page1/limit1 em2026-10-30T01:47:59Z, HTTP200, uma linha/um item parcial,
+error=null, complete_dataset=false. Fidelidade à própria resposta e
+equivalência JSON verificadas em memória; cleanup de resposta/transporte/
+cliente concluído. Sem credenciais ou valores comerciais retidos, login,
+rotação, alteração de .env ou requisição mutável. Orçamento único consumido
+e encerrado. S9.01–S9.14 comprovadas, Sprint9 concluída; G3 PASS somente
+nesse recorte, V1 NOT_READY. Não prova todas as tools reais via MCP,
+paginação ampla, snapshot ou efeitos internos do fornecedor. SKU técnico
+e busca ampliada continuam ausentes; Sprint10 não autorizada.
 
 ### Sprint 10 — Análise determinística; framework opcional
 
@@ -1023,6 +1113,8 @@ concluída neste escopo; V1 NOT_READY e Sprint9 não iniciada.
 **Aceite:** publicação jamais inclui segredo, dados reais ou funcionalidades declaradas sem prova.
 
 ## 29. Pendências e Próximas Decisões
+
+- Sprint9 concluída: integração offline e S9.12 real comprovadas conforme DEC-031, G3 PASS no recorte de descoberta e uma listagem page1/limit1. Orçamento consumido/encerrado; não autoriza consulta contínua ou conexão permanente ao Hermes. SKU técnico e busca ampliada permanecem fora do registry, Minor de diagnóstico documentado. Sprint10 não autorizada e V1 NOT_READY.
 
 - S5.01 concluída: após correção local pelo operador e renovação da autorização, produtos/preços/estoque responderam a três consultas delimitadas em 29/10/2026. Campos reais confirmados em amostras sanitizadas; normalização/metadados aceitos. Falha anterior de configuração é histórica, não bloqueio atual. `.env` não alterado pelo agente; evidência em `docs/runbook.md` e `docs/api-capabilities.md`.
 - G0/G1 PASS somente no recorte produtos/page-limit da Sprint 6 concluída. Implementação, 74 testes, pesquisa real delimitada e revisões independentes aprovados. Não estender a preços/estoque, filtros novos ou tools MCP. Instalação limpa permanece futuro aceite S13.02, e granularidade ampla de permissões segue desconhecida sem impedir a leitura já comprovada.

@@ -1,4 +1,4 @@
-"""Start an MCP stdio server without commercial tools."""
+"""Start the bounded read-only MCP stdio server with safe diagnostics."""
 
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
@@ -9,6 +9,7 @@ from mcp.server.fastmcp import FastMCP
 
 from client import NetOneClient, NetOneClientError
 from config import ConfigurationError, Settings, load_config
+from mcp_tools import NetOneMCP
 
 
 class _SafeDiagnosticFormatter(logging.Formatter):
@@ -49,7 +50,7 @@ def _configure_safe_logging(level: str) -> None:
 
 
 def create_server(settings: Settings) -> FastMCP:
-    """Bind a process-owned HTTP client to the empty stdio server lifespan."""
+    """Bind one process-owned client to the approved stdio tool registry."""
     _configure_safe_logging(settings.log_level)
 
     @asynccontextmanager
@@ -57,7 +58,7 @@ def create_server(settings: Settings) -> FastMCP:
         async with NetOneClient(settings) as client:
             yield {'netone_client': client}
 
-    return FastMCP(
+    return NetOneMCP(
         'netone-mcp', lifespan=lifespan, log_level=settings.log_level,
     )
 

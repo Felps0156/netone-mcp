@@ -2,9 +2,37 @@
 
 ## Scope and current status
 
-Read `PRD.md` before architectural/sprint work. PRD 1.8.0 / DEC-029 records Sprints 5–8 complete, with DEC-027's unchanged exception for technical codigoSku lacking real validation. Sprint 8 adds bounded local exact price/stock selection and one-page-default listing, without new HTTP filters. The current project suite passes 139 offline tests. Its single real probe consumed five page1/limit1 queries, all HTTP200, and is closed. No additional ERP request, login, token rotation, environment-file modification, wider scan or Sprint 9+ is authorized. The MCP registry stays empty and V1 NOT_READY. No private source value may be retained. Older observations/criteria remain historical, not renewed budgets.
+PRD 1.9.1 / DEC-031 records Sprint 9 complete. The maintainer authorized
+one list_products call through a generic MCP stdio client, page1/limit1,
+with existing configuration loaded only in memory through load_config.
+The one-shot completed at2026-10-30T01:47:59Z: one attempt HTTP200, one
+received/returned item, partial=true, error=null, complete_dataset=false.
+Same-response projection/Decimal/null/absence and JSON equivalence passed;
+response, transport and client cleanup completed. S9.12 marked complete,
+G3 PASS only in this bounded scope; V1 NOT_READY. Budget consumed and
+closed: no rerun, extra ERP/configuration access, login/rotation, .env
+modification, mutation, Git or Sprint10. Retain only structural evidence.
 
-## Sprint 8 completed scope — budget closed
+The maintainer subsequently approved Sprint 9's incremental offline MCP
+integration and the narrow revision of the earlier no-registration rule.
+The approved scope is recorded in docs/superpowers/specs/2026-10-29-sprint-9-design.md
+and docs/superpowers/plans/2026-10-29-sprint-9.md. This supersedes only the
+no-Sprint9/empty-registry statements below: expose the seven evidenced
+application capabilities, excluding technical SKU and expanded search.
+No further real .env access, ERP query, login, token rotation, Git, new
+HTTP filter, Sprint10 or V1 release is authorized. Earlier budgets remain
+closed. Synthetic integration remains distinct from the real one-shot above.
+
+Read PRD.md before architectural/sprint work. DEC-030 records
+Sprint 9 offline discovery/execution of exactly search_products,
+search_product_by_code, get_product_details, search_product_by_ean,
+get_product_price, check_inventory and list_products. DEC-031 adds S9.12's
+real listing proof, not real MCP coverage of every tool. Sprints 5–8 remain accepted within
+their own bounded evidence; DEC-027 is not real technical-SKU proof.
+No private source value may be retained. Application HTTP/filter/config/
+normalization behavior is unchanged; MCP price currency remains unknown.
+
+## Historical Sprint 8 scope — completed and budget closed
 
 The maintainer subsequently approved the Sprint 8 design and execution plan
 in docs/superpowers/specs/2026-10-29-sprint-8-design.md and
@@ -55,7 +83,7 @@ S7.11 is accepted with the explicit DEC-027 exception, not real SKU proof;
 do not rerun probes or register MCP tools without separate authorization.
 
 - `config.py` is the sole explicit loader/validator. Process variables override root dotenv without interpolation/environment mutation; imports perform no configuration I/O. Settings are immutable, token SecretStr, URL/token excluded from repr; never serialize settings.
-- `server.py` is thin stdio/registry/lifespan. One private HTTPX client per lifespan; no startup request. Sprint 6 adds a callable `tools.search_products(client, query, max_results=20)` without registration; it validates input and matches local normalized text, never sends an undocumented text filter.
+- `server.py` is thin stdio/lifespan, one private client per lifespan and no startup request. `mcp_tools.py` specializes public FastMCP list_tools/call_tool hooks with an explicit seven-tool registry, strict extra-forbid models and fixed safe errors. No SDK edits or generic model-controlled dispatch outside the registry. `tools.py` remains the application layer; local search never sends an undocumented text filter. Cancellation must propagate and cleanup completion must be observed.
 - `client.py` owns token auth, fixed-origin three-POST allowlist, closed page/limit filters, bounded streaming/pagination/errors. Products additionally accepts either strict product_id (idsProdutos singleton) or validated product_mask (mascara), never both, never arbitrary filters or changes to prices/stock. Per-call filters/budgets cannot mutate shared state. Validate ID-filtered response identity atomically; mask equality is enforced by the application without inventing provider semantics. `_query()` validates body; request hook checks method/origin/Host/route only. Never remove/bypass the guard for a probe.
 - `catalog.py` owns immutable normalization consumed by private collection. Decimal serializes exactly as strings; preserve IDs/leading zeros, text and absent/null/zero. Timestamp stays raw. Duplicates/conflicts and missing metadata must not create false completeness.
 - No arbitrary HTTP/SQL/commands, MCP configuration/tenant selection, commercial mutation, persistent cache/DB/UI/Docker/CI or autonomous agent. Analysis frameworks are optional only with a real justified consumer, not scaffolding.

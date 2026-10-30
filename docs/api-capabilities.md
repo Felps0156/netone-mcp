@@ -1,6 +1,84 @@
 # NetOne API capability evidence
 
-Initial investigation: 2026-10-27. Current policy: PRD 1.8.0 / DEC-029. Sprints 5–8 are complete; Sprint 7 retains DEC-027's technical-SKU exception. Sprint 8's application consumers have offline and minimal real evidence below. No MCP commercial tool is registered; V1 remains NOT_READY and Sprint 9 is not authorized. Earlier criteria/observations below are historical checkpoints; the current Sprint 8 section overrides earlier no-price/stock-consumer or no-Sprint8 statements only within its explicit scope. Every observation budget is closed. See [the field inventory](product-field-priority.md) for its distinct closed samples.
+Initial investigation: 2026-10-27. Current policy: PRD 1.9.1 / DEC-031.
+Sprints 5–8 are accepted within their bounded evidence; technical codigoSku
+remains unvalidated. Sprint 9 exposes seven previously observed application
+capabilities via MCP with offline integration and a separately authorized
+real MCP listing. S9.12 complete, G3 PASS in this bounded scope and Sprint9
+complete; V1 NOT_READY. No new ERP/configuration read is
+authorized; all observation budgets remain closed. The section below
+supersedes earlier empty-registry/no-Sprint9 instructions only. Remaining
+sections are historical evidence checkpoints, not renewed budgets. See
+[the field inventory](product-field-priority.md) for its distinct samples.
+
+## Sprint 9 — approved MCP exposure (DEC-030)
+
+| MCP tool | Guarded POST route suffix | Closed body | Existing real application evidence |
+|---|---|---|---|
+| search_products | produto/reduzidos | page/limit | S6.13 |
+| search_product_by_code | produto/reduzidos | page/limit/mascara | DEC-025 |
+| get_product_details | produto/reduzidos | page/limit/idsProdutos singleton | S7.11 ID |
+| search_product_by_ean | produto/reduzidos | page/limit | S7.11 EAN |
+| get_product_price | produto/precos | page/limit | S8.14 |
+| check_inventory | produto/estoque | page/limit | S8.14 |
+| list_products | produto/reduzidos | page/limit | S8.14 |
+
+Every suffix above is prefixed literally by /app-web/api/v2/; no new
+route, filter or method is admitted. Query intent under DEC-017 is accepted
+with residual unknown internal effects, not proof by POST or HTTP200.
+The existing token/TLS/byte/time/pagination/cleanup protections remain.
+
+MCP schemas are strict and extra-forbid; all expose max_results1–1000/
+default20, counting inspected rows and capped by configuration. Query is
+text1–200; commercial code/EAN/price product identity/stock reduced identity
+are text1–256. Details product_id is integer0–9223372036854775807. Listing
+starts at1, defaults max_pages1, accepts bounded explicit max_pages1–100
+and page_size1–1000/null constrained by the effective row budget. No
+arbitrary configuration/HTTP arguments or currency from the model.
+MCP price currency stays unknown/null; the application retains its trusted
+operator-confirmation option. Business code and technical SKU stay distinct.
+
+NetOneMCP specializes public FastMCP list_tools/call_tool methods to avoid
+implicit SDK preprocessing/coercion and exception/input echo. Structured
+payload and equivalent JSON text preserve application partial/error/empty
+states, exact Decimal strings and nulls. status error sets isError=true;
+partial keeps records/error metadata with isError=false. Input/unknown/
+unexpected errors have fixed messages. Protocol cancellation propagates.
+
+Technical SKU and expanded search are not registered: their existing offline
+coverage does not supply their missing real-function observation. This is
+an explicit restriction, not an inference from shared endpoint support.
+All auxiliary routes and analysis/write tools remain unavailable.
+
+Offline149 tests passed in7.567s before review; generic ClientSession over
+stdio discovered the exact seven tools and called listing through the
+actual application/guard with a synthetic response. One request, response
+cleanup and client cleanup completed. Memory sessions exercised all seven
+consumers, strict validation, errors, partiality and cancellation. This was
+the offline checkpoint before the separately approved S9.12 evidence below.
+Official SDK source: https://github.com/modelcontextprotocol/python-sdk/tree/v1.30.0
+documents v1.x maintenance/security support. Installed1.30.0 APIs were
+inspected; no dependency update or latest-major claim.
+
+### S9.12 real MCP acceptance — DEC-031
+
+One-shot at2026-10-30T01:47:59Z, after explicit operator approval of one
+page1/limit1 listing and memory-only configuration through the existing
+loader. Generic ClientSession/stdio_client discovered exactly seven tools
+and called list_products once with max_results1/page_size1/max_pages1.
+Actual guarded POST /app-web/api/v2/produto/reduzidos body page1/limit1:
+one attempt HTTP200, one received row and one returned item. Status partial,
+error=null, complete_dataset=false. Exact projection/numeric strings/null/
+absence compared in memory with the same response; structured/text JSON
+equivalent. One response close, transport close and client close completed.
+Original guards/TLS/identity/body/time limits and zero retries/redirects
+remained active. Only safe structural counts/statuses/invariants persisted;
+no source values, origin, credential or raw response retained.
+
+G3 PASS and Sprint9 complete within this scope. This does not prove every
+tool via real MCP, broad pagination, snapshot, deposit/freshness or absence
+of undisclosed provider effects. No login/rotation/env write/mutation was
+performed. Budget consumed and closed; no rerun or Sprint10 authorization.
 
 ## Sprint 8 — current application contract (DEC-029)
 
