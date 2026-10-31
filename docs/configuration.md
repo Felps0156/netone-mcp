@@ -35,9 +35,10 @@ For a new installation, provide base and token. For a legacy installation, keep 
 
 Historical Sprint 2 inspection found a local reduced-products route mismatch;
 the operator later corrected configuration before the successful bounded
-S5.01 observations. No value is published. This documentation execution has
-not reread the installation file or established current readiness. The
-historical mismatch is not a current diagnosed fault.
+S5.01 observations. No value is published. Sprint13 later authorized one
+in-memory loader invocation for a successful one-shot real MCP listing;
+that read/query budget is now closed. No file change or ongoing readiness
+claim follows. The historical mismatch is not a current diagnosed fault.
 
 ## Private client and request limits
 

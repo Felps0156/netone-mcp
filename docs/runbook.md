@@ -2,6 +2,16 @@
 
 ## Current boundary
 
+PRD1.13.0 / DEC-036 records twenty evidenced Sprint13 tasks; independent
+review found no Critical/Important issue. G6/global acceptance remains pending.
+The later separate installation/temporary-env/private-read/one-query consents were
+exercised: clean-install195 PASS, one MCP products listing HTTP200/one partial
+item with fidelity/JSON/cleanup accepted. Real read/query budget is CLOSED;
+no repeat, login/rotation, .env write, Git or publication is authorized.
+Seven tools, bounded G3/G4, G6 pending and V1 NOT_READY remain.
+Current execution evidence is in the Sprint13 ledger at the end of this file.
+
+The following boundary describes the historical Sprints12/14 checkpoint:
 PRD1.12.0 / DEC-035 authorizes only Sprints12/14 documentation and controlled
 handoff, with the approved design and continuous execution through review.
 Sprint13 is not executed or marked; V1 stays NOT_READY and G6 pending.
@@ -1157,3 +1167,260 @@ live TLS/ERP behavior, remote multi-page/snapshot guarantees, unit/deposit
 identity, freshness, all-tool real MCP coverage, clean installation or other
 platforms. Existing long-line style debt remains. The Sprint13 checklist and
 global/Definition-of-Done checkboxes are intentionally untouched.
+
+## Sprint 13 — final validation ledger
+
+PRD1.13.0 / DEC-036. The maintainer approved the design including VM11's
+empty-result/HTTP404 distinction, then the plan and native execution.
+Design: superpowers/specs/2026-10-31-sprint-13-design.md.
+Plan: superpowers/plans/2026-10-31-sprint-13.md.
+Offline execution uses managed scratch netone-s13, no Git helpers, and a
+63-file public-only baseline. The preceding61-file baseline matched before
+execution. No application/test/manifest change is planned.
+
+### Historical pre-execution authorization checkpoint
+
+Authorization ledger: offline/public-documents/synthetic probes APPROVED;
+temporary clean installation APPROVED separately, including removal of that
+temporary environment only; one private loader invocation APPROVED separately;
+one real list_products POST/page1/limit1 APPROVED separately. The maintainer
+answered all three independent consent questions explicitly. No remote attempt
+or private read has occurred at this checkpoint. These later permissions, not
+plan approval, admit only the exact temporary install and one-shot proof.
+
+Evidence is collected below before any corresponding PRD checkbox is marked.
+Synthetic success never establishes live credential/TLS/ERP acceptance.
+S13.02/04/11 await execution evidence within those permissions;
+recording a matrix and its blockers does not pass G6 or complete the sprint.
+
+### Offline runtime and consumer evidence
+
+Executed with the existing root .venv, Python3.14.3/win32. Direct metadata
+matches mcp1.30.0, pydantic2.14.1, httpx0.28.1, anyio4.15.1 and python-dotenv1.2.4.
+`python -B -m pip check` returned `No broken requirements found.` No install.
+The Task1 tuple comparison passed: all sprint task IDs/text/order/states
+unchanged and VM11 the sole revised VM criterion before evidence marking.
+
+Actual root-interpreter commands/results:
+
+| Command/scenario | Result | Scope |
+|---|---|---|
+| `-B -m unittest discover -s tests -v` |195 PASS/9.782s | Existing environment, synthetic only |
+| `-B -m unittest discover -s tests -p 'test_mcp*.py' -v` |19 PASS/2.171s | Exact seven-tool discovery, actual SDK stdio and guarded synthetic consumers |
+| `-B -m unittest discover -s tests -p 'test_server.py' -v` |5 PASS/1.808s | Protocol stdout, safe DEBUG stderr, malformed recovery and bounded EOF dialogue |
+| `-B -m unittest discover -s <managed-scratch>/netone-s13 -p 'test_s13_probe.py' -v` |4 PASS/1.710s | Temporary offline harness; first run failed four expected missing-harness assertions |
+| `-B <managed-scratch>/netone-s13/s13_offline.py imports config faults analysis` | All four modes PASS | Synthetic demonstrations below |
+
+Commands use `.venv/Scripts/python.exe` explicitly; scratch paths are resolved
+locally, not copied into public docs. TMPDIR was set to managed scratch before
+tests. No real .env read, settings dump, ERP request, Git or install occurred.
+
+Fresh imports exercised all seven modules with path-aware private-read guards,
+HTTP-client construction/DNS/connect prohibited, stdout/stderr captured empty
+and process environment unchanged. Guard self-check rejected nonexistent
+synthetic .env paths before access while allowing the public manifest read.
+Actual server.main/real loader with mocked file content and empty child
+environment returned1 for missing origin and missing token, stdout empty,
+fixed configuration_error diagnostics, and no client construction. Valid
+synthetic loading preserved literal interpolation text, overrides and repr
+secrecy without environment mutation. This is not private config acceptance.
+
+Manual synthetic fault demonstrations called actual tools.list_products through
+the existing client/guard/normalizer: valid empty terminal→not_found/error null;
+403→error/authorization_error;404→error/not_found (endpoint);429→rate_limited;
+ReadTimeout→timeout; invalid JSON→invalid_response. Each made one synthetic
+attempt, with no replay. A separate two-page case preserved one useful record
+and exact large Decimal/leading-zero ID after a second-page500: partial,
+upstream_error, complete_dataset false. In total8 mock attempts,7 completed
+response closes (timeout had no response) and7 completed transport/client closes.
+No real permission/rate-limit/timeout was provoked or inferred.
+
+Both actual application analyses ran without LLM/configuration using two mock
+requests and two completed response/transport/client closes. Inventory retained
+7 source records, excluded one conflicting reduced identity, analyzed5 and
+reported low_stock2/unknown2 at threshold3, sample scope and metrics incomplete.
+Catalog analyzed2 reduced identities/one product, preserving leading-zero
+codes, exact large Decimal scale, false and null/absent/blank distinctions.
+No unit/deposit sum, global KPI, real analytical evidence or MCP registration.
+
+At this historical offline checkpoint, S13.01/03/05–10/12–17 had the evidence
+above; S13.02/04/11 still awaited specific installation/private/live evidence
+and S13.18–20 awaited audit/matrix/review. The later sections record those
+results. This paragraph is not the current task status or renewed permission.
+
+### Clean installation and closed one-shot operational budget
+
+Separate consent authorized a new temporary clean environment in managed
+scratch, installation/testing and removal of that environment only. The
+destination did not exist before creation. Root `.venv/Scripts/python.exe -B
+-m venv <managed-scratch>/netone-s13/clean-env` created Python3.14.3, followed
+by its own `-m pip --isolated install --index-url https://pypi.org/simple
+-r requirements.txt`, exit0. No detailed installation stdout log was retained;
+subsequent distribution metadata confirmed the five exact manifest pins.
+This is a newly created environment, not a reinstallation into root .venv.
+
+Clean-interpreter `-B -m pip check` passed; guarded fresh imports of all seven
+modules and real-loader/synthetic missing-config probes passed; its own
+`-B -m unittest discover -s tests -v` passed195 tests/8.761s. Root direct
+distribution versions still matched the pre-install snapshot. No upgrade,
+global install or .env copy; Windows only, no lock/transitive/security claim.
+Temporary-environment cleanup is recorded after its actual execution below.
+
+Before remote execution the protocol harness passed11 tests/6.933s and the
+project passed195 tests/8.754s. Harness regressions first failed before
+implementation; checks detect rounded Decimal/null-to-zero corruption,
+preserve metrics after HTTP500 and after receiving a row, reject consumed
+markers/unapproved live launches and avoid treating an empty reply as observed
+record fidelity. A separate synthetic regression found that a successful
+child report could overwrite parent failure; it failed PASS versus FAIL_PROCESS,
+then passed after preserving the parent outcome. No production change.
+
+**Budget CONSUMED/CLOSED:** on2026-10-31T16:04:21.477379Z through
+16:04:22.744658Z, the generic SDK stdio client initialized the actual server,
+discovered exactly seven tools and called list_products once with
+max_results=1/page_size=1/max_pages=1. One private load_config invocation in
+the child used existing settings only in memory. Exactly one POST
+`/app-web/api/v2/produto/reduzidos`, body page1/limit1, returned HTTP200:
+one received/returned item, one page, partial=true, complete_dataset=false.
+Independent field-by-field projection/Decimal/null/absence checks against the
+same consumer response passed, as did structured/text JSON equivalence.
+One response close, one transport close and one client close completed.
+
+Original request guard/TLS/identity/size/time limits remained; an additional
+hook restricted method/path/body and one attempt. No real transport replacement,
+retry/redirect, login, rotation, .env write/move/checksum or additional discovery.
+Only safe counts/codes/test times/booleans were retained; no source values,
+origin/token/raw stderr/settings/response were written. The safe JSON report
+was read back after execution. The exclusive live.started marker remains;
+neither interruption nor evidence repair permits replay. No unused new budget.
+
+S13.02/04/11 now have their specific evidence. The single real product sample
+does not newly validate prices/stock, every tool, remote multi-page traversal,
+global coverage/snapshot, deposit/freshness or undisclosed provider effects.
+G3/G4 are not widened by the task count; global criteria/G6 remain unaccepted.
+
+Authorized cleanup completed: only managed-scratch clean-env was removed after
+its evidence was recorded; root direct versions still matched the before
+snapshot. No additional environment remains from the clean-install probe.
+
+### VM01–VM20 acceptance matrix
+
+All commands use the explicit root interpreter unless marked clean-interpreter.
+PASS applies only to the scope in the row, not every behavior of the ERP.
+Observed by: native coordinator; date2026-10-31. Maintainer sign-off: pending.
+
+| ID | Status | Evidence / command or scenario | Scope and remaining limit |
+|---|---|---|---|
+| VM01 | PASS | `.venv/Scripts/python.exe --version` → Python3.14.3 | Current Windows interpreter, not PATH or all platforms |
+| VM02 | PASS | Clean and root imports, five pins match, pip check passes | Fresh clean Windows environment and existing root; no transitive lock/security audit |
+| VM03 | PASS | Real load_config once in live child, configuration_loaded=true; synthetic override/no-mutation checks | Safe in-memory use for this one-shot; no settings display, no ongoing permission |
+| VM04 | PASS | s13_offline config: actual main/loader, missing origin and missing token → exit1/fixed diagnostics/empty stdout | Mocked file and child environment; no live misconfiguration induced |
+| VM05 | PASS | Actual SDK stdio initialize/list/call; server tests5 PASS | Synthetic protocol suite plus one real listing, no inbound service |
+| VM06 | PASS | Exact seven-name discovery from SDK and registry/schema tests | No SKU/expanded/analysis tools added |
+| VM07 | PASS | Registry and all guarded consumer tests; closed extra-forbid schemas | No writing/HTTP/configuration tools; advisory annotations alone not proof |
+| VM08 | PASS | MCP invalid inputs/effective page_size tests → zero sends | Synthetic invalid types/extras/combined caps, no malformed ERP call |
+| VM09 | PASS | One POST reduzidos/page1/limit1 via list_products, HTTP200/one item, fidelity/JSON/cleanup true | Real one-shot only; budget CLOSED; partial sample, not all-tool coverage |
+| VM10 | PASS | unittest client/protocol401/403 cases, manual synthetic403 | Authentication/authorization distinct; no live permission change |
+| VM11 | PASS | Manual synthetic valid empty→not_found/error null, HTTP404→error/not_found | Corrected criterion; endpoint error is not product absence |
+| VM12 | PASS | Manual synthetic429/Retry-After and client tests → one attempt/no replay | No real rate-limit stress or automatic resend |
+| VM13 | PASS | Manual ReadTimeout and second-page500 preserve error/useful partial data, completed cleanup | Synthetic failures, not observed ERP outage |
+| VM14 | PASS | Manual invalid JSON→invalid_response; suite duplicate/compression/oversize cases | Synthetic streaming/parse limits, no raw payload diagnostics |
+| VM15 | PASS | Multi-page/error/cut/duplicate tests and manual page2 failure | Offline pagination controls; real proof was one page, not remote traversal |
+| VM16 | PASS | Catalog/product-field/stock/MCP tests and actual synthetic analysis demonstrations | Exact IDs/Decimal/null/absence/zero; live fidelity only same products response |
+| VM17 | PASS | s13_offline analysis invokes both public consumers; counts/conflicts/scope asserted | Synthetic deterministic sample, application-only, no global KPI or unit sums |
+| VM18 | PASS | Guarded fresh imports, SDK stdio with LLM/framework paths excluded | No LLM key needed; generic SDK, not every possible client |
+| VM19 | PASS | Public .gitignore text has .env/.env.*/.venv and neutral-example exception | No Git/index/history inspection or prior-tracking guarantee |
+| VM20 | PASS | s13_audit:63 public files/142 local links and anchors/zero bounded findings; DEBUG malformed/projection tests | Public set and safe diagnostics only; no universal secret detection/private-file audit |
+
+### Public audit and release boundary
+
+The temporary auditor passed with63 allowlisted public files,226 ordered PRD
+tasks,142 local links/anchors,seven registry entries and three literal routes.
+Only ten allowed current-document/design/plan files differ from the execution
+baseline. Production, tests, manifest, examples/ignore and historical archives
+remain identical. The tuple checker rejects unrelated state changes, any task
+text/reordering and global-checkbox edits; its missing-implementation test first
+failed and then passed. VM11 is the only revised VM criterion. The initial URL
+candidate audit encountered intentionally malformed IPv6 negative-test strings;
+the audit now classifies those without treating them as actual destinations.
+This was a harness parsing limitation, not a production or credential finding.
+
+G6/global acceptance is **BLOCKED**, not FAIL of the twenty scoped VM scenarios.
+The mandatory section26/30 release checklists have not been individually accepted;
+the preserved original .env has no historical baseline for a byte-equality
+claim. This execution made no .env write/move, but does not invent historical
+comparison evidence. Owner action: review/accept each remaining global criterion
+against its scope, or explicitly decide a documented criterion amendment where
+proof cannot be obtained; do not substitute administrative completion for proof.
+Project license/publication decisions remain separately owned, not automatically
+new VM09 prerequisites. No G6, V1, publication or extra ERP budget is granted.
+
+S13.18 is supported by the bounded public/diagnostic audit and S13.19 by exactly
+twenty classified VM rows. S13.20 records the review and outstanding blockers,
+not a false declaration of final sprint/release acceptance.
+
+### Independent review and final reconciliation
+
+The independent read-only reviewer reran195 tests PASS/8.254s, twelve temporary
+harness tests PASS/6.208s and pip check PASS. A nonwriting in-memory audit
+confirmed63 files/142 links/226 task tuples,seven tools/three routes, no bounded
+findings and only19 supported S13 state changes at that checkpoint; S13.20
+was still open pending this reconciliation. Twenty Python files and the
+manifest matched baseline. No Critical or Important finding.
+
+One Minor identified earlier authorization/offline status paragraphs that could
+be mistaken for current instructions when quoted alone. The scheduled final
+status reconciliation labelled the pre-execution checkpoint and made its
+historical offline status explicit. No production/harness change or sensitive
+repeat was needed. Existing long-line debt is unchanged. Final coordinator
+commands/results are recorded below after execution.
+
+Historical protected-edit checkpoint: the final AGENTS.md approval initially
+timed out, leaving stale final-review wording. The renewal question was also
+unanswered; no retry or alternate path was used at that checkpoint. The
+maintainer subsequently explicitly requested that the submission be sent again.
+The normal protected patch then approved/applied only the final Sprint13 status
+paragraph:20 evidenced tasks, completed review, CLOSED budget and G6 pending/
+NOT_READY. The discrepancy and timeout are resolved, not current blockers.
+This documentation-only follow-up grants no private read, query or Git action.
+
+Review exclusions were assessed and retained, not silently discarded:
+
+- Private/current credential validity and reproduction of the consumed real
+  attempt: safe report only; no additional private read/ERP query authorized.
+- Reproduction of removed clean installation and its unretained transaction
+  stdout: accepted executed clean metadata/import/pip/test evidence only.
+- Historical .env byte equality: unavailable baseline, no invented proof.
+- All-tool live behavior, prices/stock, remote pagination/global coverage,
+  snapshots/deposit/freshness and undisclosed provider effects: not established
+  by one product sample or local guards; earlier bounded limits remain.
+- Universal secrets/private files, Git/index/history/provenance/publication
+  safety: bounded public audit only, no access to excluded material.
+- Dependency advisories/transitive reproducibility/external lint/types,
+  other operating systems/interpreters/every client: not executed or claimed.
+- Licensing/legal clearance, maintainer sign-off/global/G6/V1: owner decisions
+  and unaccepted criteria, not waived by task completion.
+- Historical RED sequencing: recorded earlier executed evidence, not newly
+  recreated by the reviewer; current twelve harness tests independently passed.
+
+The coordinator retains public snapshots/diffs/ledger instead of Git helpers
+or deleting evidence: Git remains forbidden and no commit history replaces the
+record. Synthetic probe preparation proceeded independently while permissions
+were pending; no sensitive action ran before the three explicit consents.
+Costs of these choices: no Git/history audit, managed scratch can be pruned,
+and safe operational proof cannot be reproduced without a new authorization.
+This runbook therefore carries the durable findings and consumed budget.
+
+Final coordinator verification after the review/reconciliation: root full suite
+195 PASS/8.398s, temporary harness12 PASS/6.363s, pip check PASS and public
+auditor PASS (63 files,142 local links/anchors,226 ordered tasks,seven tools,
+three routes). Exactly twenty S13 states changed to complete; all task text/
+order, sibling sprint states and global/DoD checkboxes are unchanged. The twenty
+VM rows are complete and ordered. Only the ten allowed documentation/design/
+plan files differ; production/tests/pins/archives/examples/ignore are unchanged.
+No live probe/private read/install was repeated. At that checkpoint the final
+AGENTS reconciliation awaited approval. Following the maintainer's later
+explicit re-send request, the normal protected update succeeded and the plan
+step is now complete; the earlier timeout is historical, not an active blocker.
+This is20/20 task evidence with explicit blockers, not final sprint/G6/V1
+acceptance or permission to publish. All execution findings/limits are above.

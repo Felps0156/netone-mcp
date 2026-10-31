@@ -2,6 +2,44 @@
 
 ## Scope and current status
 
+Sprint13 execution checkpoint: clean-install195 PASS on Windows/Python3.14.3,
+temporary environment removed/root .venv retained. Separately authorized one
+private loader read and one real MCP listing completed2026-10-31T16:04:21Z:
+one POST reduced-products page1/limit1, HTTP200, one partial item, exact
+same-response fidelity/JSON and response/transport/client cleanup accepted.
+Read/query budget CONSUMED/CLOSED: no rerun or new .env/ERP access. All source,
+tests and pins unchanged. S13.01–20 evidenced, matrix20 rows, independent
+review195 PASS/8.254s and12 harness PASS/6.208s, no Critical/Important.
+Historical checkpoint wording was reconciled during final status closure.
+No final sprint acceptance is declared while G6/global criteria are pending.
+G6/global acceptance stays pending, V1 NOT_READY. No Git/publication.
+The authorization history immediately below explains the phases, not new
+permission to repeat the consumed installation/private/query actions.
+
+Sprint13: the maintainer approved the design (including the VM11 correction)
+and native execution plan, docs/superpowers/specs/2026-10-31-sprint-13-design.md
+and docs/superpowers/plans/2026-10-31-sprint-13.md. PRD1.13.0/DEC-036 admits
+offline validation, public documentation and temporary synthetic probes in
+managed scratch, followed by independent final review. This supersedes only
+the earlier exclusion of13 for this approved slice. No production/test/pin
+change is planned. Mark only independently evidenced S13 items; preserve all
+other sprint/global checkboxes. Installation/temporary-environment exception,
+private load_config read and one real MCP listing each need specific consent;
+none is authorized by plan approval. Earlier ERP budgets remain exhausted.
+The maintainer later approved all three separate consent questions: clean
+temporary environment/install/tests/removal in managed scratch (root .venv
+untouched), one private load_config invocation in the server's memory, and
+one list_products MCP attempt POST reduzidos/page1/limit1. No extra discovery,
+retry/redirect, login/rotation or .env write; retain only safe counts/codes/
+test times/fidelity/JSON/cleanup booleans. Record consumption in the runbook;
+these are new nonrenewable permissions, not reopened historical budgets.
+No real .env read/write, ERP, Git, installs, login/rotation, new tool/filter
+or publication until the applicable explicit permission. Seven MCP tools,
+bounded G3/G4, G6 pending and V1 NOT_READY remain. Evidence: docs/runbook.md,
+Sprint13. VM11 separates a valid empty result from an HTTP404 endpoint error;
+do not change production to turn404 into successful absence.
+
+Historical Sprints12/14 checkpoint (superseded only as described above):
 The maintainer approved only Sprints12 and14, their design and execution
 through final verification without intermediate approval gates. Sprint13
 remains outside scope and its checklist must remain unchanged. Design/plan:

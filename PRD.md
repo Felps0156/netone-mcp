@@ -1,7 +1,7 @@
 # PRD — NetOne MCP: Consulta e Análise Read-Only
 
-> **Versão:** 1.12.0 — 31/10/2026 — documentação pública e encerramento técnico delimitado das Sprints 12 e 14
-> **Estado:** NOT_READY para V1; Sprints 5–11 mantêm seus escopos/evidências e a ressalva DEC-027. Sprints 12 e 14 concluídas no recorte documental aprovado/revisado conforme DEC-035; Sprint 13 permanece aberta e não executada. Sete tools MCP, G3 delimitado por DEC-031 e G4 sintético preservados. G5 PASS somente na documentação pública revisada; G6 pendente. Orçamentos ERP/configuração encerrados; sem nova chamada, instalação, Git ou publicação.
+> **Versão:** 1.13.0 — 31/10/2026 — vinte tarefas da Sprint13 evidenciadas; aceite global/G6 pendente
+> **Estado:** NOT_READY para V1; Sprints anteriores mantêm seus escopos/evidências e a ressalva DEC-027. S13.01–20 executadas/evidenciadas, sem declarar aceite final da sprint enquanto faltarem critérios globais/G6. Regressão offline e instalação limpa195 PASS; leitura privada/consulta única MCP autorizadas separadamente, HTTP200/um item parcial/fidelidade/JSON/cleanup aceitos; orçamento consumido e encerrado. Revisão independente sem Critical/Important. Atualização final de AGENTS aplicada pelo mecanismo normal após pedido explícito de reenvio; timeout anterior resolvido, sem bypass. Sete tools MCP e G3/G4 delimitados preservados. Sem Git/publicação ou renovação de orçamento anterior.
 > **Regra fundamental:** nenhuma operação pode alterar dados comerciais do ERP.
 
 Este documento é a fonte de verdade para escopo, arquitetura, critérios e checklist. A revisão 1.2.0 substituiu restrições históricas de testes, Git somente leitura e frameworks obrigatórios. A revisão 1.2.1 registra autorização posterior explícita para leitura em memória da configuração e até três consultas de S5.01, sem exposição de segredos. Produtos/preços/estoque responderam com page=1 e limit=1; normalização e metadados das amostras aceitos. S5.01 e Sprint 5 concluídas, com 51 testes offline novamente aprovados. Não houve login, renovação, alteração do `.env`, novas tools ou avanço para Sprint 6. A autorização pontual não libera chamadas contínuas; evidências e limites em docs/runbook.md.
@@ -366,7 +366,7 @@ Regressão offline via `.venv/Scripts/python.exe -B -m unittest discover -s test
 | VM08 | Validar entrada malformada | Rejeição sem requisição remota |
 | VM09 | Exercitar consulta read-only autorizada, pelo método documentado | Retorno fiel à API; revisão de segurança e aprovação explícita antes da chamada; registrar método/rota/schema e evidência sem segredos |
 | VM10 | HTTP 401/403 | Erros corretamente classificados |
-| VM11 | HTTP 404/resultado vazio | Estado `not_found` sem falso erro de credencial |
+| VM11 | HTTP 404 e resultado vazio válido, separadamente | Vazio terminal válido: `not_found`, error=null; HTTP404: `error` ou `partial` após dados, código seguro `not_found` de endpoint, nunca ausência comercial bem-sucedida |
 | VM12 | HTTP 429 | Zero replay de POST, erro claro |
 | VM13 | Timeout/5xx | Erros consistentes, sem prometer dados atuais |
 | VM14 | Resposta JSON inválida | `invalid_response`, sem crash com dados expostos |
@@ -682,6 +682,33 @@ totalmente bloqueada, mas falta aceite final da Sprint13 e requisitos globais.
 S14.14 aceita apenas condições comprovadas e seus limites, não uma V1.
 Publicação/versionamento são handoff opcional ao responsável, sem execução.
 
+DEC-036 — 1.13.0,31/10/2026: mantenedor solicitou Sprint13, escolheu validação
+em fases, aprovou desenho (com ajuste VM11) e plano de execução nativa com
+revisão independente final. Desenho/plano de2026-10-31 em docs/superpowers/.
+Autoriza validação offline com configuração/transporte sintéticos, probes
+temporários em managed scratch e documentação/evidência. Supersede somente
+a exclusão anterior de13 para este recorte; não altera sprints alheias nem
+aceita V1/G6 automaticamente. Instalação limpa em ambiente temporário exigirá
+exceção expressa à regra de ambiente único, preservando .venv raiz. Uma leitura
+privada pelo loader e uma tentativa real list_products/page1/limit1 exigem
+consentimentos próprios; desenho/plano não os concedem. Posteriormente, o
+mantenedor aprovou separadamente instalação/limpeza temporárias, uma leitura
+privada em memória e uma tentativa products/page1/limit1 via MCP. Instalação
+limpa195 PASS/8.761s; prova real em2026-10-31T16:04:21Z: uma tentativa HTTP200,
+uma linha/item parcial, fidelidade/JSON e cleanup concluídos. Orçamento novo
+consumido/encerrado, sem repetição. .venv raiz preservada e ambiente temporário
+removido. Sem Git, login/rotação, .env write ou publicação.
+Não mudar produção/testes/pins por cosmética. VM11 antes dizia «Estado
+not_found sem falso erro de credencial» para HTTP404/resultado vazio juntos;
+critério corrigido separa vazio válido de erro de endpoint, conforme seção17
+e implementação existente. Não muda comportamento de código ou dispensa
+prova operacional. S13.12/13 admitem demonstração manual sintética dos erros,
+sem provocar403/429/timeout no ERP. Registro de bloqueios pode concluir a
+matriz/S13.19–20, não instalação, consulta real, critérios globais ou sprint.
+Preservação do .env nesta execução não é comparação com original histórico.
+Resultados e permissões específicas serão registrados no runbook antes de
+marcar tarefas. Sem novas tools/filtros/frameworks; G3/G4 e sete tools iguais.
+
 ## 26. Critérios de Aceite
 
 ### 26.1 Critérios globais
@@ -747,6 +774,8 @@ flowchart LR
 
 IDs/ordem e estados não relacionados são preservados. Sprints 0–4 têm entregas offline/documentais; Sprint 5 concluída conforme DEC-022, Sprint 6 conforme DEC-023, Sprint 7 com ressalva DEC-027 e Sprint 8 conforme DEC-029. G2 aceito offline e G0/G1 limitados às operações observadas. Sprint 9 concluída conforme DEC-030/031: integração offline e prova única real de listagem via MCP, G3 PASS nesse recorte. Sprint10 concluída exclusivamente offline na aplicação conforme DEC-033; Sprint11 concluída na revisão offline DEC-034. DEC-035 autoriza exclusivamente Sprints12/14 documentais, sem executar13 ou publicar. Registros anteriores preservam evidências e critérios de sua época, não proibições supersedidas para este recorte.
 
+DEC-036 autoriza posteriormente Sprint13 offline, sem renovar permissões
+sensíveis; a exclusão de13 em DEC-035 descreve o checkpoint histórico12/14.
 Executar sequencialmente dentro do escopo autorizado, comprovar antes de marcar e manter tarefas condicionais bloqueadas. Commits são opcionais e dependem de autorização do responsável; não são unidade obrigatória de trabalho. Autorização de teste offline não libera consulta real nem tool.
 
 ### Sprint 0 — Investigação do SCSI, NetOne e viabilidade read-only
@@ -1332,30 +1361,49 @@ Revisão independente e reconciliação final no runbook.
 ### Sprint 13 — Validação final offline e operacional
 
 **Objetivo:** demonstrar funcionamento com regressão offline e aceite operacional autorizado.
-- [ ] S13.01 — Confirmar versão exata do Python local.
-- [ ] S13.02 — Confirmar instalação limpa das dependências compatíveis.
-- [ ] S13.03 — Confirmar imports dos módulos implementados.
-- [ ] S13.04 — Confirmar que a configuração é lida sem exibir segredo.
-- [ ] S13.05 — Verificar erro seguro na ausência de configuração obrigatória.
-- [ ] S13.06 — Iniciar MCP por stdio.
-- [ ] S13.07 — Confirmar stdout limpo e stderr saneado.
-- [ ] S13.08 — Listar ferramentas e conferir allowlist.
-- [ ] S13.09 — Verificar inexistência de tools de escrita e URL arbitrária.
-- [ ] S13.10 — Confirmar que entrada inválida é rejeitada antes de HTTP.
-- [ ] S13.11 — Validar uma consulta comercial read-only real autorizada, pelo método documentado, somente se a operação estiver liberada e G0 passou.
-- [ ] S13.12 — Validar ausência de resultado e erro de permissão separadamente.
-- [ ] S13.13 — Validar comportamento manual diante de rate limit/timeout sem stress test agressivo.
-- [ ] S13.14 — Conferir IDs, preços e estoque sem arredondamento indevido.
-- [ ] S13.15 — Conferir paginação e sinalização de universo parcial.
-- [ ] S13.16 — Confirmar análise determinística se habilitada.
-- [ ] S13.17 — Confirmar operação sem LLM e independência de cliente.
-- [ ] S13.18 — Inspecionar documentação, logs e arquivos para evitar segredos.
-- [ ] S13.19 — Registrar `PASS`, `FAIL` ou `BLOCKED` para VM01–VM20.
-- [ ] S13.20 — Não declarar conclusão até corrigir falhas ou registrar bloqueios.
+**Escopo DEC-036:** desenho/plano e execução nativa aprovados; instalação limpa,
+leitura privada e consulta única autorizadas separadamente e verificadas.
+Orçamento consumido e encerrado; provas sintéticas identificadas como tais.
+Revisão independente sem Critical/Important; S13.20 registra bloqueios globais,
+não conclusão fictícia da sprint. Atualização protegida final de AGENTS aplicada
+após pedido explícito de reenvio; timeout anterior resolvido.
+Critérios globais/G6 não dispensados.
+- [x] S13.01 — Confirmar versão exata do Python local.
+- [x] S13.02 — Confirmar instalação limpa das dependências compatíveis.
+- [x] S13.03 — Confirmar imports dos módulos implementados.
+- [x] S13.04 — Confirmar que a configuração é lida sem exibir segredo.
+- [x] S13.05 — Verificar erro seguro na ausência de configuração obrigatória.
+- [x] S13.06 — Iniciar MCP por stdio.
+- [x] S13.07 — Confirmar stdout limpo e stderr saneado.
+- [x] S13.08 — Listar ferramentas e conferir allowlist.
+- [x] S13.09 — Verificar inexistência de tools de escrita e URL arbitrária.
+- [x] S13.10 — Confirmar que entrada inválida é rejeitada antes de HTTP.
+- [x] S13.11 — Validar uma consulta comercial read-only real autorizada, pelo método documentado, somente se a operação estiver liberada e G0 passou.
+- [x] S13.12 — Validar ausência de resultado e erro de permissão separadamente.
+- [x] S13.13 — Validar comportamento manual diante de rate limit/timeout sem stress test agressivo.
+- [x] S13.14 — Conferir IDs, preços e estoque sem arredondamento indevido.
+- [x] S13.15 — Conferir paginação e sinalização de universo parcial.
+- [x] S13.16 — Confirmar análise determinística se habilitada.
+- [x] S13.17 — Confirmar operação sem LLM e independência de cliente.
+- [x] S13.18 — Inspecionar documentação, logs e arquivos para evitar segredos.
+- [x] S13.19 — Registrar `PASS`, `FAIL` ou `BLOCKED` para VM01–VM20.
+- [x] S13.20 — Não declarar conclusão até corrigir falhas ou registrar bloqueios.
 
 **Entrega:** matriz assinável de validação manual com evidências sanitizadas.  
 
 **Aceite:** G6 só é concluído com critérios globais atendidos.
+
+**Execução S13.01–20 / DEC-036:** vinte tarefas evidenciadas e matriz VM01–20
+no runbook, com escopos sintéticos/instalação limpa/prova real separados.
+Instalação limpa195 PASS/8.761s; revisão independente195 PASS/8.254s e doze
+testes de harness PASS/6.208s, pip check PASS, nenhum Critical/Important.
+Clareza histórica reconciliada no fechamento documental; atualização final
+protegida de AGENTS aplicada após pedido explícito de reenvio pelo mantenedor,
+pelo mecanismo normal. Timeout anterior resolvido, sem bypass.
+Orçamento real único consumido/encerrado. Sem alteração de produção/testes/pins,
+sprints alheias ou checkboxes globais. Aceite final da sprint/G6 permanece
+pendente dos critérios globais, com bloqueios e ação do mantenedor explícitos;
+contar vinte tarefas não os dispensa e não libera V1/publicação.
 
 ### Sprint 14 — Publicação controlada e encerramento
 
@@ -1395,7 +1443,7 @@ executada. Resultados/revisão/auditoria final no runbook.
 
 ## 29. Pendências e Próximas Decisões
 
-- DEC-035 autoriza somente Sprints12/14 documentais e encerramento delimitado; Sprint13 permanece aberta/não executada, G6 pendente e V1 NOT_READY. Nenhuma nova autorização .env/ERP, instalação, Git ou publicação. G5 cobre somente documentação pública revisada, não auditoria de histórico Git, liberação jurídica ou aceite operacional.
+- DEC-036 registra S13.01–20 executadas/evidenciadas e revisão independente sem Critical/Important; instalação limpa e regressão195 PASS, uma consulta MCP real HTTP200/um item parcial/fidelidade/JSON/cleanup aceitos, após permissões separadas; leitura/orçamento encerrados. Atualização final de AGENTS aplicada após pedido explícito de reenvio, timeout resolvido sem bypass. Aceite final da sprint/G6/critérios globais pendentes e V1 NOT_READY; sem Git/publicação ou renovação. G5 documental não é auditoria Git/liberação jurídica.
 - Revisão1.9.2 inseriu Sprint9.5 somente como planejamento; DEC-032 registra seu encerramento offline. DEC-033 conclui Sprint10 somente na aplicação, com limiar3 e verificação sintética. DEC-034 conclui revisão offline de segurança/qualidade da Sprint11. Filtros de preço/estoque continuam apenas planejados; O4 permanece documentalmente ambígua e O5 depende de admissão/validação próprias. Busca ampliada/análises continuam fora do MCP; G3/G4 limitados às evidências existentes.
 
 - Sprint9 concluída: integração offline e S9.12 real comprovadas conforme DEC-031, G3 PASS no recorte de descoberta e uma listagem page1/limit1. Orçamento consumido/encerrado; não autoriza consulta contínua ou conexão permanente ao Hermes. SKU técnico e busca ampliada permanecem fora do registry. Minor de classificação de diagnóstico corrigido offline na Sprint11, sem ampliar a prova real. Sprint10 conforme DEC-033; V1 NOT_READY.

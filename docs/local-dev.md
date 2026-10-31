@@ -9,9 +9,10 @@ without owner approval. Invoke pip through the intended environment's Python,
 not an unrelated `pip` or interpreter on PATH.
 
 The current environment was inspected as Windows/root-.venv Python3.14.3.
-All five direct versions match the manifest; unittest and pip check results
-are in the [runbook](runbook.md). This is an existing-environment check, not a
-clean install of this manifest. macOS/Linux commands below are operator
+All five direct versions match the manifest. Sprint13 separately verified a
+clean temporary installation of this manifest on Windows/Python3.14.3 with195
+tests and pip check passing; the temporary environment was removed and root
+.venv preserved. Evidence is in the [runbook](runbook.md). macOS/Linux commands below are operator
 recipes, not claims of tested platforms. A new installation, dependency
 upgrade or environment replacement is an explicit operator action.
 

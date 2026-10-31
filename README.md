@@ -8,6 +8,16 @@ inventing commercial conclusions. It must never modify commercial data.
 ## Current status
 
 **NOT_READY for V1. Seven bounded read-only MCP tools are registered.**
+Sprint13 has twenty evidenced tasks under PRD1.13.0 / DEC-036, independently
+reviewed without Critical/Important findings. Final sprint/global/G6 acceptance
+remains pending; task completion is not release acceptance. Separately
+authorized clean installation passed195 tests; one new real MCP listing
+page1/limit1 returned HTTP200, one partial item and verified fidelity/JSON/
+completed cleanup. Its configuration-read/query budget is consumed and closed.
+No broader live tool coverage or V1 acceptance follows. See the
+[Sprint13 ledger](docs/runbook.md#sprint-13--final-validation-ledger).
+
+Historical Sprints12/14 checkpoint:
 Sprints 12 and 14 consolidate public documentation and the bounded technical
 handoff (PRD1.12.0 / DEC-035); they do not execute Sprint 13 or publish a release.
 **G5 PASS in the reviewed public-documentation scope; G6 remains pending.**
@@ -40,7 +50,8 @@ approved and applied after the maintainer requested a renewed submission;
 the earlier timeout is resolved. Existing long lines remain documented
 Minor style debt. That review did not authorize additional ERP access;
 the subsequent approval covers only Sprints 12 and 14 documentation/closure.
-The review records and remaining evidence limits are in the
+The subsequent Sprint13 authorization is limited as stated above; the review
+records and remaining evidence limits are in the
 [runbook](docs/runbook.md#sprint-11--offline-security-and-quality-review).
 
 The Sprint 9 section below governs current registration. Earlier evidence
@@ -490,9 +501,9 @@ superseded policies and evidence; [PRD](PRD.md) owns every sprint state.
 
 The delivery is NOT_READY, not FOUNDATION_READY / COMMERCIAL_API_BLOCKED:
 bounded real commercial evidence already exists, but the final release
-criteria are not all established. Sprint 13 remains unexecuted/open; no
-clean-install or new operational acceptance is inferred from the existing
-offline tests. Technical SKU, remote price/stock filters and broad coverage
+criteria are not all established. Sprint13 has current Windows clean-install
+and one-shot real listing evidence plus independent review; global acceptance
+and the final sprint/G6 gate remain pending. Technical SKU, remote price/stock filters and broad coverage
 retain their explicit limits. Application-only capabilities are not new tools.
 
 The maintainer may separately choose a project license, review rights and

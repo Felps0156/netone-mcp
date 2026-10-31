@@ -2,12 +2,13 @@
 
 ## Current implementation matrix
 
-PRD1.12.0 / DEC-035 consolidates the existing implementation, not a new API
-admission or operational observation. Sprints12/14 cover documentation and
-controlled handoff only; Sprint13 remains open and V1 NOT_READY. All real
-query/configuration-read budgets are closed. Seven MCP tools are registered.
-G3 remains limited to DEC-031; G4 remains synthetic application-only evidence.
-The installed five direct pins are retained, not upgraded or clean-installed.
+PRD1.13.0 / DEC-036 validates the existing implementation without new API
+admission. A separately authorized new MCP list_products page1/limit1 check
+returned HTTP200/one partial item with fidelity/JSON/completed cleanup accepted.
+Its private-read/query budget is consumed and closed. Clean installation of
+the unchanged five pins passed on Windows/Python3.14.3. Seven MCP tools remain;
+G3 retains bounded listing/discovery scope, G4 synthetic application scope,
+V1 NOT_READY/G6 pending. Sprints12/14 remain their historical documentary slice.
 
 | Operation | Literal method and path | Implemented closed body | Current consumers and bounded evidence |
 |---|---|---|---|

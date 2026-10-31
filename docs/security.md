@@ -92,9 +92,11 @@ global metrics from samples are offered.
 ## Evidence and publication limits
 
 The [runbook](runbook.md) records offline checks and bounded historical
-observations with exhausted budgets. No current credential/TLS/ERP proof,
-clean installation, dependency vulnerability audit, Git/history secret audit
-or platform matrix is implied. Only the allowlisted public files are reviewed;
+observations with exhausted budgets. Sprint13 adds a separately authorized
+one-request real MCP listing with verified TLS and completed cleanup, and a
+Windows clean installation; neither establishes ongoing credentials/access,
+all-tool coverage, dependency vulnerability audit, Git/history secret audit
+or a platform matrix. Only the allowlisted public files are reviewed;
 private configuration/virtualenv internals are not searched for source data.
 [Attributions](attributions.md) records the unresolved project-license choice.
 V1 remains NOT_READY; source publication requires a separate owner decision
