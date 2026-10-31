@@ -2,6 +2,35 @@
 
 ## Scope and current status
 
+The maintainer approved only Sprints12 and14, their design and execution
+through final verification without intermediate approval gates. Sprint13
+remains outside scope and its checklist must remain unchanged. Design/plan:
+docs/superpowers/specs/2026-10-31-sprints-12-14-design.md and
+docs/superpowers/plans/2026-10-31-sprints-12-14.md. PRD1.12.0/DEC-035 governs
+public-documentation consolidation and controlled technical handoff, not
+publication or V1 release. Earlier no-Sprint12+ statements below describe
+their historical checkpoints and are superseded only for this approved slice.
+No real .env access/write, ERP, login/rotation, Git, installs, new filters/
+tools or production/test changes. Seven MCP tools, bounded G3/G4 and
+V1 NOT_READY remain. New guides: docs/architecture.md, docs/security.md,
+docs/local-dev.md, docs/attributions.md. Project license choice and separate
+Git/index/history publication audit remain owner actions; no legal or
+operational clearance follows from documentation. Current evidence and
+per-task acceptance belong in docs/runbook.md, Sprints12/14.
+S12.01–14 and S14.01–14 are complete in that documentation-only scope.
+Final coordinator regression:195 PASS/8.947s; independent review:195
+PASS/8.959s; pip check PASS. Audit:61 public files/103 local links and
+anchors/226 ordered tasks, exactly28 approved state changes; Sprint13
+stays0/20 and global checkboxes unchanged. No Critical/Important findings;
+two final documentation/status reconciliation items were resolved. G5 is
+limited to public documentation, G6 pending; project licensing and release
+criteria remain open. Existing source line-length debt is unchanged.
+After the public audit, the maintainer explicitly authorized narrowly scoped
+privacy substitutions in the two historical archives and Sprint5/9/11 plans.
+Only identifying business/local-path references may change; preserve all
+decisions/results/task wording/order/states. The archive index records the
+redaction instead of claiming verbatim equality. No private-file/Git access.
+
 Sprint11 / PRD1.11.0 DEC-034 is complete in its offline security/quality
 scope. The maintainer chose option1 (review and minimal verified fixes)
 and direct native execution without intermediate approval gates.

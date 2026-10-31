@@ -1,10 +1,21 @@
 # NetOne MCP
 
-A Python MCP stdio foundation for authorized, strictly read-only NetOne ERP queries and deterministic catalog/inventory analysis. It must never modify commercial data.
+A Python MCP stdio server for authorized, bounded read-only NetOne ERP queries,
+with deterministic catalog/inventory analyses available in the application layer.
+It preserves exact source values and reports incomplete evidence rather than
+inventing commercial conclusions. It must never modify commercial data.
 
 ## Current status
 
 **NOT_READY for V1. Seven bounded read-only MCP tools are registered.**
+Sprints 12 and 14 consolidate public documentation and the bounded technical
+handoff (PRD1.12.0 / DEC-035); they do not execute Sprint 13 or publish a release.
+**G5 PASS in the reviewed public-documentation scope; G6 remains pending.**
+The current manifest has not been clean-installed in this execution; current
+real configuration/ERP acceptance and a platform matrix are not claimed.
+Project licensing and a separate Git/index/history publication audit remain
+owner actions. No V1_COMPLETE or public distribution clearance is implied.
+
 Sprint 9.5 is complete within its offline local-search/serialization scope; the
 bounded real evidence remains PRD DEC-031, which records Sprint 9 complete:
 generic SDK discovery of
@@ -15,7 +26,7 @@ passed. S9.12 is complete; G3 PASS within this bounded scope, not universal
 ERP/tool coverage. Sprints 5–8 retain their bounded evidence, including
 DEC-027's unvalidated technical SKU.
 All real-query budgets remain closed: no new ERP/configuration access,
-login, token rotation or Git action is authorized. The later Sprint 10
+login, token rotation or Git action is authorized by this work. The later Sprint 10
 approval (DEC-033) permits application-only deterministic analyses and
 synthetic validation, not real queries or additional MCP tools.
 Sprint10 is complete in that offline scope:190 tests and pip check pass,
@@ -27,8 +38,8 @@ Sprint 11 is complete within its offline security/quality review scope
 Important finding remains. The protected instruction-file update was later
 approved and applied after the maintainer requested a renewed submission;
 the earlier timeout is resolved. Existing long lines remain documented
-Minor style debt. This does not
-authorize additional ERP access or Sprint 12+.
+Minor style debt. That review did not authorize additional ERP access;
+the subsequent approval covers only Sprints 12 and 14 documentation/closure.
 The review records and remaining evidence limits are in the
 [runbook](docs/runbook.md#sprint-11--offline-security-and-quality-review).
 
@@ -43,6 +54,19 @@ never both; prices/stock remain page/limit only. No arbitrary filter dict
 is accepted. Construction/startup make no ERP request. See the
 [sanitized evidence and limits](docs/api-capabilities.md); bounded samples
 do not prove global coverage, snapshot, permissions or general readiness.
+
+## Documentation
+
+| Guide | Purpose |
+|---|---|
+| [Architecture](docs/architecture.md) | Module ownership, Mermaid flow and lifecycle |
+| [Configuration](docs/configuration.md) | Variable names, validation, migration and process ownership |
+| [Security](docs/security.md) | Literal allowlist, secret handling and limits of guarantees |
+| [Local development](docs/local-dev.md) | Windows/macOS/Linux recipes and offline checks |
+| [API capabilities](docs/api-capabilities.md#current-implementation-matrix) | Current implemented contracts versus historical evidence/future filters |
+| [Runbook](docs/runbook.md) | Troubleshooting, evidence and controlled operational handoff |
+| [Licenses and attributions](docs/attributions.md) | Dependency metadata and pending project-license decision |
+| [PRD](PRD.md) | Canonical requirements, decisions, sprint checklists and release criteria |
 
 ## Architecture
 
@@ -62,7 +86,8 @@ LangChain/LangGraph are not required and are removed from the manifest while unu
 
 Requires Python **>=3.14,<4**, one root `.venv` and one root `requirements.txt`. Create the environment only if absent; do not replace an existing one without authorization.
 
-Windows PowerShell:
+Windows PowerShell (create the environment only if absent; installation is an
+intentional operator action, not an offline check):
 
 ```powershell
 py -3.14 -m venv .venv
@@ -94,6 +119,14 @@ Generic MCP client launch configuration (replace only with operator-approved loc
   }
 }
 ```
+
+`mcpServers` is a common client configuration convention, not a mandatory MCP
+file format. Translate command/args to the chosen client's settings. Use an
+absolute Python path from the root .venv and an absolute server.py path;
+the loader locates .env beside config.py regardless of the client's cwd.
+Process overrides do not prevent the loader from reading an existing root
+file. Do not configure credentials through tool arguments or paste them into
+this example. See [platform-specific development](docs/local-dev.md).
 
 Expected discovery is exactly the seven tools below. stdout is MCP-only;
 stderr emits safe code/component/level diagnostics without raw SDK/HTTP
@@ -447,4 +480,25 @@ Offline unit tests and mocked integration are allowed:
 
 Use only synthetic settings/responses; no ERP or `.env` access for these checks. Test execution is not remote acceptance. Read-only Git inspection is allowed by PRD policy; version-changing/publishing actions require authorization. No Git action is part of this documentation consolidation.
 
-[Runbook](docs/runbook.md) contains the executed 74-test Sprint 6 suite, the real bounded search observation and historical evidence with their limits. [PRD](PRD.md) owns scope and all sprint checklists. [Historical archives](docs/history/README.md) preserve prior evidence and superseded policies. The approved development policy is installed in `AGENTS.md`; the earlier protected-edit timeout was resolved after renewed approval.
+[Runbook](docs/runbook.md) records the current documentation verification and
+historical bounded observations separately. Earlier counts and no-registration
+statements above describe their named checkpoints, not the present suite or
+new query permission. [Historical archives](docs/history/README.md) retain
+superseded policies and evidence; [PRD](PRD.md) owns every sprint state.
+
+## Controlled handoff, not publication
+
+The delivery is NOT_READY, not FOUNDATION_READY / COMMERCIAL_API_BLOCKED:
+bounded real commercial evidence already exists, but the final release
+criteria are not all established. Sprint 13 remains unexecuted/open; no
+clean-install or new operational acceptance is inferred from the existing
+offline tests. Technical SKU, remote price/stock filters and broad coverage
+retain their explicit limits. Application-only capabilities are not new tools.
+
+The maintainer may separately choose a project license, review rights and
+third-party notices, inspect the Git index/history and exact publication file
+set privately, then decide whether to authorize versioning or publication.
+No commit, tag, push, repository upload, release or permanent client connection
+is performed or authorized by these documentation sprints. Do not stage all
+files blindly or rely on .gitignore as evidence that no secret was tracked.
+See the [handoff and evidence ledger](docs/runbook.md#sprints-12-and-14--documentation-and-controlled-handoff).

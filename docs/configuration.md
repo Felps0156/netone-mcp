@@ -33,7 +33,11 @@ Operator-defined private HTTPS addresses and single-label hosts are allowed. Thi
 
 For a new installation, provide base and token. For a legacy installation, keep the file intact and derive origin from a valid supported URL if the base is absent. If changing origin through process configuration, override every conflicting legacy URL as well as the base. Neutral `example.invalid` hosts are non-operational; never probe them or the published test host as an installation check.
 
-Historical Sprint 2 inspection found a local reduced-products route mismatch; no URL value is published. This refactor has not reread the installation file or established readiness. The operator owns any correction.
+Historical Sprint 2 inspection found a local reduced-products route mismatch;
+the operator later corrected configuration before the successful bounded
+S5.01 observations. No value is published. This documentation execution has
+not reread the installation file or established current readiness. The
+historical mismatch is not a current diagnosed fault.
 
 ## Private client and request limits
 

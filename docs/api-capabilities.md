@@ -1,5 +1,40 @@
 # NetOne API capability evidence
 
+## Current implementation matrix
+
+PRD1.12.0 / DEC-035 consolidates the existing implementation, not a new API
+admission or operational observation. Sprints12/14 cover documentation and
+controlled handoff only; Sprint13 remains open and V1 NOT_READY. All real
+query/configuration-read budgets are closed. Seven MCP tools are registered.
+G3 remains limited to DEC-031; G4 remains synthetic application-only evidence.
+The installed five direct pins are retained, not upgraded or clean-installed.
+
+| Operation | Literal method and path | Implemented closed body | Current consumers and bounded evidence |
+|---|---|---|---|
+| products | POST `/app-web/api/v2/produto/reduzidos` | Integer page/limit; optionally idsProdutos=[strict integer] OR mascara=validated unchanged string, never both | MCP search_products, search_product_by_code, get_product_details, search_product_by_ean, list_products. Historical S5.01/S6.13/S7 ID/EAN/DEC-025/S8.14; DEC-031 real MCP listing only. Application-only SKU/expanded/catalog analysis have no own real acceptance. |
+| prices | POST `/app-web/api/v2/produto/precos` | Integer page/limit only | MCP get_product_price: exact local product_id selection. S8.14 sample, not price-ID filter proof. Currency unknown in MCP. |
+| stock | POST `/app-web/api/v2/produto/estoque` | Integer page/limit only | MCP check_inventory: exact local reduced_id selection; S8.14 sample. Application-only inventory analysis synthetic. No selected/verified deposit identity or freshness. |
+
+The three method/path pairs exactly match client._QUERY_PATHS and the
+[security policy](security.md). `_query()` constructs bodies, while the
+mandatory hook checks destination/method/Host/path. Strict application limits
+are bounded again by configuration; rows count before deduplication.
+Only literal search defaults to100 inspected rows with max_items20; the
+other six MCP tools default max_results20. Listing defaults max_pages1.
+Neither published parameters nor successful page/limit observations admit
+additional filters. O4's IDs number/array conflict remains unresolved; O5
+directed IDs remain planned, not implemented. Auxiliary routes are
+INVENTORIED_ONLY; login is documented but not implemented/admitted.
+
+The sections below retain dated evidence and earlier contracts. Where they
+describe no registration, old defaults or no later sprint, that is a
+historical boundary superseded only by the named later decision, not current
+instructions. The matrix above and current source govern actual capability.
+Source documentation was inspected on the dates recorded below, not freshly
+validated against the provider during these documentation sprints.
+
+## Evidence chronology
+
 Initial investigation: 2026-10-27. Sprint 9.5 offline contracts below supersede
 the earlier search defaults only; DEC-027/030/031 evidence remains bounded.
 PRD1.9.3 / DEC-032 records Sprint9.5 complete offline,170 tests PASS after
@@ -434,9 +469,15 @@ No route was recovered from private environment values. The neutral `.env.exampl
 
 ## Endpoint inventory
 
-All commercial rows below are OFFICIALLY DOCUMENTED / NOT RELEASED FOR MCP. The first three rows have the bounded S5.01 field observation below, not general operational release; auxiliary rows are INVENTORIED_ONLY. "Documented" alone describes a published contract, not a successful call. Authentication header policy comes from O2 even where an operation page omits its security widget. No raw response examples from a commercial installation are included.
+This is the published-contract research inventory, not the implemented body
+schema. Its original no-MCP state is historical; the current matrix above
+records the seven registered consumers and separately bounded observations.
+Unimplemented filters and auxiliary rows remain unsupported/INVENTORIED_ONLY.
+"Documented" alone does not establish a successful call or admission.
+Authentication header policy comes from O2 even where a security widget is
+absent. No raw installation response is included.
 
-| ID / source | Method and literal path | Request body / documented response | Potential consumer (not registered) |
+| ID / source | Method and literal path | Request body / documented response | Consumer candidate (registration governed by current matrix) |
 |---|---|---|---|
 | reduced_products / L2, O3 | POST `/app-web/api/v2/produto/reduzidos` | `ultimaAlteracaoTimestamp`, `idsReduzidos: array[number]`, `idsProdutos: array[number]`, `mascara: string`, `carregarClassificacoes: boolean`, `carregarCategorias: boolean`, `page`, `limit`; 200 envelope with product array, `total`, `page`, `totalPages`, `totalElements` | `search_products`, details, code lookups, list/catalog analysis |
 | product_prices / O5 | POST `/app-web/api/v2/produto/precos` | Timestamp, product/reduced-ID arrays, `mascara`, `page`, `limit`; 200 envelope with IDs, SKU, retail/wholesale table/value/discount fields | `get_product_price` |
@@ -744,7 +785,7 @@ The server formatter emits only `level=<...> component=mcp|httpx|httpcore|librar
 
 ## Historical gate record and unblock request before DEC-029
 
-Current decision: DEC-017 accepts query purpose with residual limitations; DEC-024/025 admit typed ID/mask filters and distinct exact-code consumers. Real ID/EAN/commercial-code observations succeeded; technical SKU proof remains absent. DEC-027 closes Sprint 7 by explicit maintainer acceptance with that exception, revising only S7.11's criterion. This is not full operational proof. Commercial MCP tools remain absent; no price/stock consumer, arbitrary filter, new ERP request or Sprint 8 work is authorized. V1 remains NOT_READY.
+Historical decision before DEC-029: DEC-017 accepts query purpose with residual limitations; DEC-024/025 admit typed ID/mask filters and distinct exact-code consumers. Real ID/EAN/commercial-code observations succeeded; technical SKU proof remains absent. DEC-027 closes Sprint 7 by explicit maintainer acceptance with that exception, revising only S7.11's criterion. This is not full operational proof. At that checkpoint commercial MCP tools remained absent and no price/stock consumer or Sprint 8 work was authorized. Later DEC-029/030/031 supersede those boundaries only within their recorded scopes; V1 remains NOT_READY.
 
 Owner: maintainer, with NetOne support where the contract is ambiguous. Required next evidence:
 

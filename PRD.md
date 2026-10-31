@@ -1,7 +1,7 @@
 # PRD — NetOne MCP: Consulta e Análise Read-Only
 
-> **Versão:** 1.11.0 — Sprint 11 concluída no escopo offline de segurança e qualidade
-> **Estado:** NOT_READY para V1; Sprints 5–11 concluídas em seus escopos delimitados, preservada a ressalva DEC-027 para codigoSku técnico. Sprint 11 revisada offline conforme DEC-034, com pendências menores documentadas; sem registro MCP das análises ou nova prova ERP. Sete tools MCP e G3 no recorte de DEC-031 preservados. Todos os orçamentos ERP encerrados; nenhuma nova chamada ou Sprint 12+ autorizada.
+> **Versão:** 1.12.0 — 31/10/2026 — documentação pública e encerramento técnico delimitado das Sprints 12 e 14
+> **Estado:** NOT_READY para V1; Sprints 5–11 mantêm seus escopos/evidências e a ressalva DEC-027. Sprints 12 e 14 concluídas no recorte documental aprovado/revisado conforme DEC-035; Sprint 13 permanece aberta e não executada. Sete tools MCP, G3 delimitado por DEC-031 e G4 sintético preservados. G5 PASS somente na documentação pública revisada; G6 pendente. Orçamentos ERP/configuração encerrados; sem nova chamada, instalação, Git ou publicação.
 > **Regra fundamental:** nenhuma operação pode alterar dados comerciais do ERP.
 
 Este documento é a fonte de verdade para escopo, arquitetura, critérios e checklist. A revisão 1.2.0 substituiu restrições históricas de testes, Git somente leitura e frameworks obrigatórios. A revisão 1.2.1 registra autorização posterior explícita para leitura em memória da configuração e até três consultas de S5.01, sem exposição de segredos. Produtos/preços/estoque responderam com page=1 e limit=1; normalização e metadados das amostras aceitos. S5.01 e Sprint 5 concluídas, com 51 testes offline novamente aprovados. Não houve login, renovação, alteração do `.env`, novas tools ou avanço para Sprint 6. A autorização pontual não libera chamadas contínuas; evidências e limites em docs/runbook.md.
@@ -649,6 +649,39 @@ desatualizadas (posteriormente corrigidas) e linhas longas preexistentes
 (único Minor remanescente). S11.01–13 concluídas neste recorte.
 G3/G4, ressalvas DEC-027/030/031, sete tools e V1 permanecem inalterados.
 
+DEC-035 — 1.12.0, 31/10/2026: mantenedor confirmou executar somente Sprints
+12 e14, excluindo13, e aprovou o desenho e execução até verificação final
+sem checkpoints intermediários. Desenho/plano de2026-10-31 em
+docs/superpowers/specs/2026-10-31-sprints-12-14-design.md e
+docs/superpowers/plans/2026-10-31-sprints-12-14.md; builder check sem lacunas
+importantes. Consolidação incremental, não substituição de arquitetura:
+README/inventário/configuração/runbook e novos guias architecture/security/
+local-dev/attributions; atualização restrita de instruções pelo mecanismo
+normal. Custos/trade-offs: documentação mantém detalhes históricos e
+navegação explícita para não apagar evidência; receitas POSIX não são prova
+de plataforma. Produção/testes/pins preservados. Após a auditoria identificar
+12 linhas com nome empresarial/caminho local em cinco documentos históricos,
+o mantenedor autorizou expressamente substituir somente essas referências
+por placeholders nos dois arquivos de docs/history e nos planos de Sprint5,
+9 e11. Decisões/resultados/checklists permanecem inalterados; índice histórico
+registra que as cópias não são mais byte-idênticas. Exceção restrita à
+sanitização, não reescrita de provas ou acesso a .env/Git/publicação.
+Cinco dependências diretas têm consumidores reais; nenhuma removida por
+cosmética. Metadados de licença instalados registrados, mas licença do
+projeto/clearance de publicação continuam decisão do mantenedor, não
+inventados. Sem Git/histórico, .env real, ERP, instalações, login/rotação,
+filtros/tools novos ou infraestrutura. Supersede somente proibições anteriores
+de iniciar12+ para este recorte12/14; registros antigos são históricos e
+orçamentos anteriores continuam encerrados. Marcação de tarefas depende da
+evidência no runbook; revisão e comandos reais registrados ali.
+G5 PASS somente no conjunto documental público revisado, com limites de
+auditoria de segredos/licenças explicitados; não é liberação jurídica ou
+operacional. G6 e critérios globais não promovidos. Classificação NOT_READY:
+há prova comercial delimitada, portanto não se alega integração comercial
+totalmente bloqueada, mas falta aceite final da Sprint13 e requisitos globais.
+S14.14 aceita apenas condições comprovadas e seus limites, não uma V1.
+Publicação/versionamento são handoff opcional ao responsável, sem execução.
+
 ## 26. Critérios de Aceite
 
 ### 26.1 Critérios globais
@@ -712,7 +745,7 @@ flowchart LR
 
 ## 28. Sprints de Implementação em Checklist
 
-IDs/ordem e estados não relacionados são preservados. Sprints 0–4 têm entregas offline/documentais; Sprint 5 concluída conforme DEC-022, Sprint 6 conforme DEC-023, Sprint 7 com ressalva DEC-027 e Sprint 8 conforme DEC-029. G2 aceito offline e G0/G1 limitados às operações observadas. Sprint 9 concluída conforme DEC-030/031: integração offline e prova única real de listagem via MCP, G3 PASS nesse recorte. Sprint10 concluída exclusivamente offline na aplicação conforme DEC-033; Sprint11 autorizada para revisão offline conforme DEC-034. Sprint12+ não autorizada. Registros anteriores preservam evidências e critérios de sua época.
+IDs/ordem e estados não relacionados são preservados. Sprints 0–4 têm entregas offline/documentais; Sprint 5 concluída conforme DEC-022, Sprint 6 conforme DEC-023, Sprint 7 com ressalva DEC-027 e Sprint 8 conforme DEC-029. G2 aceito offline e G0/G1 limitados às operações observadas. Sprint 9 concluída conforme DEC-030/031: integração offline e prova única real de listagem via MCP, G3 PASS nesse recorte. Sprint10 concluída exclusivamente offline na aplicação conforme DEC-033; Sprint11 concluída na revisão offline DEC-034. DEC-035 autoriza exclusivamente Sprints12/14 documentais, sem executar13 ou publicar. Registros anteriores preservam evidências e critérios de sua época, não proibições supersedidas para este recorte.
 
 Executar sequencialmente dentro do escopo autorizado, comprovar antes de marcar e manter tarefas condicionais bloqueadas. Commits são opcionais e dependem de autorização do responsável; não são unidade obrigatória de trabalho. Autorização de teste offline não libera consulta real nem tool.
 
@@ -1262,24 +1295,39 @@ V1 NOT_READY preservados; nenhum ERP/.env/Git ou avanço à Sprint12+.
 ### Sprint 12 — README, arquitetura e documentação pública
 
 **Objetivo:** reproduzibilidade sem dados privados.
-- [ ] S12.01 — Revisar introdução e objetivos no `README.md` em inglês.
-- [ ] S12.02 — Documentar requisitos Python 3.14+ e instalação via `.venv`.
-- [ ] S12.03 — Documentar `requirements.txt` e compatibilidade verificada.
-- [ ] S12.04 — Documentar variáveis apenas como nomes/placeholders.
-- [ ] S12.05 — Documentar inicialização stdio e exemplo genérico de cliente MCP.
-- [ ] S12.06 — Listar **somente** tools efetivamente implementadas/liberadas.
-- [ ] S12.07 — Escrever `docs/architecture.md` com diagrama de camadas.
-- [ ] S12.08 — Concluir `docs/api-capabilities.md` com status e evidências.
-- [ ] S12.09 — Escrever `docs/security.md` com garantias de leitura e gestão de segredos.
-- [ ] S12.10 — Escrever `docs/local-dev.md` com passos Windows/macOS/Linux.
-- [ ] S12.11 — Escrever `docs/runbook.md` com troubleshooting e validação manual.
-- [ ] S12.12 — Garantir que não há URL particular, usuário, empresa, token ou dados comerciais reais.
-- [ ] S12.13 — Revisar licenças e atribuições quando houver código de terceiros reutilizado.
-- [ ] S12.14 — Registrar G5 e limitações reais no README.
+**Escopo DEC-035:** consolidação e auditoria do conjunto público explícito,
+sem .env real/Git/histórico. Receitas de instalação não equivalem a nova
+instalação limpa ou prova macOS/Linux. Revisão de licenças registra a decisão
+pendente do projeto, sem conceder licença ou autorização para publicação.
+- [x] S12.01 — Revisar introdução e objetivos no `README.md` em inglês.
+- [x] S12.02 — Documentar requisitos Python 3.14+ e instalação via `.venv`.
+- [x] S12.03 — Documentar `requirements.txt` e compatibilidade verificada.
+- [x] S12.04 — Documentar variáveis apenas como nomes/placeholders.
+- [x] S12.05 — Documentar inicialização stdio e exemplo genérico de cliente MCP.
+- [x] S12.06 — Listar **somente** tools efetivamente implementadas/liberadas.
+- [x] S12.07 — Escrever `docs/architecture.md` com diagrama de camadas.
+- [x] S12.08 — Concluir `docs/api-capabilities.md` com status e evidências.
+- [x] S12.09 — Escrever `docs/security.md` com garantias de leitura e gestão de segredos.
+- [x] S12.10 — Escrever `docs/local-dev.md` com passos Windows/macOS/Linux.
+- [x] S12.11 — Escrever `docs/runbook.md` com troubleshooting e validação manual.
+- [x] S12.12 — Garantir que não há URL particular, usuário, empresa, token ou dados comerciais reais.
+- [x] S12.13 — Revisar licenças e atribuições quando houver código de terceiros reutilizado.
+- [x] S12.14 — Registrar G5 e limitações reais no README.
 
 **Entrega:** documentação pronta para hospedagem pública de código.  
 
 **Aceite:** mantenedor consegue instalar e identificar o que está e não está funcional.
+
+**Evidência S12.01–14 / DEC-035:** README, guias de arquitetura/segurança/
+desenvolvimento local/atribuições, configuração, inventário e runbook
+consolidados.195 testes offline PASS/9.144s e pip check PASS após as edições.
+Auditoria de61 arquivos públicos:103 links/âncoras locais verificados;
+12 linhas identificáveis sanitizadas em cinco históricos sob autorização
+adicional explícita, demais decisões/resultados/checklists preservados.
+S12.12 cobre o conjunto público inspecionado, não .env privado/índice/histórico
+Git ou garantia de detecção universal. G5 documental, não clearance jurídico,
+nova instalação ou aceite operacional; licença do projeto permanece pendente.
+Revisão independente e reconciliação final no runbook.
 
 ### Sprint 13 — Validação final offline e operacional
 
@@ -1312,28 +1360,43 @@ V1 NOT_READY preservados; nenhum ERP/.env/Git ou avanço à Sprint12+.
 ### Sprint 14 — Publicação controlada e encerramento
 
 **Objetivo:** fechar o escopo da V1 sem confundir fundação pronta com API desbloqueada.
-- [ ] S14.01 — Reconciliar `README.md`, `PRD.md` e tools registradas.
-- [ ] S14.02 — Reconciliar status das operações read-only por método + rota + schema no inventário.
-- [ ] S14.03 — Auditar arquivos de exemplo para dados privados e tokens.
-- [ ] S14.04 — Revisar `requirements.txt` e remover dependências sem uso.
-- [ ] S14.05 — Confirmar estrutura mínima, sem infraestrutura proibida.
-- [ ] S14.06 — Confirmar que nenhuma tarefa ou sprint foi marcada sem evidência.
-- [ ] S14.07 — Registrar decisões técnicas finais com seus trade-offs.
-- [ ] S14.08 — Registrar limitações e funcionalidades deliberadamente recusadas.
-- [ ] S14.09 — Classificar entrega como `V1_COMPLETE`, `FOUNDATION_READY / COMMERCIAL_API_BLOCKED` ou `NOT_READY`.
-- [ ] S14.10 — Elaborar resumo das ferramentas realmente implementadas.
-- [ ] S14.11 — Elaborar instruções públicas de execução e integração MCP genérica.
-- [ ] S14.12 — Entregar ações opcionais de versionamento/publicação ao responsável; execução mutável requer autorização.
-- [ ] S14.13 — Incrementar a versão do PRD e registrar data/alterações.
-- [ ] S14.14 — Dar aceite apenas às condições comprovadas no ambiente real.
+**Escopo DEC-035:** encerramento técnico honesto com classificação NOT_READY;
+não é conclusão da V1 ou publicação executada. Sprint13 permanece intacta.
+S14.14 registra aceite somente das condições comprovadas e limitações, não
+evidência operacional nova ou dispensa dos critérios globais.
+- [x] S14.01 — Reconciliar `README.md`, `PRD.md` e tools registradas.
+- [x] S14.02 — Reconciliar status das operações read-only por método + rota + schema no inventário.
+- [x] S14.03 — Auditar arquivos de exemplo para dados privados e tokens.
+- [x] S14.04 — Revisar `requirements.txt` e remover dependências sem uso.
+- [x] S14.05 — Confirmar estrutura mínima, sem infraestrutura proibida.
+- [x] S14.06 — Confirmar que nenhuma tarefa ou sprint foi marcada sem evidência.
+- [x] S14.07 — Registrar decisões técnicas finais com seus trade-offs.
+- [x] S14.08 — Registrar limitações e funcionalidades deliberadamente recusadas.
+- [x] S14.09 — Classificar entrega como `V1_COMPLETE`, `FOUNDATION_READY / COMMERCIAL_API_BLOCKED` ou `NOT_READY`.
+- [x] S14.10 — Elaborar resumo das ferramentas realmente implementadas.
+- [x] S14.11 — Elaborar instruções públicas de execução e integração MCP genérica.
+- [x] S14.12 — Entregar ações opcionais de versionamento/publicação ao responsável; execução mutável requer autorização.
+- [x] S14.13 — Incrementar a versão do PRD e registrar data/alterações.
+- [x] S14.14 — Dar aceite apenas às condições comprovadas no ambiente real.
 
 **Entrega:** release tecnicamente honesta, documentada e segura.  
 
 **Aceite:** publicação jamais inclui segredo, dados reais ou funcionalidades declaradas sem prova.
 
+**Evidência S14.01–14 / DEC-035:** registry de sete nomes e três rotas/body
+atuais reconciliados; cinco pins com consumidores reais, sem remoção artificial
+ou instalação. Exemplos neutros e estrutura mínima revisados. Versão1.12.0,
+trade-offs, recusas e handoff opcional ao mantenedor registrados. Checklist
+comparado ao baseline público por código; Sprint13 e critérios globais intactos.
+S14.14 aceita documentação/regressão offline no ambiente existente e somente
+o alcance declarado das evidências reais históricas; não há nova prova ERP,
+dispensa da Sprint13 ou conclusão da V1. Entrega NOT_READY; publicação não
+executada. Resultados/revisão/auditoria final no runbook.
+
 ## 29. Pendências e Próximas Decisões
 
-- Revisão1.9.2 inseriu Sprint9.5 somente como planejamento; DEC-032 registra seu encerramento offline. DEC-033 conclui Sprint10 somente na aplicação, com limiar3 e verificação sintética. DEC-034 autoriza revisão offline de segurança/qualidade da Sprint11. Filtros de preço/estoque continuam apenas planejados; O4 permanece documentalmente ambígua e O5 depende de admissão/validação próprias. Busca ampliada/análises continuam fora do MCP. Nenhuma autorização ERP, ampliação de G3/V1 ou Sprint12+.
+- DEC-035 autoriza somente Sprints12/14 documentais e encerramento delimitado; Sprint13 permanece aberta/não executada, G6 pendente e V1 NOT_READY. Nenhuma nova autorização .env/ERP, instalação, Git ou publicação. G5 cobre somente documentação pública revisada, não auditoria de histórico Git, liberação jurídica ou aceite operacional.
+- Revisão1.9.2 inseriu Sprint9.5 somente como planejamento; DEC-032 registra seu encerramento offline. DEC-033 conclui Sprint10 somente na aplicação, com limiar3 e verificação sintética. DEC-034 conclui revisão offline de segurança/qualidade da Sprint11. Filtros de preço/estoque continuam apenas planejados; O4 permanece documentalmente ambígua e O5 depende de admissão/validação próprias. Busca ampliada/análises continuam fora do MCP; G3/G4 limitados às evidências existentes.
 
 - Sprint9 concluída: integração offline e S9.12 real comprovadas conforme DEC-031, G3 PASS no recorte de descoberta e uma listagem page1/limit1. Orçamento consumido/encerrado; não autoriza consulta contínua ou conexão permanente ao Hermes. SKU técnico e busca ampliada permanecem fora do registry. Minor de classificação de diagnóstico corrigido offline na Sprint11, sem ampliar a prova real. Sprint10 conforme DEC-033; V1 NOT_READY.
 
@@ -1342,7 +1405,7 @@ V1 NOT_READY preservados; nenhum ERP/.env/Git ou avanço à Sprint12+.
 - Conflitos documentais: nome de header gerado, stock IDs array, nomes/semântica timestamp, metadados/limites de paginação.
 - Identidade/unicidade, seleção de tabela, unidade/depósito e snapshot/visibilidade comercial permanecem limitados/não comprovados globalmente. BRL foi confirmado pelo operador para esta instalação em DEC-029, não observado em campo da API; valores/tabelas nominais não são preço final.
 - Análises de Sprint10 usam fluxo direto justificado e suficiência por métrica; evidência atual sintética não prova indicadores reais/globais ou autoriza consulta ERP.
-- Licença/atribuição e outras plataformas/instalação limpa precisam de evidência aplicável.
+- Licenças das cinco dependências diretas revisadas por metadados instalados e atribuições em docs/attributions.md; nenhuma dependência sem consumidor. Licença do projeto e direitos de distribuição pendentes de decisão do mantenedor; não houve auditoria jurídica/transitiva ou publicação. Outras plataformas e instalação limpa do manifesto atual continuam sem nova prova. .gitignore não substitui revisão de índice/histórico e seleção pública de arquivos pelo responsável.
 
 - Checkpoint histórico anterior à Sprint 6: 51 testes offline passaram; uma falha importante de prioridade de exceções no cleanup, encontrada na revisão, foi reproduzida e corrigida. Naquele checkpoint não houve segunda revisão independente, instalação limpa ou aceite remoto. A Sprint 6 verificou a suíte total de 74 testes e acrescentou revisão independente por etapa e do conjunto, além da observação real delimitada de produtos; não comprova instalação limpa nem aceite amplo da V1.
 

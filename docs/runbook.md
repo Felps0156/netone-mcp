@@ -2,27 +2,27 @@
 
 ## Current boundary
 
-Sprint9.5 / DEC-032 authorizes only the approved offline local optimization
-design/plan. Search defaults and new metadata below supersede the earlier
-search contracts, not DEC-027/030/031's real evidence or exhausted budgets.
-MCP remains exactly seven tools, literal search only; price/stock filters
-are plans, not implementation. Expanded lexical search is application-only.
+PRD1.12.0 / DEC-035 authorizes only Sprints12/14 documentation and controlled
+handoff, with the approved design and continuous execution through review.
+Sprint13 is not executed or marked; V1 stays NOT_READY and G6 pending.
+MCP remains exactly seven tools, literal search only. Technical SKU, expanded
+lexical search and deterministic analyses are application-only. Remote
+price/stock filters remain plans, not implementation.
 
-PRD 1.9.1 / DEC-031 records Sprint 9's completed MCP integration:
-seven evidenced application consumers are registered, excluding technical
-SKU and expanded search. S9.12's separately authorized single real listing
-passed via generic MCP stdio, page1/limit1, HTTP200, one partial item and
-completed response/transport/client cleanup. G3 PASS in that bounded scope;
-Sprint9 complete, V1 NOT_READY. The memory-only loader read and one-query
-budget are consumed and closed; no further .env access, ERP query, login,
-token rotation, .env write or Git action is authorized. DEC-033 subsequently
-authorizes Sprint10 application-only analysis and synthetic verification;
-earlier no-Sprint10 statements below are historical checkpoint boundaries.
-This does not authorize Sprint11+, real analysis queries or MCP registration.
-All earlier observation budgets remain closed. Earlier no-registration/
-no-Sprint9 statements and test counts below describe historical checkpoints;
-the Sprint9 section governs current discovery. BRL remains installation
-context in the application, not a generic MCP currency or API field.
+DEC-031 records the one authorized real MCP listing: page1/limit1, HTTP200,
+one partial item, completed response/transport/client cleanup. G3 remains
+limited to that evidence. DEC-033/G4 covers synthetic application analyses;
+DEC-034 records offline security/quality review, not new ERP proof.
+All real configuration-read/query budgets remain closed. No real .env
+access/write, ERP query, login, rotation, Git, installation or publication
+is part of the current work. BRL is historical operator-confirmed application
+context, never a generic MCP currency or API-returned field.
+
+Earlier sprint sections below preserve their original default values, test
+counts, registry states and authorization boundaries as dated history. They
+are not current instructions, renewed budgets or a substitute for Sprint13.
+Current contracts: [README](../README.md), [architecture](architecture.md),
+[security](security.md) and the [current API matrix](api-capabilities.md#current-implementation-matrix).
 
 Current behavior and limits: [configuration](configuration.md). Endpoint contracts, field mapping and unresolved provider ambiguities: [API inventory](api-capabilities.md). Canonical sprint IDs/states/sequence: [PRD section 28](../PRD.md#28-sprints-de-implementação-em-checklist).
 
@@ -204,7 +204,15 @@ from this investigation. G3 scope/V1 NOT_READY and closed budgets unchanged.
 
 ## Evidence retained, not re-executed
 
-[The integral runbook through PRD 1.1.6](history/runbook-through-1.1.6.md) preserves every prior command/scenario, PASS/FAIL/BLOCKED result, harness failure, independent finding and correction. [The integral PRD 1.1.6](history/PRD-1.1.6.md) preserves prior requirements/decisions and checklist context. These are immutable historical records; obsolete restrictions and earlier deny-all/GET-only states are not current policy. Relative links inside verbatim archives refer to the original document locations; use [the archive index](history/README.md) for current navigation.
+[The historical runbook through PRD1.1.6](history/runbook-through-1.1.6.md)
+preserves prior scenarios, PASS/FAIL/BLOCKED results, harness failures,
+findings and corrections. [PRD1.1.6](history/PRD-1.1.6.md) preserves its
+requirements/decisions/checklist context. These records received only the
+explicitly authorized identifying-reference substitutions in Sprints12/14;
+they are no longer verbatim or byte-identical. Historical decisions/results/
+checklists remain, while obsolete deny-all/GET-only rules are not current
+policy. Relative links retain their original-location interpretation; use
+[the archive index](history/README.md) for navigation and redaction scope.
 
 Historical outcome summary (not new verification):
 
@@ -244,6 +252,37 @@ Do not disable the protocol or indiscriminately disable loggers.
 | Missing totals / repeated page / budget exhausted | Partial result, no global KPI or invented totals |
 | Cancellation / cleanup failure | Preserve cancellation/original error, shield cleanup; bounded stalled-close failure is not completed release |
 | Protected instruction edit timeout | Stop; no retry/bypass without renewed user authorization. The refactor's AGENTS timeout was resolved by renewed approval through the normal patch tool. |
+
+## Future authorized manual validation
+
+This is a procedure for a separate owner-approved acceptance session, not an
+execution of Sprint13 or permission to repeat historical probes:
+
+1. Agree on the exact consumer, method/path/closed body, numeric attempt/page/
+   row ceilings and retained structural evidence. Configuration-read consent
+   is separate from query consent; old consumed budgets cannot be reused.
+2. Review current loader/guard/TLS/limits offline first. The operator selects
+   the intended origin and credentials privately; never diagnose by dumping
+   settings or copying .env into a report. No automatic login or token rotation.
+3. Use a generic SDK stdio client with the root-.venv absolute executable and
+   server.py paths. Await initialize before tools/list, inspect exactly seven
+   names, then send only the approved tools/call. The existing
+   tests/test_mcp_stdio.py shows this sequence with synthetic settings only;
+   do not replace its fixture with live configuration to run offline QA.
+4. Count actual request attempts and statuses. Keep source data only in memory
+   for same-response projection/Decimal/null/absence comparison. Check
+   structuredContent/text JSON equivalence; retain only approved fixed codes,
+   counts, booleans and sanitized observations. A valid partial miss is not
+   failure of identity matching or proof of global absence.
+5. Observe completed response/transport/client cleanup. Preserve cancellation
+   and initial errors. A stalled bounded close, HTTP429, timeout or changing
+   sample never permits a retry, extra discovery or relaxed guard.
+6. Close the budget durably, record actual PASS/FAIL/BLOCKED and its scope,
+   and reconcile only the acceptance tasks supported by that evidence.
+   Failure paths may be exercised synthetically rather than provoking rate
+   limits or permission changes in the ERP. Never invent remote error proof.
+
+No real calls or private loader access were performed to write this procedure.
 
 ## Offline verification commands and acceptance
 
@@ -971,3 +1010,150 @@ protected-instruction update resolves one, leaving only existing long lines.
 V1 remains NOT_READY. This follow-up changes documentation/instructions only;
 the test results above are the preceding executed verification, not a new
 test run or operational authorization.
+
+## Sprints 12 and 14 — documentation and controlled handoff
+
+Date:2026-10-31. PRD1.12.0 / DEC-035. The maintainer confirmed only Sprints12
+and14, excluding13, approved the [design](superpowers/specs/2026-10-31-sprints-12-14-design.md)
+after an independent builder check found no important gaps, and approved
+continuous execution through final review. The [plan](superpowers/plans/2026-10-31-sprints-12-14.md)
+uses native edits and one independent whole-change review. No intermediate
+permission loop, production/test change, install, Git or real configuration/
+ERP operation is part of this work.
+
+### Deliverables and task evidence
+
+The following ledger states the evidence required for checklist marking;
+verification results and final acceptance follow below. It is not a second
+copy of the canonical PRD checklist.
+
+| PRD task | Deliverable / acceptance evidence and limit |
+|---|---|
+| S12.01 | README introduction explains bounded read-only queries, application analyses and no invented conclusions; English public prose. |
+| S12.02 | README/local-dev require Python >=3.14,<4, one root .venv, create only if absent, no unauthorized replacement. |
+| S12.03 | requirements.txt pins compared to installed metadata; all direct imports have consumers; existing environment only, no clean-install claim. |
+| S12.04 | Configuration guide and .env.example use variable names/neutral example.invalid and empty credentials; no existing .env read/overwrite. |
+| S12.05 | README command/args example with absolute-path placeholders; common client wrapper distinguished from protocol; existing generic SDK stdio regression. |
+| S12.06 | Seven-name README table compared to explicit registry; excluded application-only functions labelled, not advertised as MCP tools. |
+| S12.07 | architecture.md Mermaid, module ownership, request flow, lifespan and collection/result invariants. |
+| S12.08 | Current implementation matrix compares exactly three literal POST paths and closed bodies to source; published future filters/history distinguished. |
+| S12.09 | security.md describes secrets, allowlist, trust boundaries, TLS, replay/byte/time/cleanup limits and residual risks. |
+| S12.10 | local-dev.md has Windows PowerShell/Git Bash and macOS/Linux recipes, explicit interpreter/pip and unverified POSIX-platform caveat. |
+| S12.11 | Current runbook boundary/troubleshooting and separately authorized future manual-validation procedure; no execution of Sprint13. |
+| S12.12 | Allowlisted public Markdown/example review for private paths, personal identifiers, nonpublic hosts and credential assignments; no claim about ignored files, Git index/history or unknown source secrets. |
+| S12.13 | attributions.md records five installed direct-license metadata values, source-reference audit and no vendored upstream source observed; project-license decision stays pending, no redistribution clearance. |
+| S12.14 | README records G5 in the reviewed public-documentation scope, explicit release limitations and NOT_READY/G6 pending. |
+| S14.01 | README/PRD/current inventory and seven registry names reconciled; no behavioral or registry change. |
+| S14.02 | Method/route/body matrix and security guide compared to _QUERY_PATHS/_query; prices/stock page/limit only; mutually exclusive product filters. |
+| S14.03 | Existing .env.example and generic MCP snippet reviewed: no real token/login/password, host example.invalid, absolute-path placeholders only. |
+| S14.04 | AST imports show actual consumers of mcp/pydantic/httpx/anyio/python-dotenv; exact pins retained, no unused direct dependency to remove. |
+| S14.05 | Explicit public root/tests/docs inventory and production imports: seven modules, no Docker/DB/migrations/UI/CI implementation; excluded trees not traversed. |
+| S14.06 | Programmatic ordered tuple comparison requires only28 approved S12/S14 state changes; all task texts/order, Sprint13 and global checkboxes preserved; prior evidence read, not fabricated anew. |
+| S14.07 | DEC-035 records consolidation versus operational/public release, direct pipeline and existing dependencies, history preservation and costs. |
+| S14.08 | README/security/inventory retain refused filters/tools, no mutation/arbitrary HTTP/tenant, SKU exception, unknown currency/deposit/freshness and bounded visibility. |
+| S14.09 | NOT_READY: bounded commercial evidence exists, but Sprint13/final global release criteria are not accepted; do not relabel as fully blocked commercial API. |
+| S14.10 | README seven-tool table plus separately labelled application functions, actual inputs/defaults/output limits and evidence. |
+| S14.11 | Public README/local-dev/configuration cover explicit interpreter, secure configuration ownership and generic stdio integration without client-brand dependency. |
+| S14.12 | Optional maintainer handoff below, no executed Git/versioning/publication. |
+| S14.13 | PRD1.12.0 dated31/10/2026, DEC-035 and affected current status reconciled; historical records remain dated. |
+| S14.14 | Accept only reviewed documentation/offline behavior and historical bounded evidence as labelled; no new operational acceptance, V1 approval or waiver of Sprint13/global criteria. |
+
+### Executed verification and boundaries
+
+Baseline captured57 explicitly public files in managed scratch, including the
+approved design/plan. Root-.venv `--version` returned Python3.14.3.
+`.venv/Scripts/python.exe -B -m unittest discover -s tests -v` returned195
+tests PASS in17.591s; `.venv/Scripts/python.exe -B -m pip check` returned
+`No broken requirements found.` This is a new offline regression run, not
+a recreation of historical ERP results or completion of Sprint13 tasks.
+Direct distribution metadata matches all five pins; AST source inspection
+confirms each dependency's actual consumer. License metadata is recorded in
+attributions.md, not a project-license selection or legal certification.
+
+The initial documentation audit correctly reported the pending new README
+handoff anchor before this runbook section existed; it was supplied here,
+not suppressed from link checking. A subsequent audit also caught12 existing
+identifying lines in five historical documents. After the maintainer explicitly
+approved the narrow exception, business/local-path references were replaced
+with neutral placeholders in the two archives and Sprint5/9/11 plans. The
+archive index now discloses redaction rather than claiming byte equality.
+The first credential-empty check also mishandled CRLF in the unchanged
+example; line-based inspection corrected the audit, not the example file.
+
+After those edits, the offline suite again passed195 tests in9.144s and
+pip check passed. Public audit:61 files,226 ordered PRD tasks,103 local
+links/anchors, zero findings in the documented identifier/host/path checks.
+Exact historical comparison allows only the12 approved substituted lines;
+all other historical lines, task text/order/states and results remain.
+Production, tests, manifest and neutral example are unchanged. Exactly seven
+MCP names and three literal POST routes match the README/current matrix.
+The final public comparison confirms exactly28 newly completed tasks,
+S12.01–14/S14.01–14, among226 ordered tasks. Sprint13 remains0/20 open and
+global/Definition-of-Done checkboxes are identical to baseline. Only the
+approved documentation and historical identifying references differ.
+
+### Independent review and final acceptance
+
+The independent reviewer ran the complete offline suite:195 tests PASS in
+8.959s, pip check PASS, Python3.14.3, and reran the public auditor. It
+confirmed61 public files,103 local links/anchors, exact28 task transitions,
+seven tools, three closed query contracts, five installed pins/licenses,
+23 unchanged public production/test/manifest/example/ignore files and only
+12 authorized historical line substitutions. No Critical/Important finding.
+
+Two Minor reconciliation items were identified: the current archive paragraph
+still described verbatim/immutable copies, and the execution plan steps were
+not yet marked. Both are within the planned final documentation/status
+reconciliation, not production fixes. A focused document check reproduced
+both mismatches before correction; the current paragraph and plan were then
+reconciled and are checked again with the final audit. No new runtime test
+or retrospective operational evidence was invented. Existing long-line
+style debt is unchanged; no new review finding is deferred.
+
+The reviewer explicitly did not judge current credentials/TLS/ERP/permissions/
+effects/coverage; clean installation or macOS/Linux; secrets in private files/
+Git index/history/future publication sets; legal ownership/license or
+transitive compliance/vulnerabilities; reproduction of old ERP observations;
+visual Mermaid rendering or current external-link availability. These limits
+are retained: code fences/structure and local links are checked, not rendered
+diagrams or live provider contracts. No new release criterion or permission
+is inferred. G5 passes only the reviewed public-documentation scope; the two
+sprints are accepted in that scope, NOT_READY and G6 pending remain.
+
+Final coordinator closure check: both focused document assertions passed
+after failing before reconciliation; full195-test suite PASS/8.947s and
+pip check PASS. The public scope/checklist/link/privacy auditor passed again
+with the same61 files/103 links/226 task IDs and exactly28 approved state
+changes. All18 execution-plan steps are now marked with their evidence.
+No pending new review finding; no additional ERP/configuration/Git action.
+
+Audit artifacts use explicit Hermes managed scratch netone-s12-s14. Initial
+TMPDIR unexpectedly pointed to ordinary Local/Temp; only the newly created
+public baseline was moved to managed scratch and TMPDIR was explicitly set
+there before tests. No private configuration was involved. Public snapshots
+and difflib replace Git; no index/history or secret-file checksum is claimed.
+
+### Optional maintainer actions and remaining release blockers
+
+1. Decide the project's license and confirm authorship/rights; retain required
+   notices if distributing third-party artifacts. Installed direct metadata
+   alone is not a transitive redistribution audit.
+2. Privately review the exact proposed publication file set and Git index/
+   history for secrets/commercial data. Ignore rules do not establish prior
+   tracking safety. Do not blindly stage all files or publish historical
+   secrets; incident response/rotation belongs to an authorized owner.
+3. If desired, separately authorize Sprint13 scope: compatible clean-install
+   proof without silently replacing the sole .venv, applicable acceptance
+   matrix and a numeric real-call budget/configuration-read permission where
+   needed. Preserve historical evidence, unknowns and the technical-SKU
+   exception. Do not infer query permission from this handoff.
+4. Only after reviewing actual acceptance and remaining blockers, decide on
+   explicit commit/tag/push/release actions and destination. No such action,
+   upload or permanent MCP connection has been performed here.
+
+G5 is documentation-only within the reviewed public set. G6 and V1 remain
+pending/NOT_READY. These sprints do not establish current credential validity,
+live TLS/ERP behavior, remote multi-page/snapshot guarantees, unit/deposit
+identity, freshness, all-tool real MCP coverage, clean installation or other
+platforms. Existing long-line style debt remains. The Sprint13 checklist and
+global/Definition-of-Done checkboxes are intentionally untouched.
