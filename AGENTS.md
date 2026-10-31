@@ -2,6 +2,26 @@
 
 ## Scope and current status
 
+Sprint11 / PRD1.11.0 DEC-034 is complete in its offline security/quality
+scope. The maintainer chose option1 (review and minimal verified fixes)
+and direct native execution without intermediate approval gates.
+Plan: docs/superpowers/plans/2026-10-30-sprint-11.md; evidence and residual
+limits: docs/runbook.md, Sprint11. S11.01–13 are marked with evidence.
+Coordinator:195 tests PASS/8.643s; independent review:195 PASS/8.629s;
+pip check PASS, no Critical/Important findings. Existing long lines remain
+documented Minor style debt. No new operational evidence was obtained.
+This supersedes earlier no-Sprint11 checkpoints below, not their closed
+ERP budgets. No real .env access/write, ERP, login/rotation, Git, installs,
+new filters/tools, Sprint12+ or V1 release is authorized. Registry stays
+exactly seven tools; G3/G4 retain their bounded scope and V1 is NOT_READY.
+Application ToolInputError (ValueError subtype) identifies registered-tool
+input failures; internal ValueError/serialization errors use safe tool_error.
+Listing page_size validates against the effective row cap before collection;
+invalid input now raises ToolInputError, not collector BlockedOperationError.
+Application-only lexical/analysis validators retain their existing behavior.
+S11.06 covers no protected-file access/mutation during this execution,
+not historical checksum equality or a third-party-change guarantee.
+
 Sprint10 / PRD1.10.0 DEC-033: maintainer chose application-only option1,
 approved docs/superpowers/specs/2026-10-30-sprint-10-design.md with low-stock
 default3, then the native execution plan. Implemented tools.analyze_inventory

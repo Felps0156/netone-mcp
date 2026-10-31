@@ -22,6 +22,16 @@ Sprint10 is complete in that offline scope:190 tests and pip check pass,
 independent review found no issues, and G4 passes for bounded synthetic
 analysis only. No real analysis acceptance or V1 release is claimed.
 
+Sprint 11 is complete within its offline security/quality review scope
+(DEC-034):195 tests and pip check pass, independently rerun; no Critical or
+Important finding remains. The protected instruction-file update was later
+approved and applied after the maintainer requested a renewed submission;
+the earlier timeout is resolved. Existing long lines remain documented
+Minor style debt. This does not
+authorize additional ERP access or Sprint 12+.
+The review records and remaining evidence limits are in the
+[runbook](docs/runbook.md#sprint-11--offline-security-and-quality-review).
+
 The Sprint 9 section below governs current registration. Earlier evidence
 sections retain their original no-registration boundaries as history,
 not current discovery instructions or renewed real-call budgets.
@@ -125,7 +135,13 @@ CallToolResult provides structuredContent and equivalent compact JSON text.
 Application status error sets isError=true while preserving its safe code;
 partial and not_found remain valid structured results. Validation,
 unknown-tool and unexpected failures use fixed messages without input or
-exception echo. Cancel a running call with MCP notifications/cancelled;
+exception echo. Application input failures use invalid_arguments; unexpected
+internal ValueError or serialization failures use tool_error. An explicit
+listing page_size exceeding the effective row budget is invalid_arguments
+before HTTP, including when the configured cap is smaller than the request.
+The application raises ToolInputError (a ValueError subtype) for this case,
+rather than exposing the collector's BlockedOperationError.
+Cancel a running call with MCP notifications/cancelled;
 cancelling only a local SDK task does not send that notification in1.30.0.
 Read-only hints are advisory, not credentials or a guarantee of server
 internals, repeat safety, availability or delivery. API text is data,
@@ -228,8 +244,8 @@ C-category characters. Leading zeros, case, spaces and punctuation are
 preserved. The source mascara/product_mask is the commercial code;
 codigoSku/sku is a separate technical field and may be null. The existing
 search_product_by_sku still means exact API codigoSku, not this business
-alias. IDs/EAN remain separate too. No conversational router or MCP tool
-has been registered; this priority is the application-function contract.
+alias. IDs/EAN remain separate too. No conversational router
+is implemented; search_product_by_code is also registered as described above.
 
 The provider does not document exact-equality semantics for mascara, so
 the application checks equality after the bounded filtered traversal.
@@ -267,7 +283,7 @@ No new HTTP consumer, MCP tool, Sprint8 work or technical-SKU acceptance.
 Eight new offline tests pass; the full suite passes 116 tests. No private
 source values or credentials are stored in the inventory or examples.
 
-### Sprint 8 application functions (not MCP tools)
+### Sprint 8 application functions (also exposed by MCP since Sprint 9)
 
 - `await tools.get_product_price(client, product_id, max_results=20,
   currency=None)` selects exact normalized product IDs locally from bounded
@@ -396,7 +412,9 @@ request/20 rows/0 matches. More coverage is deliberately more work.
 ### Product details and exact codes (Sprint 7 application functions)
 
 Implemented and independently task-reviewed; ID/EAN real observations
-succeeded, SKU real acceptance remains pending. None is registered in MCP:
+succeeded, SKU real acceptance remains unverified under DEC-027's accepted
+exception. ID/EAN are registered since Sprint 9; technical SKU remains
+application-only:
 
 - `await tools.get_product_details(client, product_id, max_results=20)`
   requests the documented product-ID filter and returns the bounded set

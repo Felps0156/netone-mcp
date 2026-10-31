@@ -14,6 +14,10 @@ from analysis import (
 )
 
 
+class ToolInputError(ValueError):
+    """Identify application argument failures without echoing input."""
+
+
 def _filtered_result(
     result: QueryResult, items: tuple[CatalogRecord, ...], warning: str,
 ) -> dict[str, object]:
@@ -34,15 +38,19 @@ def _validate_code_input(code: object, max_results: object) -> None:
         or not code.strip()
         or any(unicodedata.category(char).startswith('C') for char in code)
     ):
-        raise ValueError('Code must be 1 to 256 characters without controls.')
+        raise ToolInputError(
+            'Code must be 1 to 256 characters without controls.'
+        )
     if type(max_results) is not int or not 1 <= max_results <= 1000:
-        raise ValueError('max_results must be an integer from 1 to 1000.')
+        raise ToolInputError('max_results must be an integer from 1 to 1000.')
 
 
 def _validate_search_limits(max_results: object, max_items: object) -> None:
     for value in (max_results, max_items):
         if type(value) is not int or not 1 <= value <= 1000:
-            raise ValueError('Search limits must be integers from 1 to 1000.')
+            raise ToolInputError(
+                'Search limits must be integers from 1 to 1000.'
+            )
 
 
 def _search_result(
@@ -85,7 +93,9 @@ async def search_products(
         or not query.strip()
         or any(unicodedata.category(char).startswith('C') for char in query)
     ):
-        raise ValueError('Query must be 1 to 200 characters without controls.')
+        raise ToolInputError(
+            'Query must be 1 to 200 characters without controls.'
+        )
     _validate_search_limits(max_results, max_items)
     needle = query.strip().casefold()
     result = await client._collect('products', max_results=max_results)
@@ -230,9 +240,11 @@ async def get_product_details(
         type(product_id) is not int
         or not 0 <= product_id <= 9223372036854775807
     ):
-        raise ValueError('product_id must be an integer from 0 to 2**63 - 1.')
+        raise ToolInputError(
+            'product_id must be an integer from 0 to 2**63 - 1.'
+        )
     if type(max_results) is not int or not 1 <= max_results <= 1000:
-        raise ValueError('max_results must be an integer from 1 to 1000.')
+        raise ToolInputError('max_results must be an integer from 1 to 1000.')
     result = await client._collect(
         'products', max_results=max_results, product_id=product_id,
     )
@@ -295,7 +307,7 @@ async def get_product_price(
     if currency is not None and (
         not isinstance(currency, str) or currency != 'BRL'
     ):
-        raise ValueError('Currency must be BRL or unknown.')
+        raise ToolInputError('Currency must be BRL or unknown.')
     result = await client._collect('prices', max_results=max_results)
     items = tuple(item for item in result.items
                   if item.product_id == product_id)
@@ -356,9 +368,14 @@ async def list_products(
     describes only the provider-visible endpoint, not an ERP-wide snapshot.
     """
     if type(max_results) is not int or not 1 <= max_results <= 1000:
-        raise ValueError('max_results must be an integer from 1 to 1000.')
+        raise ToolInputError('max_results must be an integer from 1 to 1000.')
     if type(max_pages) is not int or not 1 <= max_pages <= 100:
-        raise ValueError('max_pages must be an integer from 1 to 100.')
+        raise ToolInputError('max_pages must be an integer from 1 to 100.')
+    if page_size is not None and (
+        type(page_size) is not int
+        or not 1 <= page_size <= min(max_results, client._max_results)
+    ):
+        raise ToolInputError('page_size must fit the effective row budget.')
     result = await client._collect(
         'products', max_results=max_results,
         page_size=page_size, max_pages=max_pages,

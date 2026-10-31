@@ -274,7 +274,7 @@ class ListTests(CommercialToolsCase):
                 with self.assertRaises((ValueError, BlockedOperationError)):
                     await function(self.client, **{name: value})
         instance = self.make_client(max_results=2)
-        with self.assertRaises(BlockedOperationError):
+        with self.assertRaises(ValueError):
             await function(instance, 100, page_size=3)
         self.assertEqual(self.requests, [])
 

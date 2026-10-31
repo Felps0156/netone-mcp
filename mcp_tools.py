@@ -167,7 +167,7 @@ class NetOneMCP(FastMCP):
                 structuredContent=result,
                 content=[TextContent(type='text', text=text)],
             )
-        except ValueError:
+        except tools.ToolInputError:
             # Application validation adds Unicode/blank/effective-budget rules.
             return _error('invalid_arguments')
         except Exception:

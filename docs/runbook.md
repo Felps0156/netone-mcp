@@ -777,6 +777,10 @@ This affects error-code diagnosis, not rejection/read-only/data fidelity.
 Exact code-classification regressions and a narrower validation boundary
 remain a known follow-up; this is not described as corrected.
 
+This paragraph is the historical Sprint 9 checkpoint. Sprint 11 below
+reproduces and fixes the diagnostic classification issue offline; it does
+not expand Sprint 9's real-call evidence.
+
 The reviewer did not certify real configuration/credentials/DNS/TLS/token,
 ERP/MCP operational acceptance or internal effects, broad pagination/
 snapshot/coverage/deposit/currency/availability, SKU/expanded-search real
@@ -848,3 +852,122 @@ snapshot,14/14 S9 tasks complete; all unrelated task states and global
 acceptance checkboxes unchanged. Core application/pins/history and new
 runtime/test sources match their reviewed public snapshots; current local
 links and every safe real-report invariant passed. No further ERP send.
+
+## Sprint 11 — offline security and quality review
+
+PRD 1.11.0 / DEC-034. The maintainer selected review with minimal verified
+corrections and direct execution without intermediate approvals. The
+[plan](superpowers/plans/2026-10-30-sprint-11.md) records the short design
+and scope. No Git, real .env access, ERP request, login/rotation, install,
+new dependency/filter/tool or Sprint 12+ work was authorized or performed.
+Seven MCP tools and V1 NOT_READY remain unchanged.
+
+### Reviewed controls and item evidence
+
+| PRD task | Evidence and boundary |
+|---|---|
+| S11.01 | Reviewed client._query/_request_guard and all application consumers. Exactly POST reduzidos/precos/estoque, closed page/limit plus products-only exclusive idsProdutos or mascara; tests exercise exact bodies, invalid combinations and destination rejection before transport. Guard is not an arbitrary trusted-process body sandbox. Zero redirects/retries/fallback. |
+| S11.02 | MCP discovery and execution tests cover exactly seven approved queries, strict extra-forbid inputs, no HTTP/configuration/CRUD arguments. Technical SKU, expanded search and analyses remain unregistered. |
+| S11.03 | config.py is the sole explicit loader, process-owned origin/token, immutable repr-safe Settings; configuration tests mock file reads, verify override/no interpolation/no environment mutation. No real configuration was loaded. |
+| S11.04 | Root/MCP/HTTPX/httpcore DEBUG diagnostics retain fixed level/component/code only; malformed stdio recovers; exception and input sentinels are absent from logs/replies. Internal ValueError classification fixed below. |
+| S11.05 | .gitignore includes .env, .env.*, .venv/ and neutral-example exception. No Git/index inspection: ignore patterns do not prove that no secret was previously tracked or committed. |
+| S11.06 | This execution did not read/write/move the real .env. Tests replace file reads or forbid real reads; baseline/diff inventory excludes it. Preservation is scoped to this execution, not an unperformed historical checksum or a guarantee against third-party edits. |
+| S11.07 | Synthetic effective HTTPX transport inspection verified CERT_REQUIRED, hostname checking, trust_env=False, no proxy mounts despite synthetic HTTPS_PROXY/CA overrides, no redirects, identity encoding. URL tests cover HTTPS, userinfo/path/query/fragment/encoding, port, equivalent origins/private hosts. No live TLS/DNS claim. |
+| S11.08 | Effective phase timeout15/total60, zero retries, pool1/keepalive1 verified offline. Existing tests cover 429/Retry-After, redirects, timeouts, bytes/compression/invalid JSON, fixed-page budgets, contradictory metadata and completed cleanup under cancellation; stalled close remains bounded failure, not release assurance. |
+| S11.09 | Catalog/application/MCP tests preserve exact Decimal strings, IDs/zeros, false, absent/null/zero, distinct variants, duplicates/conflicts, partial errors; analysis tests preserve explicit metric universe and unknown quantities. No invented currency/deposit/freshness. |
+| S11.10 | New protocol projection test supplies unprojected token/header/private URL/nested password sentinels: none reaches result/logs; description instruction-like text remains data and triggers no additional request. Structured/text JSON agree. Authorized commercial fields are intentionally returned, not globally redacted. |
+| S11.11 | Public root/tests/docs inventory contains no Docker, DB/migrations or CI/CD implementation; manifest/source imports have no such consumer. Private .git/.venv/secret trees were excluded, not crawled. |
+| S11.12 | Syntax checked in20 source/test files; direct installed pins exactly match requirements and pip check passes. PEP8-oriented manual/token/line review preserves English names, useful types and single quotes (one intentional double-quoted string contains an apostrophe). Existing long lines remain documented style debt; no external linter/type checker, clean install, vulnerability-free dependency claim or other-platform claim. |
+| S11.13 | Corrected MCP error classification and stale current README registration statements. The protected AGENTS.md update initially timed out; after the maintainer explicitly requested renewed submission, the normal protected patch applied it. No bypass. Independent review/final reconciliation and the resolved timeout are recorded below. |
+
+### Minimal correction and executed checks
+
+Root cause: mcp_tools.call_tool caught all ValueError across application
+execution and JSON serialization. An internal failure therefore looked like
+invalid_arguments. Conversely, listing page_size above the effective row
+budget reached the collector's BlockedOperationError and became tool_error.
+Neither case bypassed rejection or leaked data, but diagnosis was inverted.
+
+Registered consumers now raise tools.ToolInputError (ValueError subtype)
+for explicit application argument rejection. MCP catches that type, not
+arbitrary ValueError. Listing validates explicit page_size against both
+requested and configured row ceilings before collection. Application callers
+of that invalid listing now receive ToolInputError rather than the private
+collector's BlockedOperationError; this intentional exception-type change
+is documented in README. The collector still independently guards its own
+inputs. Application-only analysis/expanded-search validators are not migrated
+merely for hypothetical MCP consumers. No accepted inputs, defaults, payload
+fields, commercial matching or request budgets changed.
+
+| Command/scenario | Actual result |
+|---|---|
+| Root .venv interpreter | Python3.14.3, Windows |
+| `.venv/Scripts/python.exe -B -m unittest discover -s tests -v` baseline |190 PASS/8.436s |
+| Three new protocol classification regressions before fix | RED: three failed assertions (reported as errors via SDK ExceptionGroup),0.095s; internal and serialization errors returned wrong category, incompatible page size returned wrong category |
+| Focused test_mcp_tools after fix |15 PASS/0.911s |
+| First integrated run after fix |193 run/one error: existing test_list_inputs_never_send expected BlockedOperationError for page_size above configured cap; aligned to the documented application ValueError subtype |
+| Added projection and real argument-validation classification checks | Existing behavior confirmed; no production change needed |
+| Full suite after expectation reconciliation and added checks |195 PASS/8.404s |
+| `.venv/Scripts/python.exe -m pip check` |No broken requirements found |
+| Managed-scratch audit.py with synthetic Settings | PASS effective transport controls, import/config/network restrictions, pins, syntax20 files, ignore patterns and public infrastructure inventory |
+
+Snapshot, logs and execution ledger use managed scratch netone-s11;
+54 baseline files contain public source/documentation only. The audit uses
+installed HTTPX private transport attributes strictly for read-only
+inspection, never production writes. No settings, environment dumps or
+private file contents are retained. Import checks block real .env opens,
+HTTP-client construction, DNS and socket connect; transport checks create
+the Windows event loop first before blocking connect, then instantiate
+only a synthetic client without sends.
+
+### Residuals and publication limits
+
+- Resolved after renewed authorization: AGENTS.md now records Sprint11
+  completion, bounded evidence, the explicit input-error contract and
+  unchanged ERP/configuration/Git/Sprint12+ restrictions. The first protected
+  approval timed out; the maintainer later explicitly requested renewed
+  submission and the normal patch tool applied it. No bypass occurred.
+  The timeout and stale status are historical, not current residuals.
+- No .env checksum, Git index/history/secret scan, live token/TLS/ERP proof,
+  dependency advisory audit, clean installation or platform matrix was run.
+  Do not equate this bounded security review with public-release approval.
+- Existing source/test long lines are retained rather than reformatted
+  broadly. The baseline runbook ended at S9.12 despite later PRD references
+  to Sprint9.5/10 evidence; this review revalidates their implementation in
+  the current195-test suite but does not fabricate missing historical logs.
+- Provider-internal side effects, broad permissions, snapshot/coverage,
+  unit/deposit identity, freshness, technical SKU and O4 filter ambiguity
+  keep their prior limitations. No earlier query budget is reopened.
+
+### Independent review and final reconciliation
+
+The independent read-only reviewer inspected all seven production modules
+and the public difflib comparison; ran195 tests PASS/8.629s and pip check
+PASS; reran the synthetic audit in memory without writing its report.
+No Critical/Important finding or unresolved critical security deviation
+was identified in this bounded scope. Two Minor findings were deferred at
+that checkpoint: stale protected AGENTS.md status and preexisting lines
+above79 columns. The former was subsequently resolved by an explicitly
+renewed protected-edit request; only existing line-length debt remains.
+No production-code fix pass was needed.
+
+S11.01–13 are accepted within the evidence boundaries above; S11.13 records
+the protected-document divergence and its later authorized resolution.
+S11.06 is not historical byte verification. The final coordinator command
+and checklist reconciliation are recorded after their execution below.
+
+Final coordinator verification: `.venv/Scripts/python.exe -B -m unittest
+discover -s tests -v` passed195 tests/8.643s; `.venv/Scripts/python.exe -B
+-m pip check` reported no broken requirements. Public scope.py comparison
+verified226 ordered task IDs/texts: only13 S11 states changed to complete;
+all unrelated task states and non-task/global checkboxes unchanged. Added
+Python lines fit79 columns; checked local links resolve. Seven existing
+public files changed and one plan was added. config.py/client.py/catalog.py/
+analysis.py/server.py, manifest, ignore/example, prior archives and protected
+AGENTS.md remain identical to the public baseline. No .env read/checksum,
+Git or ERP action occurred. Sprint11 is complete in this bounded offline
+scope with two disclosed Minor residuals at that checkpoint; the later
+protected-instruction update resolves one, leaving only existing long lines.
+V1 remains NOT_READY. This follow-up changes documentation/instructions only;
+the test results above are the preceding executed verification, not a new
+test run or operational authorization.

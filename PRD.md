@@ -1,7 +1,7 @@
 # PRD — NetOne MCP: Consulta e Análise Read-Only
 
-> **Versão:** 1.10.0 — Sprint 10 concluída no escopo offline da aplicação
-> **Estado:** NOT_READY para V1; Sprints 5–10 concluídas em seus escopos delimitados, preservada a ressalva DEC-027 para codigoSku técnico. Sprint 10 verificada/revisada somente na aplicação, sem registro MCP das análises ou nova prova ERP. Sete tools MCP e G3 no recorte de DEC-031 preservados. Todos os orçamentos ERP encerrados; nenhuma nova chamada ou Sprint 11+ autorizada.
+> **Versão:** 1.11.0 — Sprint 11 concluída no escopo offline de segurança e qualidade
+> **Estado:** NOT_READY para V1; Sprints 5–11 concluídas em seus escopos delimitados, preservada a ressalva DEC-027 para codigoSku técnico. Sprint 11 revisada offline conforme DEC-034, com pendências menores documentadas; sem registro MCP das análises ou nova prova ERP. Sete tools MCP e G3 no recorte de DEC-031 preservados. Todos os orçamentos ERP encerrados; nenhuma nova chamada ou Sprint 12+ autorizada.
 > **Regra fundamental:** nenhuma operação pode alterar dados comerciais do ERP.
 
 Este documento é a fonte de verdade para escopo, arquitetura, critérios e checklist. A revisão 1.2.0 substituiu restrições históricas de testes, Git somente leitura e frameworks obrigatórios. A revisão 1.2.1 registra autorização posterior explícita para leitura em memória da configuração e até três consultas de S5.01, sem exposição de segredos. Produtos/preços/estoque responderam com page=1 e limit=1; normalização e metadados das amostras aceitos. S5.01 e Sprint 5 concluídas, com 51 testes offline novamente aprovados. Não houve login, renovação, alteração do `.env`, novas tools ou avanço para Sprint 6. A autorização pontual não libera chamadas contínuas; evidências e limites em docs/runbook.md.
@@ -622,6 +622,33 @@ limitadas, não validação operacional. G3/V1 e DEC-027/030/031 permanecem
 inalterados, sem prova operacional das análises. Fechamento/auditoria e
 última regressão do coordenador registrados no runbook.
 
+DEC-034 — 1.11.0: mantenedor solicitou Sprint11, escolheu opção1 de revisão
+com correções mínimas e autorizou execução direta sem checkpoints intermediários.
+Plano/desenho curto: docs/superpowers/plans/2026-10-30-sprint-11.md.
+Supersede somente restrições anteriores de iniciar11, que passam a descrever
+checkpoints históricos; não renova ERP/.env, login/rotação, Git, instalações,
+novas tools/filtros ou Sprint12+. Auditar S11.01–13 com fontes públicas,
+configuração/transporte sintéticos e revisão independente final.
+Corrigida classificação MCP: falhas explicitamente identificadas por
+tools.ToolInputError (subtipo ValueError) são invalid_arguments; ValueError
+interno/serialização é tool_error seguro. page_size inválido para orçamento
+efetivo é validado na aplicação antes de HTTP e agora usa ToolInputError,
+não BlockedOperationError do coletor; guarda privada permanece inalterada.
+S11.06 é verificada no recorte desta execução sem acesso/mutação ao .env;
+não há checksum histórico ou prova de ausência de mudanças por terceiros.
+Suíte baseline190 PASS; regressões de classificação primeiro falharam nas
+asserções esperadas, encapsuladas em ExceptionGroup do SDK;195 PASS/8.404s
+após correção e atualização da expectativa antiga da exceção de page_size.
+Atualização protegida de AGENTS.md inicialmente não aplicada por timeout;
+após pedido explícito do mantenedor para reenviar a solicitação, o mecanismo
+normal aprovou/aplicou a atualização restrita de estado e contrato de erros.
+Timeout resolvido, sem bypass ou ampliação de escopo; registro no runbook.
+Revisão independente executou195 testes PASS/8.629s e pip check PASS;
+nenhum Critical/Important, dois Minor naquele checkpoint: instruções
+desatualizadas (posteriormente corrigidas) e linhas longas preexistentes
+(único Minor remanescente). S11.01–13 concluídas neste recorte.
+G3/G4, ressalvas DEC-027/030/031, sete tools e V1 permanecem inalterados.
+
 ## 26. Critérios de Aceite
 
 ### 26.1 Critérios globais
@@ -685,7 +712,7 @@ flowchart LR
 
 ## 28. Sprints de Implementação em Checklist
 
-IDs/ordem e estados não relacionados são preservados. Sprints 0–4 têm entregas offline/documentais; Sprint 5 concluída conforme DEC-022, Sprint 6 conforme DEC-023, Sprint 7 com ressalva DEC-027 e Sprint 8 conforme DEC-029. G2 aceito offline e G0/G1 limitados às operações observadas. Sprint 9 concluída conforme DEC-030/031: integração offline e prova única real de listagem via MCP, G3 PASS nesse recorte. Sprint10 autorizada exclusivamente offline na aplicação conforme DEC-033; Sprint11+ não autorizada. Registros anteriores preservam evidências e critérios de sua época.
+IDs/ordem e estados não relacionados são preservados. Sprints 0–4 têm entregas offline/documentais; Sprint 5 concluída conforme DEC-022, Sprint 6 conforme DEC-023, Sprint 7 com ressalva DEC-027 e Sprint 8 conforme DEC-029. G2 aceito offline e G0/G1 limitados às operações observadas. Sprint 9 concluída conforme DEC-030/031: integração offline e prova única real de listagem via MCP, G3 PASS nesse recorte. Sprint10 concluída exclusivamente offline na aplicação conforme DEC-033; Sprint11 autorizada para revisão offline conforme DEC-034. Sprint12+ não autorizada. Registros anteriores preservam evidências e critérios de sua época.
 
 Executar sequencialmente dentro do escopo autorizado, comprovar antes de marcar e manter tarefas condicionais bloqueadas. Commits são opcionais e dependem de autorização do responsável; não são unidade obrigatória de trabalho. Autorização de teste offline não libera consulta real nem tool.
 
@@ -1202,23 +1229,35 @@ ERP/.env, Git, dependências, novos filtros/tools ou Sprint11+.
 ### Sprint 11 — Revisão de segurança e qualidade
 
 **Objetivo:** endurecimento antes de documentação final.
-- [ ] S11.01 — Revisar allowlist de método/rota/schema; POST somente nos candidatos aprovados e validados; nenhuma operação de escrita ou body arbitrário; retries/redirects seguros.
-- [ ] S11.02 — Inspecionar registro de ferramentas: nenhum CRUD ou HTTP arbitrário.
-- [ ] S11.03 — Rever origem de `base_url` e credenciais por processo.
-- [ ] S11.04 — Verificar sanitização de logs e exceções.
-- [ ] S11.05 — Verificar proteção `.env` e `.venv` em `.gitignore`.
-- [ ] S11.06 — Confirmar que `.env` existente permanece inalterado.
-- [ ] S11.07 — Verificar TLS, redirects e tratamento de URL.
-- [ ] S11.08 — Revisar timeouts, retries, 429 e limites de páginas.
-- [ ] S11.09 — Revisar nulidade e precisão de preços/quantidade/IDs.
-- [ ] S11.10 — Revisar exposição de dados internos em resultados MCP.
-- [ ] S11.11 — Verificar ausência de Docker, banco e CI/CD; testes offline são permitidos.
-- [ ] S11.12 — Revisar PEP 8, aspas simples, nomenclatura e dependências.
-- [ ] S11.13 — Documentar/corrigir divergências relevantes; ações Git mutáveis dependem de autorização.
+**Escopo DEC-034:** execução direta da opção1, offline e sem leitura do
+`.env` real. S11.06 verifica preservação nesta execução, não igualdade com
+arquivo histórico. Evidência operacional anterior não é renovada.
+- [x] S11.01 — Revisar allowlist de método/rota/schema; POST somente nos candidatos aprovados e validados; nenhuma operação de escrita ou body arbitrário; retries/redirects seguros.
+- [x] S11.02 — Inspecionar registro de ferramentas: nenhum CRUD ou HTTP arbitrário.
+- [x] S11.03 — Rever origem de `base_url` e credenciais por processo.
+- [x] S11.04 — Verificar sanitização de logs e exceções.
+- [x] S11.05 — Verificar proteção `.env` e `.venv` em `.gitignore`.
+- [x] S11.06 — Confirmar que `.env` existente permanece inalterado.
+- [x] S11.07 — Verificar TLS, redirects e tratamento de URL.
+- [x] S11.08 — Revisar timeouts, retries, 429 e limites de páginas.
+- [x] S11.09 — Revisar nulidade e precisão de preços/quantidade/IDs.
+- [x] S11.10 — Revisar exposição de dados internos em resultados MCP.
+- [x] S11.11 — Verificar ausência de Docker, banco e CI/CD; testes offline são permitidos.
+- [x] S11.12 — Revisar PEP 8, aspas simples, nomenclatura e dependências.
+- [x] S11.13 — Documentar/corrigir divergências relevantes; ações Git mutáveis dependem de autorização.
 
 **Entrega:** relatório seguro e lista de pendências residuais.  
 
 **Aceite:** nenhum desvio crítico de segurança não resolvido.
+
+**Fechamento DEC-034:** relatório por tarefa em docs/runbook.md.195 testes
+PASS e pip check PASS, também na revisão independente; nenhum achado crítico
+ou importante. Minor de AGENTS.md resolvido após solicitação renovada e
+aprovação protegida; linhas longas preexistentes permanecem documentadas.
+O timeout anterior é histórico, não pendência atual. Não houve bypass.
+S11.06 refere-se somente à preservação nesta execução sem acesso ao arquivo;
+não houve comparação histórica de bytes. Registry de sete tools, G3/G4 e
+V1 NOT_READY preservados; nenhum ERP/.env/Git ou avanço à Sprint12+.
 
 ### Sprint 12 — README, arquitetura e documentação pública
 
@@ -1294,9 +1333,9 @@ ERP/.env, Git, dependências, novos filtros/tools ou Sprint11+.
 
 ## 29. Pendências e Próximas Decisões
 
-- Revisão1.9.2 inseriu Sprint9.5 somente como planejamento; DEC-032 registra seu encerramento offline. DEC-033 autoriza Sprint10 somente na aplicação, com limiar3 e verificação sintética. Filtros de preço/estoque continuam apenas planejados; O4 permanece documentalmente ambígua e O5 depende de admissão/validação próprias. Busca ampliada/análises continuam fora do MCP. Nenhuma autorização ERP, ampliação de G3/V1 ou Sprint11+.
+- Revisão1.9.2 inseriu Sprint9.5 somente como planejamento; DEC-032 registra seu encerramento offline. DEC-033 conclui Sprint10 somente na aplicação, com limiar3 e verificação sintética. DEC-034 autoriza revisão offline de segurança/qualidade da Sprint11. Filtros de preço/estoque continuam apenas planejados; O4 permanece documentalmente ambígua e O5 depende de admissão/validação próprias. Busca ampliada/análises continuam fora do MCP. Nenhuma autorização ERP, ampliação de G3/V1 ou Sprint12+.
 
-- Sprint9 concluída: integração offline e S9.12 real comprovadas conforme DEC-031, G3 PASS no recorte de descoberta e uma listagem page1/limit1. Orçamento consumido/encerrado; não autoriza consulta contínua ou conexão permanente ao Hermes. SKU técnico e busca ampliada permanecem fora do registry, Minor de diagnóstico documentado. Sprint10 conforme DEC-033; V1 NOT_READY.
+- Sprint9 concluída: integração offline e S9.12 real comprovadas conforme DEC-031, G3 PASS no recorte de descoberta e uma listagem page1/limit1. Orçamento consumido/encerrado; não autoriza consulta contínua ou conexão permanente ao Hermes. SKU técnico e busca ampliada permanecem fora do registry. Minor de classificação de diagnóstico corrigido offline na Sprint11, sem ampliar a prova real. Sprint10 conforme DEC-033; V1 NOT_READY.
 
 - S5.01 concluída: após correção local pelo operador e renovação da autorização, produtos/preços/estoque responderam a três consultas delimitadas em 29/10/2026. Campos reais confirmados em amostras sanitizadas; normalização/metadados aceitos. Falha anterior de configuração é histórica, não bloqueio atual. `.env` não alterado pelo agente; evidência em `docs/runbook.md` e `docs/api-capabilities.md`.
 - G0/G1 PASS somente no recorte produtos/page-limit da Sprint 6 concluída. Implementação, 74 testes, pesquisa real delimitada e revisões independentes aprovados. Não estender a preços/estoque, filtros novos ou tools MCP. Instalação limpa permanece futuro aceite S13.02, e granularidade ampla de permissões segue desconhecida sem impedir a leitura já comprovada.
