@@ -2,6 +2,23 @@
 
 ## Current implementation matrix
 
+PRD1.15.0 / DEC-038 adds directed numeric price/stock identity filters to
+the same three literal query routes, with no public signature/default or
+registry change. After separately authorized real checks, both filter paths
+returned HTTP200/one matching row/nonpartial filtered traversal with fidelity,
+MCP JSON equivalence and completed cleanup accepted. One memory-only loader
+read/two attempts were consumed and closed; previous campaign permissions
+are not renewed. O4's published documentation conflict is retained below.
+
+PRD1.14.0 / DEC-037 adds typed start_page to list_products and the eighth
+MCP tool list_inventory on the existing stock/page/limit contract. No new
+HTTP route/filter is admitted. Both listings expose accepted first/last
+pages, safe next_page, block_complete and endpoint_exhausted; terminal
+suffixes are never complete_dataset. External consumers must reconcile
+metadata, totals and identities across blocks and enforce whole-campaign
+budgets. The historical Sprint13 checkpoint immediately below does not
+describe this extension's registry or new authorization.
+
 PRD1.13.0 / DEC-036 validates the existing implementation without new API
 admission. A separately authorized new MCP list_products page1/limit1 check
 returned HTTP200/one partial item with fidelity/JSON/completed cleanup accepted.
@@ -13,18 +30,20 @@ V1 NOT_READY/G6 pending. Sprints12/14 remain their historical documentary slice.
 | Operation | Literal method and path | Implemented closed body | Current consumers and bounded evidence |
 |---|---|---|---|
 | products | POST `/app-web/api/v2/produto/reduzidos` | Integer page/limit; optionally idsProdutos=[strict integer] OR mascara=validated unchanged string, never both | MCP search_products, search_product_by_code, get_product_details, search_product_by_ean, list_products. Historical S5.01/S6.13/S7 ID/EAN/DEC-025/S8.14; DEC-031 real MCP listing only. Application-only SKU/expanded/catalog analysis have no own real acceptance. |
-| prices | POST `/app-web/api/v2/produto/precos` | Integer page/limit only | MCP get_product_price: exact local product_id selection. S8.14 sample, not price-ID filter proof. Currency unknown in MCP. |
-| stock | POST `/app-web/api/v2/produto/estoque` | Integer page/limit only | MCP check_inventory: exact local reduced_id selection; S8.14 sample. Application-only inventory analysis synthetic. No selected/verified deposit identity or freshness. |
+| prices | POST `/app-web/api/v2/produto/precos` | Integer page/limit; optional idsProdutos=[strict integer] | MCP get_product_price: directed canonical numeric product_id; legacy noncanonical text remains local/exact. DEC-038 offline tests plus one separately authorized real filtered query HTTP200/one matching row. Currency unknown in MCP. |
+| stock | POST `/app-web/api/v2/produto/estoque` | Integer page/limit; optional idsReduzidos=[strict integer], array compatibility observed in one bounded check | MCP check_inventory: directed canonical numeric reduced_id; legacy noncanonical text remains local/exact. DEC-038 offline tests plus one separately authorized real array-filtered query HTTP200/one matching row. list_inventory and application-only analysis retain page/limit. Deposit identity/freshness unknown. |
 
 The three method/path pairs exactly match client._QUERY_PATHS and the
 [security policy](security.md). `_query()` constructs bodies, while the
 mandatory hook checks destination/method/Host/path. Strict application limits
 are bounded again by configuration; rows count before deduplication.
 Only literal search defaults to100 inspected rows with max_items20; the
-other six MCP tools default max_results20. Listing defaults max_pages1.
-Neither published parameters nor successful page/limit observations admit
-additional filters. O4's IDs number/array conflict remains unresolved; O5
-directed IDs remain planned, not implemented. Auxiliary routes are
+other seven MCP tools default max_results20. Both listings default
+max_pages1/start_page1 and accept strict start_page1–1000000.
+Only DEC-038's narrow identity filters are newly admitted for implementation;
+other published parameters are not accepted. O4's IDs number/array conflict
+remains unresolved by the supplier despite the provisional array choice.
+Auxiliary routes are
 INVENTORIED_ONLY; login is documented but not implemented/admitted.
 
 The sections below retain dated evidence and earlier contracts. Where they
@@ -33,6 +52,87 @@ historical boundary superseded only by the named later decision, not current
 instructions. The matrix above and current source govern actual capability.
 Source documentation was inspected on the dates recorded below, not freshly
 validated against the provider during these documentation sprints.
+
+## Directed identity queries — DEC-038
+
+Reinspection on2026-10-31 used anonymous public documentation/artefacts only,
+without Send/Try, installation configuration or ERP queries. Rendered operation
+bodies were read after hydration, not from navigation-only shells.
+
+| Source | Evidence | What it does not prove |
+|---|---|---|
+| [O4 stock](https://net1ti.stoplight.io/docs/erp-api-v2/47f2f0f5255d2-busca-estoque) | idsReduzidos:number in schema; body and generated cURL use an array with one numeric ID | Does not resolve which forms the server accepts |
+| [Public OpenAPI export](https://stoplight.io/api/v1/projects/net1ti/erp-api-v2/nodes/reference/4.API.v1.yaml?fromExportButton=true), also [official source](https://bitbucket.org/maggiori/docs-erp-api/raw/master/reference/4.API.v1.yaml) | The stock number-schema/array-example conflict exists in the underlying operation, not only the UI. Prices idsProdutos is array with number items | No supplier correction or successful remote filter response |
+| [Official Postman article](https://net1ti.stoplight.io/docs/erp-api-v2/409425838b900-testando-api-via-postman) and [linked collection](https://bitbucket.org/maggiori/docs-erp-api/raw/master/assets/postman/ERP_API_V2_1.postman_collection.json) | Published update label29/05/26. Stock body has idsReduzidos:[]; prices body has idsProdutos:[] and idsReduzidos:[]; no saved responses for either item | Empty-array examples do not prove filled-array behavior, empty semantics, combinations, exact filtering or paging |
+| [O5 prices](https://net1ti.stoplight.io/docs/erp-api-v2/79683209728d7-busca-precos) | idsProdutos:array[number] consistently in rendered schema/OpenAPI/Postman | No new live acceptance or batch/numeric ceiling |
+
+Decision under the maintainer's delegated implementation authority: choose
+the singleton numeric array shown by both official stock examples, not a
+scalar guessed from the ambiguous schema. This supersedes the old project
+block only for the offline implementation/tests. The statement “number is
+a documentation typo” remains a corroborated hypothesis, not a provider
+confirmation. A subsequently authorized singleton-array call succeeded in
+this installation; definitive supplier clarification remains pending.
+Never try scalar after an array error, retry, redirect or drop the filter.
+
+The only added private query argument is reduced_id:int|None on stock;
+product_id:int|None extends from products to prices. Each is a strict built-in
+integer0–9223372036854775807 (local defensive cap); no generic dict, model
+array, stock product_id, prices reduced_id, filter combination or deposit choice.
+An omitted filter preserves existing listing/analysis page/limit bodies.
+Both _query and _collect validate before sending, keep filters/page size fixed
+and do not mutate shared budgets. Every normalized response identity must
+exactly equal the requested ID; a mixed/absent identity rejects the whole page
+as invalid_response, preserving only earlier accepted pages.
+
+Stock conflict detection groups by reduced_id alone, independent of optional
+product_id metadata. Different quantities or product metadata for the same
+reduced ID remain separate source rows with conflicting_rows_preserved and
+partial=true/complete_dataset=false; never add them or select one balance.
+This applies to directed/legacy checks, stock listing and inventory analysis.
+Products/prices retain their existing (product_id,reduced_id) grouping.
+
+Public get_product_price/check_inventory keep textual1–256 identities and
+max_results1–1000/default20/config caps. Only ASCII `0|[1-9][0-9]*` within
+the defensive bound is encoded numerically, with lookup_strategy=remote_id_filter
+and remote_exact_product_id_price_search/remote_exact_reduced_id_stock_search.
+Canonical overflow is ToolInputError before HTTP. Noncanonical text (including
+leading zeros or significant spaces) is never repaired: compatibility remains
+bounded local equality with lookup_strategy=bounded_local_exact and
+numeric_id_filter_unavailable plus the original local matching warning. This
+is pre-request compatibility selection, not fallback after a directed failure.
+
+Quantity zero stays exact zero; null/absent stays unknown, with quantity_missing
+and missing_fields distinguishing field presence. found means identity found,
+not known quantity, sellability or a quote. Valid terminal empty means not_found
+only within the provider-visible query, not stock zero or global absence.
+Limits/missing metadata/conflicts preserve partiality and later errors. A
+filtered row with zero may coexist with partial=true; it is not a complete
+inventory statement. Prices preserve all bounded variants/source tables and
+Decimal/null, unknown MCP currency and nominal-not-final-quote warnings.
+complete_dataset means the actual filtered or legacy traversal completed,
+never the entire ERP, stable snapshot or verified deposit/freshness.
+
+Synthetic regression uses the identifiers explicitly supplied by the maintainer;
+all commercial values are simulated. The unfiltered handler advertises985 pages;
+the same consumer sends one targeted stock request and one targeted price request,
+each accepting a terminal one-row filtered response. This proves request shape
+and local behavior, not a measured ERP speedup or either real stock/price value.
+See the [execution ledger](runbook.md#directed-commercial-query-fix--dec-038).
+
+Subsequent real observation at2026-10-31T21:39:53Z: one private loader call
+only in server memory and two actual guarded attempts, stock then prices,
+page1/limit20. Both HTTP200, one received/returned exact-identity row each,
+found, partial=false/error=null/complete_dataset=true only within the filtered
+query. Independent same-response projection/Decimal/null/absence comparison,
+MCP structured/text equivalence and two response/one transport/one client
+close completions passed. The generic MCP client used an in-memory protocol
+session with the actual production factory/consumers and real HTTP transport;
+live stdio was not rerun, and its regression remains separately offline.
+The array is therefore operationally observed in this bounded scope, not
+universally guaranteed or evidence of corrected supplier documentation.
+No values, origins, credentials or raw responses retained in project files.
+The new read/query budget is consumed and closed, without replay permission.
 
 ## Evidence chronology
 
@@ -169,6 +269,10 @@ conservative and the coverage/snapshot disclaimer remains explicit.
 
 ### O5/O4 reinspection and future directed-query plan (no filter implemented)
 
+Historical Sprint9.5 checkpoint: the plan/block below was superseded only
+for DEC-038's narrow offline implementation described above. It remains
+evidence of the earlier decision, not the current runtime contract.
+
 Anonymous rendered official documentation was reread on2026-10-29 after
 hydration; no Send action, configuration read or ERP call. The generic URL
 extractor was search-only, so the browser supplied the operation bodies.
@@ -300,6 +404,10 @@ of undisclosed provider effects. No login/rotation/env write/mutation was
 performed. Budget consumed and closed; no rerun or Sprint10 authorization.
 
 ## Sprint 8 — current application contract (DEC-029)
+
+Historical Sprint8 contract: DEC-037 adds listing continuation and DEC-038
+replaces numeric local-only lookups with the directed filters above. The
+observations below are retained unchanged, not real evidence of new filters.
 
 O3/O4/O5 were refreshed anonymously after browser hydration on 2026-10-29.
 O5 still publishes idsProdutos/idsReduzidos arrays and retail/wholesale

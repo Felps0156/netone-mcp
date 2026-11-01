@@ -177,6 +177,12 @@ class QueryResult:
     page_limit: int | None = None
     page_size: int | None = None
     deadline_seconds: int | None = None
+    start_page: int = 1
+    first_page: int | None = None
+    last_page: int | None = None
+    next_page: int | None = None
+    block_complete: bool = False
+    endpoint_exhausted: bool = False
 
     def as_json(self) -> dict[str, object]:
         # Avoid recursively copying records that are serialized below once.

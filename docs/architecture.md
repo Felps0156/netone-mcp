@@ -12,7 +12,7 @@ flowchart LR
     Operator[Trusted operator configuration] --> Config[config.py]
     Config --> Server[server.py stdio and lifespan]
     MCP[Generic MCP client] <-->|JSON-RPC stdio| Server
-    Server --> Registry[mcp_tools.py seven strict adapters]
+    Server --> Registry[mcp_tools.py eight strict adapters]
     Registry --> Tools[tools.py application contracts]
     Tools --> Client[client.py private bounded collector]
     Client --> Catalog[catalog.py normalization]
@@ -31,7 +31,7 @@ are separate from future candidates and historical observations.
 |---|---|---|
 | config.py | Explicit root dotenv/process loading, immutable Settings, safe validation | Import-time file I/O, network, tool-selected configuration |
 | server.py | Startup validation, safe stderr logging, stdio and lifespan | Commercial matching, startup ERP query |
-| mcp_tools.py | Closed seven-entry registry, strict schemas, fixed protocol errors, structured/text equivalence | Generic dispatch outside registry, credentials, new HTTP filters |
+| mcp_tools.py | Closed eight-entry registry, strict schemas, fixed protocol errors, structured/text equivalence | Generic dispatch outside registry, credentials, new HTTP filters |
 | tools.py | Input validation, bounded searches/exact selection/listing, analytical consumers | Arbitrary HTTP, persistence, inferred commercial facts |
 | client.py | Token header, literal destination guard, request construction, streaming, pagination and cleanup | Login, mutation, arbitrary URLs/headers/bodies |
 | catalog.py | Immutable normalized records, exact Decimal JSON, collection evidence | Price/stock joins, timezone or missing-value inference |
@@ -49,8 +49,11 @@ are separate from future candidates and historical observations.
    checks. Tool arguments cannot select configuration or transport.
 4. One bounded collection constructs its internally selected query body.
    The mandatory request hook checks method, origin, Host and literal path.
-   Products may use one admitted ID or commercial-mask filter; price/stock
-   selection remains local over page/limit-only responses.
+   Products may use one admitted ID or commercial-mask filter. Canonical numeric
+   price/stock IDs use closed singleton filters (idsProdutos/idsReduzidos).
+   Legacy noncanonical text stays exact/local with explicit lookup_strategy;
+   no input normalization or fallback after failure. Stock array selection is
+   provisional under DEC-038; supplier schema disagreement is not resolved.
 5. Each page is streamed under byte/time limits, parsed without float
    intermediates and normalized atomically. Contradictory metadata or another
    identity in an ID-filtered page rejects that page. Prior valid data survives
@@ -66,7 +69,10 @@ are separate from future candidates and historical observations.
 
 ## Collection and result invariants
 
-- Fixed-size pages begin at one; row budgets count received rows before
+- Fixed-size pages begin at one by default; DEC-037 listings accept a strict
+  start_page for stateless blocks. Consumers reconcile metadata and identities
+  across calls; local block completion/terminal suffix is not full traversal.
+  Row budgets count received rows before
   deduplication, including nonmatches. No shrinking the next page to fit a
   residual budget or stopping at the first match.
 - Search inspection and output caps are distinct. Output cuts preserve
@@ -75,6 +81,10 @@ are separate from future candidates and historical observations.
   mascara, technical codigoSku, product ID, reduced ID and EAN are distinct.
 - Decimal values serialize as exact strings. Missing/null/blank/zero/false
   are not interchangeable. missing_fields records absent projected source keys.
+- Stock conflict groups use reduced_id alone; optional/missing product_id
+  cannot hide inconsistent balances behind separate identities. Conflicting
+  source rows remain partial without summation. Products/prices retain their
+  (product_id,reduced_id) grouping.
 - Provider-visible traversal completeness does not prove ERP-wide coverage,
   stable snapshot, stock freshness, deposit identity or semantic coverage.
 - Analytics distinguish collection completeness, analytical completeness and
@@ -85,6 +95,6 @@ are separate from future candidates and historical observations.
 [Security](security.md) describes controls and their limits. [Configuration](configuration.md)
 describes process ownership and defensive ceilings; none are provider quotas.
 [Runbook](runbook.md) separates synthetic regression, historical bounded ERP
-observations and future operational acceptance. Seven MCP tools are implemented;
+observations and future operational acceptance. Eight MCP tools are implemented;
 technical SKU, expanded lexical search and two analyses remain application-only.
 No architecture diagram or successful mock grants permission for a real query.

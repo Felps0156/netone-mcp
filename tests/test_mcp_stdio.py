@@ -15,6 +15,80 @@ from test_mcp_tools import EXPECTED_TOOLS
 
 
 class MCPStdioTests(unittest.IsolatedAsyncioTestCase):
+    async def test_generic_stdio_directed_price_and_stock(self):
+        fixture = Path(__file__).with_name('mcp_stdio_fixture.py').resolve()
+        with tempfile.TemporaryFile(mode='w+', encoding='utf-8') as stderr:
+            with anyio.fail_after(20):
+                async with stdio_client(StdioServerParameters(
+                    command=sys.executable,
+                    args=['-B', str(fixture), '--directed-queries'],
+                ), errlog=stderr) as (reader, writer):
+                    async with ClientSession(reader, writer) as session:
+                        await session.initialize()
+                        for name, arguments in (
+                            ('check_inventory', {'reduced_id': '42'}),
+                            ('get_product_price', {'product_id': '7'}),
+                        ):
+                            reply = await session.call_tool(name, arguments)
+                            self.assertFalse(reply.isError)
+                            data = reply.structuredContent
+                            self.assertEqual(data['status'], 'found')
+                            self.assertEqual(data['lookup_strategy'],
+                                             'remote_id_filter')
+                            self.assertEqual(data['pages_fetched'], 1)
+                            self.assertEqual(data['items'][0]['reduced_id'],
+                                             '42')
+                            field = ('quantity' if name == 'check_inventory'
+                                     else 'price')
+                            self.assertEqual(data['items'][0][field], '0')
+                            self.assertEqual(json.loads(reply.content[0].text),
+                                             data)
+            stderr.seek(0)
+            diagnostic = stderr.read()
+        summary = next(line.removeprefix('offline_fixture ')
+                       for line in diagnostic.splitlines()
+                       if line.startswith('offline_fixture '))
+        self.assertEqual(json.loads(summary), {
+            'requests': 2, 'responses_closed': 2, 'clients_closed': 1,
+        })
+        self.assertNotIn('Traceback', diagnostic)
+
+    async def test_generic_stdio_continues_catalog_and_inventory(self):
+        fixture = Path(__file__).with_name('mcp_stdio_fixture.py').resolve()
+        with tempfile.TemporaryFile(mode='w+', encoding='utf-8') as stderr:
+            with anyio.fail_after(20):
+                async with stdio_client(StdioServerParameters(
+                    command=sys.executable,
+                    args=['-B', str(fixture), '--continuation'],
+                ), errlog=stderr) as (reader, writer):
+                    async with ClientSession(reader, writer) as session:
+                        await session.initialize()
+                        self.assertEqual({t.name for t in (
+                            await session.list_tools()).tools}, EXPECTED_TOOLS)
+                        for name in ('list_products', 'list_inventory'):
+                            reply = await session.call_tool(name, {
+                                'start_page': 2, 'max_results': 1,
+                                'page_size': 1, 'max_pages': 1,
+                            })
+                            self.assertFalse(reply.isError)
+                            data = reply.structuredContent
+                            self.assertEqual(data['items'][0]['reduced_id'],
+                                             '001')
+                            self.assertEqual(data['last_page'], 2)
+                            self.assertTrue(data['endpoint_exhausted'])
+                            self.assertFalse(data['complete_dataset'])
+                            self.assertEqual(json.loads(reply.content[0].text),
+                                             data)
+            stderr.seek(0)
+            diagnostic = stderr.read()
+        summary = next(line.removeprefix('offline_fixture ')
+                       for line in diagnostic.splitlines()
+                       if line.startswith('offline_fixture '))
+        self.assertEqual(json.loads(summary), {
+            'requests': 2, 'responses_closed': 2, 'clients_closed': 1,
+        })
+        self.assertNotIn('Traceback', diagnostic)
+
     async def test_generic_stdio_client_discovers_executes_and_closes(self):
         await self.exercise()
 

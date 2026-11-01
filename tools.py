@@ -294,34 +294,53 @@ async def search_product_by_ean(
     return await _search_exact_code(client, ean, max_results, 'ean')
 
 
+def _numeric_identity(identity: str, max_results: int) -> int | None:
+    """Adapt only lossless canonical ASCII IDs; preserve legacy text IDs."""
+    _validate_code_input(identity, max_results)
+    if re.fullmatch(r'0|[1-9][0-9]*', identity) is None:
+        return None
+    value = int(identity)
+    if value > 9223372036854775807:
+        raise ToolInputError('Numeric identity must be from 0 to 2**63 - 1.')
+    return value
+
+
 async def get_product_price(
     client: NetOneClient, product_id: str, max_results: int = 20,
     *, currency: Literal['BRL'] | None = None,
 ) -> dict[str, object]:
-    """Select nominal source prices by exact local normalized product ID.
+    """Query nominal source prices by a losslessly encoded product ID.
 
     Currency is trusted operator context, not an API field or conversion.
-    A limited miss cannot establish global absence or a final quote.
+    Noncanonical textual IDs retain bounded exact local compatibility.
+    A partial miss cannot establish absence; never fall back after failure.
     """
-    _validate_code_input(product_id, max_results)
+    numeric_id = _numeric_identity(product_id, max_results)
     if currency is not None and (
         not isinstance(currency, str) or currency != 'BRL'
     ):
         raise ToolInputError('Currency must be BRL or unknown.')
-    result = await client._collect('prices', max_results=max_results)
+    result = await client._collect(
+        'prices', max_results=max_results, product_id=numeric_id,
+    )
     items = tuple(item for item in result.items
                   if item.product_id == product_id)
-    output = _filtered_result(
-        result, items, 'local_exact_product_id_price_search',
+    matching = (
+        'remote_exact_product_id_price_search' if numeric_id is not None
+        else 'local_exact_product_id_price_search'
     )
-    warnings = [*result.warnings, 'local_exact_product_id_price_search',
-                'nominal_prices_not_final_quote']
+    output = _filtered_result(result, items, matching)
+    warnings = [*result.warnings, matching, 'nominal_prices_not_final_quote']
+    if numeric_id is None:
+        warnings.append('numeric_id_filter_unavailable')
     if currency is None:
         warnings.append('currency_unknown')
     if any(item.price is None and item.wholesale_price is None
            for item in items):
         warnings.append('price_missing')
     output.update(
+        lookup_strategy=('remote_id_filter' if numeric_id is not None
+                         else 'bounded_local_exact'),
         currency=currency,
         currency_source='operator_confirmation' if currency else None,
         price_kind='source_retail_and_wholesale', warnings=warnings,
@@ -332,23 +351,32 @@ async def get_product_price(
 async def check_inventory(
     client: NetOneClient, reduced_id: str, max_results: int = 20,
 ) -> dict[str, object]:
-    """Select an exact local reduced identity in the user's stock scope.
+    """Query a losslessly encoded reduced ID in the user's stock scope.
 
     Quantities are source physical-minus-reservations values, not a promise
     of sellability. Deposit identity and stock freshness remain unverified.
+    Noncanonical textual IDs retain bounded exact local compatibility.
     """
-    _validate_code_input(reduced_id, max_results)
-    result = await client._collect('stock', max_results=max_results)
+    numeric_id = _numeric_identity(reduced_id, max_results)
+    result = await client._collect(
+        'stock', max_results=max_results, reduced_id=numeric_id,
+    )
     items = tuple(item for item in result.items
                   if item.reduced_id == reduced_id)
-    output = _filtered_result(
-        result, items, 'local_exact_reduced_id_stock_search',
+    matching = (
+        'remote_exact_reduced_id_stock_search' if numeric_id is not None
+        else 'local_exact_reduced_id_stock_search'
     )
-    warnings = [*result.warnings, 'local_exact_reduced_id_stock_search',
+    output = _filtered_result(result, items, matching)
+    warnings = [*result.warnings, matching,
                 'inventory_scope_unverified', 'inventory_freshness_unverified']
+    if numeric_id is None:
+        warnings.append('numeric_id_filter_unavailable')
     if any(item.quantity is None for item in items):
         warnings.append('quantity_missing')
     output.update(
+        lookup_strategy=('remote_id_filter' if numeric_id is not None
+                         else 'bounded_local_exact'),
         inventory_scope={
             'selection': 'configured_user_deposit', 'deposit_id': None,
             'branch_id': None, 'quantity_basis': 'physical_minus_reservations',
@@ -358,31 +386,62 @@ async def check_inventory(
     return output
 
 
-async def list_products(
-    client: NetOneClient, max_results: int = 20, *,
-    page_size: int | None = None, max_pages: int = 1,
-) -> dict[str, object]:
-    """List from page one, fetching at most one page unless explicitly set.
-
-    Limits count received rows, not distinct products. A complete traversal
-    describes only the provider-visible endpoint, not an ERP-wide snapshot.
-    """
+def _validate_listing(
+    client: NetOneClient, max_results: int, page_size: int | None,
+    max_pages: int, start_page: int,
+) -> None:
+    """Validate the full typed block before entering the collector."""
     if type(max_results) is not int or not 1 <= max_results <= 1000:
         raise ToolInputError('max_results must be an integer from 1 to 1000.')
     if type(max_pages) is not int or not 1 <= max_pages <= 100:
         raise ToolInputError('max_pages must be an integer from 1 to 100.')
+    if (
+        type(start_page) is not int or not 1 <= start_page <= 1_000_000
+        or start_page + min(max_pages, client._max_pages) - 1 > 1_000_000
+    ):
+        raise ToolInputError('start_page must fit the bounded page range.')
     if page_size is not None and (
         type(page_size) is not int
         or not 1 <= page_size <= min(max_results, client._max_results)
     ):
         raise ToolInputError('page_size must fit the effective row budget.')
+
+
+async def list_products(
+    client: NetOneClient, max_results: int = 20, *,
+    page_size: int | None = None, max_pages: int = 1, start_page: int = 1,
+) -> dict[str, object]:
+    """List one bounded catalog block, starting at page one by default."""
+    _validate_listing(client, max_results, page_size, max_pages, start_page)
     result = await client._collect(
         'products', max_results=max_results,
-        page_size=page_size, max_pages=max_pages,
+        page_size=page_size, max_pages=max_pages, start_page=start_page,
     )
     return replace(
         result, warnings=(*result.warnings, 'provider_visible_catalog_only'),
     ).as_json()
+
+
+async def list_inventory(
+    client: NetOneClient, max_results: int = 20, *,
+    page_size: int | None = None, max_pages: int = 1, start_page: int = 1,
+) -> dict[str, object]:
+    """List a bounded stock block; never infer deposit identity or freshness."""
+    _validate_listing(client, max_results, page_size, max_pages, start_page)
+    result = await client._collect(
+        'stock', max_results=max_results, page_size=page_size,
+        max_pages=max_pages, start_page=start_page,
+    )
+    output = result.as_json()
+    output.update(
+        inventory_scope={
+            'selection': 'configured_user_deposit', 'deposit_id': None,
+            'branch_id': None, 'quantity_basis': 'physical_minus_reservations',
+        },
+        warnings=[*result.warnings, 'inventory_scope_unverified',
+                  'inventory_freshness_unverified'],
+    )
+    return output
 
 
 def _validate_analysis_limits(max_results: object, max_pages: object) -> None:

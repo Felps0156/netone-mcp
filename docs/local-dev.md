@@ -103,7 +103,7 @@ authorized scope and may return commercial data to that client/model.
 Use synthetic settings/responses and in-memory transport; do not invoke an
 unoverridden loader, a real query or `server.py` against the installation as
 an offline test. Existing unittest fixtures cover generic SDK stdio,
-malformed protocol, exact seven-tool discovery, strict inputs, equivalent
+malformed protocol, exact eight-tool discovery, strict inputs, equivalent
 JSON, bounded pagination, errors, fidelity and completed cancellation cleanup.
 The stdio fixture forbids external HTTP sends and substitutes configuration.
 Keep its diagnostic sentinels out of real installation data.

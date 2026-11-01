@@ -2,6 +2,27 @@
 
 ## Current boundary
 
+PRD1.15.0 / DEC-038 records the directed commercial-query fix,229 offline tests
+and two separately authorized real filtered checks, both HTTP200/one matching
+row/nonpartial with source fidelity/JSON/completed cleanup accepted. One loader
+invocation and the new two-attempt budget are consumed/closed; no query/read
+permission remains. AGENTS.md was reconciled after explicit resubmission and
+normal protected approval. Prior campaign permissions below are historical,
+not active here. Eight tools, existing
+sprint/global checkboxes and V1 NOT_READY/G6 pending remain unchanged.
+
+PRD1.14.0 / DEC-037 was the previous approved extension: resumable catalog
+blocks plus list_inventory (eight tools), with the original seven defaults
+and the same guarded three-query HTTP contract. Only an external consumer
+associates catalog/stock in memory. Execution plan:
+[resumable inventory](superpowers/plans/2026-10-31-resumable-inventory.md).
+The new authorized campaign is capped at1200 products/stock attempts,
+limit<=50 and45 minutes, including validation; no retry/redirect/login,
+.env mutation, install, Git, publication or business write. Runtime and
+budget evidence will be recorded below after execution; no result is
+claimed in advance. V1 NOT_READY/G6 pending and all existing checkboxes
+remain unchanged. The next paragraph is the historical Sprint13 boundary.
+
 PRD1.13.0 / DEC-036 records twenty evidenced Sprint13 tasks; independent
 review found no Critical/Important issue. G6/global acceptance remains pending.
 The later separate installation/temporary-env/private-read/one-query consents were
@@ -35,6 +56,207 @@ Current contracts: [README](../README.md), [architecture](architecture.md),
 [security](security.md) and the [current API matrix](api-capabilities.md#current-implementation-matrix).
 
 Current behavior and limits: [configuration](configuration.md). Endpoint contracts, field mapping and unresolved provider ambiguities: [API inventory](api-capabilities.md). Canonical sprint IDs/states/sequence: [PRD section 28](../PRD.md#28-sprints-de-implementação-em-checklist).
+
+## Directed commercial-query fix — DEC-038
+
+### Cause, decision and boundaries
+
+check_inventory and get_product_price called _collect with page/limit only,
+then selected exact textual identity locally. max_results bounds received
+rows, not target matches: the default20-row budget can stop after page1
+despite a large totalPages. This was accurate partial reporting, but an
+inefficient lookup design for an identity that has a documented remote filter.
+Increasing caps or scanning the entire endpoint is not the chosen fix.
+
+Changes reuse client.py/tools.py/mcp_tools.py and existing test fixtures.
+No new route, tool, dependency, cache, join, deposit choice or environment
+setting. Prices uses idsProdutos singleton numeric array; stock provisionally
+uses idsReduzidos singleton numeric array. Each filtered page is identity-checked
+atomically, budgets stay isolated/fixed and no error triggers replay, scalar
+attempt or unfiltered fallback. All transport, sanitization and cleanup
+controls remain. Source fields/Decimal/null/absence/zero are unchanged.
+
+Ruling: stock array follows the official operation example and linked official
+Postman collection, despite number in the OpenAPI schema. The conflict remains
+unresolved by the supplier, not merely a rendering error. The delegated offline
+implementation supersedes the former project refusal narrowly; if this choice
+is wrong, a future authorized call should fail safely without alternate sends,
+and the supplier must clarify it. This is not remote acceptance.
+
+Ruling: preserve noncanonical textual IDs with the existing bounded local
+exact lookup and explicit lookup_strategy=bounded_local_exact plus
+numeric_id_filter_unavailable. Do not silently convert leading zeros, signs,
+Unicode digits or significant spaces to another identity. Canonical ASCII
+numeric IDs within0–9223372036854775807 use remote_id_filter; canonical overflow
+fails pre-send. Cost: legacy textual identities remain subject to prefix caps.
+
+Ruling: work in the existing checkout without Git/worktree/commit helpers,
+as required by project policy. An allowlisted public snapshot in managed
+scratch provides comparison without reading .env/.git or replacing prior edits.
+
+Official sources and unresolved-contract details are in
+[the current inventory](api-capabilities.md#directed-identity-queries--dec-038).
+Only public documentation GETs/browser reads were made, never Send/Try or
+queries to the documentation's ERP test host. The public Postman collection
+returned HTTP200; both relevant saved-response arrays are empty. There was
+no real NetOne send, private loader invocation, .env read/write, installation,
+login/rotation, Git, publication or Hermes-registration change.
+
+### Executed verification
+
+- Existing .venv interpreter: Python3.14.3. Baseline:
+  `.venv/Scripts/python.exe -B -m unittest discover -s tests -v`:
+  214 PASS/9.139s.
+- RED before implementation: seven new directed-consumer tests failed on
+  missing body filters/lookup_strategy and wrong found/partial/error behavior;
+  the requested product-code fixture reproduced partial instead of found.
+  Three low-level filter tests also failed before the private argument/admission
+  existed. Tests use the supplied identifiers and simulated values only.
+- Focused consumers/client after implementation:71 PASS/3.774s.
+- Intermediate whole-suite run:223 tests, one expected legacy MCP body
+  assertion failed because prices now sends idsProdutos; updated that specific
+  expectation. No unrelated failures were hidden.
+- The new directed stdio test failed before its synthetic fixture supported
+  stock/prices, then passed with strict body assertions and external sends
+  forbidden. Both calls observe response closure and one client/transport close.
+- Whole suite after implementation/MCP fixture:
+  `.venv/Scripts/python.exe -B -m unittest discover -s tests -v`:
+  228 PASS/9.777s. Tests include the reported985-page-prefix miss, closed bodies,
+  IDs/bounds/invalid arguments before send, zero/null/absence, terminal empty,
+  wrong/missing/mixed identities, later-page rejection/errors, caps/conflicts/
+  missing metadata, source tables/precision, concurrent IDs/budgets, cancellation
+  with completed cleanup, generic MCP stdio and unchanged registry/defaults.
+- `.venv/Scripts/python.exe -B -m pip check`: No broken requirements found.
+  No installation or dependency change was performed.
+
+### Independent review and verified fix pass
+
+Independent read-only review ran228 tests PASS/10.105s and pip check PASS,
+compared the26-file public snapshot, unchanged public signatures and checklists.
+No Critical finding; one Important pre-existing stock-conflict defect (I1),
+one pre-existing Minor documentation inconsistency (M1).
+
+I1: conflict grouping used (product_id,reduced_id), although stock identity is
+reduced_id and product_id is optional. Two incompatible quantities for one
+reduced ID could appear found/complete when product_id differed or was absent.
+The coordinator reproduced this in a new transport-backed regression, with
+nine failing subcases across check_inventory, list_inventory and analyze_inventory.
+The fix changes only stock grouping to reduced_id, preserving both rows,
+conflicting_rows_preserved and partiality without summation; products/prices
+retain their original grouping. Regression GREEN/0.032s, whole suite229
+PASS/10.116s after the fix. This is a verified implementer fix pass, not a
+claim that the independent reviewer reran the corrected revision.
+
+Final coordinator verification on the corrected tree:
+`.venv/Scripts/python.exe -B -m unittest discover -s tests -v`:
+229 PASS/10.279s, exit0, with229 individual OK lines counted;
+`.venv/Scripts/python.exe -B -m pip check`: No broken requirements found.
+The final snapshot/checklist/parser/new-line-length audit also passed.
+The existing checkout is preserved without any Git operation or integration.
+
+Final: minor (deferred): M1, PRD.md's legacy status paragraph at line4 still
+mentions seven tools; the current DEC-038 section, registry and discovery
+tests explicitly establish eight. This pre-existing header-only inconsistency
+is retained for a separate documentation cleanup, not an implementation issue.
+
+Final: Ruling on the review's declined operational judgments: server acceptance,
+definitive number/array clarification and live behavior stay unverified and
+pending fresh authorization; offline success cannot supply that missing proof.
+No new call was made to settle them.
+
+Final public audit:256 PRD checklist lines exactly match the pre-edit snapshot;
+AGENTS.md, requirements.txt and catalog.py are unchanged;18 Python files parse;
+no new over79-character lines in modified Python code. All87 local links/anchors
+in the seven affected documents were valid. These checks do not constitute
+an index/history audit, protected configuration comparison or publication clearance.
+
+### Subsequently authorized real validation
+
+The maintainer explicitly requested resubmitting the protected AGENTS.md update
+and then executing the previously proposed real tests. The normal protected
+mechanism approved/applied that narrow update, and a readback confirmed it.
+New nonrenewable scope: one load_config invocation only in server memory;
+at most two guarded attempts total, one stock/check_inventory and one
+prices/get_product_price, page1/limit20, using the already-supplied identities.
+No discovery, extra page, retries, redirects, scalar/unfiltered fallback,
+login/rotation, .env write/display, ERP mutation, Git, install, publication or
+registration changes. Stop after an error, inconsistency or incomplete evidence.
+Retain structural evidence only; commercial values belong only in the operator
+response. A scratch one-shot marker must precede the live attempt; offline
+probe checks and budget consumption/results are recorded below.
+
+#### Executed one-shot result and closed budget
+
+The temporary managed-scratch probe was exercised with six synthetic cases:
+success, HTTP error, wrong response identity, deliberate numeric-fidelity
+corruption, failure precedence after a reply and unknown quantity. All six
+checks passed with no private loader invocation. The project regression also
+passed229 tests/10.074s before the live run.
+
+Actual command:
+`.venv/Scripts/python.exe -B <managed-scratch>/netone_dec038_live_probe.py --live`.
+An exclusive consumption marker preceded the single launch. Execution began
+2026-10-31T21:39:53.889316Z and finished21:39:54.425448Z; exit0. A generic SDK
+MCP session in memory initialized the actual production server factory and
+discovered exactly eight tools, then called check_inventory and get_product_price
+sequentially through the unchanged application/collector/guard/real HTTP path.
+This was not a real stdio rerun; stdio regression remains separately offline.
+
+- Exactly one load_config invocation, values held only in server memory.
+- Exactly two guarded POST attempts: stock with idsReduzidos singleton array,
+  then prices with idsProdutos singleton array, both page1/limit20.
+- Both HTTP200; each accepted one fetched page, one received/returned matching
+  row, status found, partial=false, error=null and complete_dataset=true only
+  within its filtered query. No broad-catalog claim follows.
+- Both same-response checks passed: explicit independent source-to-output
+  projection including IDs, Decimal strings, null/absence/missing_fields,
+  plus structured MCP/text JSON equivalence. The production normalizer was
+  not used as the sole fidelity oracle.
+- Two underlying response-stream close completions, one transport close and
+  one client close observed after awaiting the original cleanup operations.
+  No closed-state flag was used as the sole evidence.
+- Original HTTPS/origin/Host/route guards, TLS, identity/1MiB, timeouts and
+  zero retries/redirects remained. An additional hook after the original guard
+  restricted exact bodies/phase/attempts; it did not replace the production guard.
+- Commercial values were returned only to the authorized operator; no raw
+  responses, credentials, origins, source descriptions or amounts were written
+  to the project/report. The saved probe report contains structural evidence only.
+
+CONSUMED/CLOSED: no remaining loader read, attempt, discovery, rerun or automatic
+replay is authorized. Earlier budgets remain closed. This demonstrates that
+the singleton stock array was accepted for this known identity in this
+installation; the supplier's number/array documentation conflict, general
+filter guarantees, freshness/deposit identity and broader coverage remain
+unverified. No login/rotation, .env write, ERP mutation, Git, installation,
+publication, registration change or sprint/global acceptance was performed.
+
+After evidence/documentation reconciliation and the description-only MCP
+wording update, final offline verification passed229 tests/10.833s and
+pip check reported No broken requirements found. Readback of the saved
+structural report confirmed the exact two attempts/one loader/cleanup counts;
+all256 PRD checklist lines and direct dependency pins remain unchanged.
+
+The pending-action list below describes the earlier pre-authorization
+checkpoint, retained as history rather than an active approval gate.
+
+### Remaining human/real validation — historical pre-authorization checkpoint
+
+- AGENTS.md update was not applied: the protected-write approval timed out
+  without response. No retry or alternate write path was used for that file.
+  Its old price/stock filter instructions remain stale for DEC-038; the maintainer
+  must explicitly renew approval to reconcile that narrow section. This is a
+  separate instruction-file approval, not permission for real ERP queries.
+- Resolve stock's number/array inconsistency with the supplier or an authorized
+  controlled observation; offline results cannot settle what the server accepts.
+- Separately authorize a bounded real check of both actual MCP consumers using
+  the private loader only in memory, preserving the existing guard, and compare
+  identity/Decimal/null/paging/cleanup against each same response. Proposed
+  initial ceiling: two attempts total, one stock and one prices, page1/limit20,
+  no discovery/replay/redirect/fallback; stop on error or incomplete evidence.
+  This is a proposal, not authorization or a claim of execution. More than one
+  filtered page, missing metadata or changing totals remains an explicit limit.
+- No real quantity/price, broad coverage, filter acceptance, supplier correction,
+  release, G6/global acceptance or new sprint completion is claimed.
 
 ## Sprint 10 — offline application analysis evidence
 

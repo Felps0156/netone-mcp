@@ -72,13 +72,20 @@ def _validate_query(page: object, limit: object, maximum: int) -> None:
         raise BlockedOperationError()
 
 
-def _validate_product_filter(
+def _validate_filters(
     operation: str, product_id: object, product_mask: object = None,
+    reduced_id: object = None,
 ) -> None:
-    """Allow one typed ID or commercial-code filter on products only."""
+    """Allow only the single typed filter admitted for each operation."""
     if product_id is not None and (
-        operation != 'products' or type(product_id) is not int
+        operation not in ('products', 'prices') or type(product_id) is not int
         or not 0 <= product_id <= 9223372036854775807
+    ):
+        raise BlockedOperationError()
+    if reduced_id is not None and (
+        operation != 'stock' or product_id is not None
+        or type(reduced_id) is not int
+        or not 0 <= reduced_id <= 9223372036854775807
     ):
         raise BlockedOperationError()
     if product_mask is not None and (
@@ -243,16 +250,19 @@ class NetOneClient:
     async def _query(
         self, operation: str, page: int, limit: int,
         *, product_id: int | None = None, product_mask: str | None = None,
+        reduced_id: int | None = None,
     ) -> dict[str, object]:
         """Run a bounded internally selected query; never accept a URL."""
         path = _QUERY_PATHS.get(operation)
         if path is None:
             raise BlockedOperationError()
         _validate_query(page, limit, self._max_results)
-        _validate_product_filter(operation, product_id, product_mask)
+        _validate_filters(operation, product_id, product_mask, reduced_id)
         body: dict[str, object] = {'page': page, 'limit': limit}
         if product_id is not None:
             body['idsProdutos'] = [product_id]
+        if reduced_id is not None:
+            body['idsReduzidos'] = [reduced_id]
         if product_mask is not None:
             body['mascara'] = product_mask
         try:
@@ -281,18 +291,19 @@ class NetOneClient:
         self, operation: str, *, page_size: int | None = None,
         max_results: int | None = None, product_id: int | None = None,
         product_mask: str | None = None, max_pages: int | None = None,
+        start_page: int = 1, reduced_id: int | None = None,
     ) -> QueryResult:
         """Collect internally; this does not authorize real calls or tools.
 
         The optional row budget is capped by configuration and stays local
         to this call. It counts received rows, including duplicates. Only
-        page/limit and one optional typed products-only filter enter the
-        guarded POST path. No resume cursor, tenant, arbitrary filter, URL
-        or method is accepted.
+        page/limit and one optional typed operation-specific filter enter the
+        guarded POST path. A typed starting page permits stateless listing
+        blocks; no cursor, tenant, arbitrary filter, URL or method is accepted.
         """
         if operation not in _QUERY_PATHS:
             raise BlockedOperationError()
-        _validate_product_filter(operation, product_id, product_mask)
+        _validate_filters(operation, product_id, product_mask, reduced_id)
         if max_pages is not None and (
             type(max_pages) is not int or not 1 <= max_pages <= 100
         ):
@@ -301,6 +312,11 @@ class NetOneClient:
             self._max_pages if max_pages is None
             else min(max_pages, self._max_pages)
         )
+        if (
+            type(start_page) is not int or not 1 <= start_page <= 1_000_000
+            or start_page + page_budget - 1 > 1_000_000
+        ):
+            raise BlockedOperationError()
         if max_results is not None and (
             type(max_results) is not int or not 1 <= max_results <= 1000
         ):
@@ -320,6 +336,8 @@ class NetOneClient:
         total_elements = None
         complete = False
         error_code = None
+        first_page = None
+        last_page = None
 
         def warn(code: str) -> None:
             if code not in warnings:
@@ -328,7 +346,8 @@ class NetOneClient:
         async def collect_pages() -> None:
             nonlocal pages_fetched, rows_received, total_pages
             nonlocal total_elements, complete
-            for page in range(1, page_budget + 1):
+            nonlocal first_page, last_page
+            for page in range(start_page, start_page + page_budget):
                 # Changing limit mid-traversal can change offset semantics.
                 if budget - rows_received < size:
                     warn('result_limit_reached')
@@ -336,7 +355,7 @@ class NetOneClient:
                 limit = size
                 envelope = await self._query(
                     operation, page, limit, product_id=product_id,
-                    product_mask=product_mask,
+                    product_mask=product_mask, reduced_id=reduced_id,
                 )
                 rows = envelope['result']
                 if not isinstance(rows, list) or len(rows) > limit:
@@ -355,7 +374,8 @@ class NetOneClient:
                     raise ResponseError('invalid_response')
                 if elements is not None and (
                     rows_received > elements
-                    or pages is not None and page >= pages
+                    or pages is not None and elements > pages * size
+                    or start_page == 1 and pages is not None and page >= pages
                     and rows_received != elements
                 ):
                     raise ResponseError('invalid_response')
@@ -366,9 +386,19 @@ class NetOneClient:
                     for record in normalized
                 ):
                     raise ResponseError('invalid_response')
+                if reduced_id is not None and any(
+                    record.reduced_id != str(reduced_id)
+                    for record in normalized
+                ):
+                    raise ResponseError('invalid_response')
                 new_rows = 0
                 for row, record in zip(rows, normalized):
-                    key = (record.product_id, record.reduced_id)
+                    # Stock identity is reduced_id; optional product metadata
+                    # cannot split conflicting balances into separate groups.
+                    key = (
+                        None if operation == 'stock' else record.product_id,
+                        record.reduced_id,
+                    )
                     previous = seen.setdefault(key, [])
                     if row in previous:
                         warn('duplicate_rows_removed')
@@ -388,6 +418,11 @@ class NetOneClient:
                 if not new_rows and (page > 1 or pages > 1):
                     warn('pagination_no_progress')
                     return
+                if not {'duplicate_rows_removed',
+                        'conflicting_rows_preserved'}.intersection(warnings):
+                    if first_page is None:
+                        first_page = page
+                    last_page = page
                 if page >= pages:
                     complete = True
                     return
@@ -408,7 +443,27 @@ class NetOneClient:
             error_code = 'timeout'
         if error_code is not None:
             warn('collection_interrupted')
-        partial = not complete or 'conflicting_rows_preserved' in warnings
+        if start_page != 1:
+            warn('traversal_started_after_first_page')
+        if last_page == 1_000_000 and not complete:
+            warn('page_range_limit_reached')
+        unsafe_block = {
+            'pagination_metadata_missing', 'pagination_no_progress',
+            'duplicate_rows_removed', 'conflicting_rows_preserved',
+            'page_range_limit_reached',
+        }
+        block_complete = (
+            error_code is None and last_page is not None
+            and not unsafe_block.intersection(warnings)
+        )
+        next_page = (
+            last_page + 1 if block_complete and not complete
+            and last_page is not None and last_page < 1_000_000 else None
+        )
+        partial = (
+            start_page != 1 or not complete
+            or 'conflicting_rows_preserved' in warnings
+        )
         status = (
             'partial' if partial else 'found' if items else 'not_found'
         )
@@ -424,6 +479,9 @@ class NetOneClient:
             complete_dataset=complete and not partial,
             inspection_limit=budget, page_limit=page_budget,
             page_size=size, deadline_seconds=self._deadline,
+            start_page=start_page, first_page=first_page, last_page=last_page,
+            next_page=next_page, block_complete=block_complete,
+            endpoint_exhausted=complete and block_complete,
         )
 
     async def __aenter__(self) -> 'NetOneClient':

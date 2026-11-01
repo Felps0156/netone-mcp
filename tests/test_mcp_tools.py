@@ -23,11 +23,51 @@ from test_client import Stream, response, row
 EXPECTED_TOOLS = {
     'search_products', 'search_product_by_code', 'get_product_details',
     'search_product_by_ean', 'get_product_price', 'check_inventory',
-    'list_products',
+    'list_products', 'list_inventory',
 }
 
 
 class MCPToolsTests(unittest.IsolatedAsyncioTestCase):
+    async def test_listing_blocks_resume_and_keep_suffix_scope(self):
+        def send(request):
+            body = json.loads(request.content)
+            return response([row(str(body['page']), quantidade=0)],
+                            body['page'], 2, totalElements=2)
+
+        async with self.session(send) as (session, requests, _):
+            for name, route in (('list_products', 'reduzidos'),
+                                ('list_inventory', 'estoque')):
+                reply = await session.call_tool(name, {
+                    'start_page': 2, 'max_results': 1, 'page_size': 1,
+                })
+                self.assertFalse(reply.isError)
+                data = reply.structuredContent
+                self.assertEqual(data['last_page'], 2)
+                self.assertTrue(data['block_complete'])
+                self.assertTrue(data['endpoint_exhausted'])
+                self.assertFalse(data['complete_dataset'])
+                self.assertEqual(json.loads(reply.content[0].text), data)
+                self.assertEqual(requests[-1].url.path,
+                                 '/app-web/api/v2/produto/' + route)
+                self.assertEqual(json.loads(requests[-1].content),
+                                 {'page': 2, 'limit': 1})
+
+    async def test_listing_start_validation_never_sends(self):
+        async with self.session() as (session, requests, _):
+            for name in ('list_products', 'list_inventory'):
+                for arguments in (
+                    {'start_page': True}, {'start_page': '2'},
+                    {'start_page': 0}, {'start_page': 1000001},
+                    {'start_page': 1000000, 'max_pages': 2},
+                    {'start_page': 2, 'max_results': 1, 'page_size': 2},
+                    {'start_page': 2, 'tenant': 'PRIVATE'},
+                ):
+                    reply = await session.call_tool(name, arguments)
+                    self.assertTrue(reply.isError)
+                    self.assertIn('invalid_arguments:', reply.content[0].text)
+                    self.assertNotIn('PRIVATE', reply.model_dump_json())
+            self.assertEqual(requests, [])
+
     async def test_search_default_reaches_second_page_and_output_cut_is_safe(self):
         def send(request):
             page = json.loads(request.content)['page']
@@ -177,6 +217,7 @@ class MCPToolsTests(unittest.IsolatedAsyncioTestCase):
             ('get_product_price', {'product_id': '7'}, 'precos'),
             ('check_inventory', {'reduced_id': '001'}, 'estoque'),
             ('list_products', {}, 'reduzidos'),
+            ('list_inventory', {}, 'estoque'),
         )
         async with self.session() as (session, requests, _):
             for name, arguments, route in cases:
@@ -198,7 +239,7 @@ class MCPToolsTests(unittest.IsolatedAsyncioTestCase):
                     expected: dict[str, object] = {'page': 1, 'limit': 20}
                     if name == 'search_products':
                         expected['limit'] = 50
-                    if name == 'get_product_details':
+                    if name in ('get_product_details', 'get_product_price'):
                         expected['idsProdutos'] = [7]
                     if name == 'search_product_by_code':
                         expected['mascara'] = '0007'
@@ -206,7 +247,42 @@ class MCPToolsTests(unittest.IsolatedAsyncioTestCase):
                     if name == 'get_product_price':
                         self.assertIsNone(data['currency'])
                         self.assertIn('currency_unknown', data['warnings'])
-            self.assertEqual(len(requests), 7)
+            self.assertEqual(len(requests), 8)
+
+    async def test_directed_commercial_queries_and_identity_validation(self):
+        def send(request):
+            body = json.loads(request.content)
+            if 'idsReduzidos' in body:
+                return response([{'idReduzido': 42, 'quantidade': 0}],
+                                totalElements=1)
+            return response([row('42', idProduto=7, valor=0)], totalElements=1)
+
+        async with self.session(send) as (session, requests, _):
+            for name, arguments, body in (
+                ('check_inventory', {'reduced_id': '42'},
+                 {'page': 1, 'limit': 20, 'idsReduzidos': [42]}),
+                ('get_product_price', {'product_id': '7'},
+                 {'page': 1, 'limit': 20, 'idsProdutos': [7]}),
+            ):
+                reply = await session.call_tool(name, arguments)
+                self.assertFalse(reply.isError)
+                data = reply.structuredContent
+                self.assertEqual(data['status'], 'found')
+                self.assertEqual(data['lookup_strategy'], 'remote_id_filter')
+                self.assertTrue(data['complete_dataset'])
+                self.assertEqual(json.loads(reply.content[0].text), data)
+                self.assertEqual(json.loads(requests[-1].content), body)
+                field = 'quantity' if name == 'check_inventory' else 'price'
+                self.assertEqual(data['items'][0][field], '0')
+                before = len(requests)
+                argument = ('reduced_id' if name == 'check_inventory'
+                            else 'product_id')
+                for value in ('9223372036854775808', True, 7):
+                    rejected = await session.call_tool(name, {argument: value})
+                    self.assertTrue(rejected.isError)
+                    self.assertIn('invalid_arguments:',
+                                  rejected.content[0].text)
+                self.assertEqual(len(requests), before)
 
     async def test_invalid_inputs_are_safe_and_never_send(self):
         cases = [

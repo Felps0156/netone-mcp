@@ -32,6 +32,8 @@ for key in tuple(os.environ):
 
 counts = {'requests': 0, 'responses_closed': 0, 'clients_closed': 0}
 search_pages = '--search-pages' in sys.argv
+continuation = '--continuation' in sys.argv
+directed_queries = '--directed-queries' in sys.argv
 
 
 class Stream(httpx.AsyncByteStream):
@@ -50,7 +52,24 @@ def send(request):
     counts['requests'] += 1
     assert request.method == 'POST'
     assert request.url.host == 'example.invalid'
-    assert request.url.path == '/app-web/api/v2/produto/reduzidos'
+    if directed_queries:
+        body = json.loads(request.content)
+        if request.url.path == '/app-web/api/v2/produto/estoque':
+            assert body == {'page': 1, 'limit': 20, 'idsReduzidos': [42]}
+            records = [{'idReduzido': 42, 'quantidade': 0}]
+        else:
+            assert request.url.path == '/app-web/api/v2/produto/precos'
+            assert body == {'page': 1, 'limit': 20, 'idsProdutos': [7]}
+            records = [{'idProduto': 7, 'idReduzido': 42, 'valor': 0}]
+        return httpx.Response(200, stream=Stream(json.dumps({
+            'result': records, 'page': 1, 'totalPages': 1, 'totalElements': 1,
+        }).encode()))
+    assert request.url.path in (
+        '/app-web/api/v2/produto/reduzidos',
+        '/app-web/api/v2/produto/estoque',
+    ) if continuation else (
+        request.url.path == '/app-web/api/v2/produto/reduzidos'
+    )
     body = json.loads(request.content)
     data = (
         b'{"result":[{"idProduto":7,"idReduzido":"001",'
@@ -58,7 +77,13 @@ def send(request):
         b'"valor":123456789012345678.2300,"quantidade":0}],'
         b'"page":1,"totalPages":1,"totalElements":1}'
     )
-    if search_pages:
+    if continuation:
+        assert body == {'page': 2, 'limit': 1}
+        data = data.replace(
+            b'"page":1,"totalPages":1,"totalElements":1',
+            b'"page":2,"totalPages":2,"totalElements":2',
+        )
+    elif search_pages:
         page = counts['requests']
         assert page in (1, 2)
         assert body == {'page': page, 'limit': 50}

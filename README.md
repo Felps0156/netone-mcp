@@ -7,7 +7,46 @@ inventing commercial conclusions. It must never modify commercial data.
 
 ## Current status
 
-**NOT_READY for V1. Seven bounded read-only MCP tools are registered.**
+**NOT_READY for V1. Eight bounded read-only MCP tools are registered.**
+
+PRD1.15.0 / DEC-038 fixes canonical numeric price/stock identity lookups
+using closed singleton-ID filters. After separate authorization, both actual
+MCP consumers passed one real page1/limit20 query each: HTTP200, one matching
+row, nonpartial filtered traversal, same-response fidelity/JSON and completed
+cleanup. One memory-only loader read/two attempts were consumed and closed;
+no repeat or ongoing access is authorized. Stock array compatibility is
+observed only in this bounded installation check, not a supplier schema fix.
+The paragraphs below retain the earlier extension and sprint evidence.
+
+PRD1.14.0 / DEC-037 adds stateless listing continuation and `list_inventory`.
+The maintainer approved this extension and a separate bounded operational
+campaign; execution evidence is recorded in the runbook. Earlier Sprint13
+and seven-tool/no-new-query statements below are historical checkpoints,
+not the current extension's interface or authorization.
+
+### Resumable listing blocks
+
+`list_products` and `list_inventory` accept `start_page` (strict integer
+1–1000000, default1), `max_results` (1–1000, default20), `page_size`
+(1–1000/null, must fit the effective row cap) and `max_pages` (1–100,
+default1). Configured caps always prevail; the requested page range must
+fit the HTTP page bound. Existing seven-tool defaults are unchanged.
+Stock listing uses the existing page/limit query, no new remote filter.
+
+Keep page_size fixed across blocks. `first_page`/`last_page` identify fully
+validated pages; `next_page` is available only after a safe bounded block.
+`block_complete` means this block finished normally, not that all records
+were read. `endpoint_exhausted` identifies a valid terminal block.
+`complete_dataset` cannot be true for a traversal starting after page1.
+Errors, missing pagination, duplicates/conflicts or no progress prevent
+safe continuation; data already accepted and safe error codes survive.
+
+An external authorized MCP consumer must reconcile contiguous pages,
+stable metadata, received totals and identities across calls before
+claiming full visible-endpoint coverage. No transactional snapshot follows.
+Catalog/stock association belongs only in that consumer's memory, not in
+the normalizer. Stock quantities retain unknown deposit/freshness caveats.
+No persistent catalog, new dependency or commercial-write operation is added.
 Sprint13 has twenty evidenced tasks under PRD1.13.0 / DEC-036, independently
 reviewed without Critical/Important findings. Final sprint/global/G6 acceptance
 remains pending; task completion is not release acceptance. Separately
@@ -58,10 +97,13 @@ The Sprint 9 section below governs current registration. Earlier evidence
 sections retain their original no-registration boundaries as history,
 not current discovery instructions or renewed real-call budgets.
 
-The private client implements three documented query POSTs with fixed
-origin/Host and closed page/limit bodies. Products may additionally use
-either integer idsProdutos=[product_id] or a validated mascara string,
-never both; prices/stock remain page/limit only. No arbitrary filter dict
+The private client implements three query POSTs with fixed origin/Host and
+closed page/limit bodies. Products may additionally use either integer
+idsProdutos=[product_id] or a validated mascara string, never both; prices
+may use idsProdutos=[product_id], and stock idsReduzidos=[reduced_id].
+Stock's array shape follows official request examples despite the conflicting
+number schema; one bounded real array query passed, not a universal contract proof.
+No arbitrary filter dict
 is accepted. Construction/startup make no ERP request. See the
 [sanitized evidence and limits](docs/api-capabilities.md); bounded samples
 do not prove global coverage, snapshot, permissions or general readiness.
@@ -83,7 +125,7 @@ do not prove global coverage, snapshot, permissions or general readiness.
 
 - `config.py`: explicit process-owned settings loader and validation.
 - `server.py`: thin MCP stdio entrypoint, one private client per lifespan.
-- `mcp_tools.py`: explicit seven-tool registry, strict closed input schemas and safe protocol errors through FastMCP's public list/call hooks.
+- `mcp_tools.py`: explicit eight-tool registry, strict closed input schemas and safe protocol errors through FastMCP's public list/call hooks.
 - `client.py`: HTTPX authentication, literal allowlist, bounded streaming/pagination and safe errors.
 - `catalog.py`: immutable normalized records consumed by private collection.
 - `tools.py`: bounded commercial consumers with distinct search inspection/output limits, called by MCP adapters without exposing the private client or settings.
@@ -139,13 +181,17 @@ Process overrides do not prevent the loader from reading an existing root
 file. Do not configure credentials through tool arguments or paste them into
 this example. See [platform-specific development](docs/local-dev.md).
 
-Expected discovery is exactly the seven tools below. stdout is MCP-only;
+Expected discovery is exactly the eight tools below. stdout is MCP-only;
 stderr emits safe code/component/level diagnostics without raw SDK/HTTP
 messages, payloads, exception text or stacks. Loggers are not disabled.
 Discovery does not send an ERP query; tools/call does and requires the
 operator's authorization. Do not launch a real query to repeat offline QA.
 
 ## Sprint 9 MCP interface
+
+The original seven entries are retained below with the DEC-037 eighth
+entry and additive continuation contract. Dated evidence later in this
+section describes its historical execution, not proof of this extension.
 
 Only these tools are discoverable; all descriptions are in English:
 
@@ -155,25 +201,28 @@ Only these tools are discoverable; all descriptions are in English:
 | search_product_by_code | code: string1–256 | Preferred business code/SKU: remote mascara filter + exact local equality |
 | get_product_details | product_id: integer0–9223372036854775807 | Remote documented product-ID filter; normalized reduced variants |
 | search_product_by_ean | ean: string1–256 | Exact local EAN within bounded pages |
-| get_product_price | product_id: string1–256 | Exact local normalized identity; nominal prices, unknown currency |
-| check_inventory | reduced_id: string1–256 | Exact local identity; configured-user deposit, unknown identity/freshness |
+| get_product_price | product_id: string1–256 | Canonical numeric ID uses remote idsProdutos; legacy text matches locally; nominal prices, unknown currency |
+| check_inventory | reduced_id: string1–256 | Canonical numeric ID uses remote idsReduzidos array; legacy text matches locally; configured-user deposit, unknown identity/freshness |
 | list_products | none | Start at page1, at most one page by default |
+| list_inventory | none | Bounded stock block; start_page1/one page by default, unknown deposit/freshness |
 
 Every tool accepts strict max_results integer1–1000, capped by configuration
 and counting all inspected source rows, not promised matches. search_products
 now defaults to100 inspected rows and adds max_items integer1–1000/default20
 for returned matches. Explicit max_results20 keeps its old inspection budget;
-the other six tools retain default20. The search's default can reach later
+the other seven tools retain default20. The search's default can reach later
 pages when configured caps allow; this deliberately increases coverage/work,
 not a promise to search the entire catalog or return20 matches.
-Only list_products also accepts page_size integer1–1000/null and max_pages
-integer1–100/default1; both must fit configured/effective budgets. Types
+Both listings also accept page_size integer1–1000/null, max_pages
+integer1–100/default1 and start_page integer1–1000000/default1;
+all must fit configured/effective budgets and the page range. Types
 are not coerced. Codes preserve zeros, case, spaces and punctuation; blank
 and Unicode C-category input is rejected. Query matching trims only input.
 Extra arguments are rejected, including URL, endpoint, token, headers,
 tenant, method, client and currency. MCP prices default to null currency
 with currency_unknown; installation-specific BRL confirmation is not a
-model argument or a provider field. No HTTP contract/filter changed.
+model argument or a provider field. DEC-038 adds only the closed identity
+filters described below; listing/search defaults and public signatures stay unchanged.
 
 CallToolResult provides structuredContent and equivalent compact JSON text.
 Application status error sets isError=true while preserving its safe code;
@@ -270,7 +319,8 @@ absent/null/blank counts from actual source-text value/count entries.
 Stock deposit/branch identity and freshness remain unknown. No cross-unit or
 cross-deposit quantity sums, stock valuation, replenishment recommendation or
 delivery promise is produced. The historical O4 ID-filter conflict does not
-affect page/limit analysis and remains unresolved. Frameworks/adapters were
+affect page/limit analysis; DEC-038's provisional directed implementation
+does not resolve that supplier documentation conflict. Frameworks/adapters were
 evaluated and deliberately omitted: the direct pipeline already serves both
 functions. Synthetic execution evidence and review are in the runbook; no
 real analysis acceptance, new MCP registration or V1 release is implied.
@@ -296,7 +346,8 @@ the application checks equality after the bounded filtered traversal.
 It reports remote_product_code_exact_match, source-row budgets and the
 existing partial/error/completeness metadata. A partial miss is not global
 absence; complete_dataset refers only to the provider-visible query.
-Product-ID and mask filters cannot be combined; prices/stock are unchanged.
+Product-ID and mask filters cannot be combined. This code lookup never
+queries price/stock; their separate directed consumers are described below.
 
 The specifically authorized two-request real check returned HTTP200 twice,
 confirmed the supplied code in mascara rather than codigoSku or the IDs,
@@ -330,24 +381,32 @@ source values or credentials are stored in the inventory or examples.
 ### Sprint 8 application functions (also exposed by MCP since Sprint 9)
 
 - `await tools.get_product_price(client, product_id, max_results=20,
-  currency=None)` selects exact normalized product IDs locally from bounded
-  prices pages, retaining all reduced variants. product_id is a string,
-  unlike the integer remote filter of get_product_details. No ID filter is
-  sent for prices. Retail/wholesale values and tables are source nominal
+  currency=None)` sends idsProdutos=[numeric_id] for a canonical numeric
+  textual product ID and validates every returned identity, retaining all
+  reduced variants within the original limits. product_id remains a string,
+  unlike get_product_details. Retail/wholesale values and tables are source nominal
   amounts, not final quotes, discount calculations or a table choice.
 - `currency='BRL'` may be supplied by a trusted caller with operator
   confirmation. It produces currency_source=operator_confirmation, not an
   API currency claim or conversion. The maintainer confirmed BRL for the
   current installation. Generic callers default to unknown currency/null.
 - `await tools.check_inventory(client, reduced_id, max_results=20)` selects
-  exact normalized reduced IDs locally from bounded stock pages. Stock is
+  a canonical numeric textual reduced ID using idsReduzidos=[numeric_id]
+  and rejects mismatching response pages atomically. Stock is
   documented as physical minus reservations in the user's configured
   deposit. inventory_scope discloses this selection while deposit_id and
-  branch_id remain null/unverified. No deposit/filter is sent or aggregated.
+  branch_id remain null/unverified. No deposit selection or aggregation.
   Zero, negative, null and absent quantities remain distinct. Raw item
   timestamps are not stock freshness; retrieved_at is local observation.
-- Price/stock identities are strings1–256/nonblank/no Unicode C; equality
-  preserves zeros, spaces and case. max_results is a strict integer1–1000,
+- Price/stock identities are strings1–256/nonblank/no Unicode C. Only canonical
+  ASCII `0|[1-9][0-9]*` text within0–9223372036854775807 is encoded numerically;
+  the ceiling is defensive local policy, not a provider quota. Canonical IDs
+  above it fail before HTTP. Leading zeros, signs, spaces and other text are
+  never stripped: legacy noncanonical IDs retain bounded exact local matching
+  with lookup_strategy=bounded_local_exact and numeric_id_filter_unavailable.
+  Numeric lookups report lookup_strategy=remote_id_filter. No retry, scalar
+  attempt or unfiltered fallback follows an unsuccessful directed request.
+  max_results is a strict integer1–1000,
   default20/capped by configuration, counting all received rows. A partial
   miss never proves global absence; initial/later errors remain error/partial.
   found means identity found, not a populated price or sellable quantity;
@@ -360,10 +419,19 @@ source values or credentials are stored in the inventory or examples.
   Limits, missing metadata and conflicts remain partial. No arbitrary
   filters, resume cursor, global-catalog or snapshot claim is supported.
 
-All three use only the existing guarded POSTs with page/limit bodies,
+All three use only the existing guarded POSTs with closed bodies,
 verified TLS, zero retries/redirects and existing byte/time/cleanup bounds.
 Calling them needs operator authorization; importing/startup makes no query.
-The stock ID-filter schema conflict remains unresolved and is not bypassed.
+The stock ID-filter schema conflict remains unresolved by the supplier;
+DEC-038 chooses the array used in the official operation example and linked
+Postman collection. The subsequently authorized real check accepted that array
+in this installation, without resolving the supplier's published inconsistency.
+Missing metadata/cuts/conflicts remain partial, even with a known zero row;
+null/absent quantity is unknown, not zero. Valid terminal empty is not_found
+only in the provider-visible query, not proof of zero stock or ERP-wide absence.
+Stock conflicts are grouped by reduced_id even when optional product_id differs
+or is absent. Incompatible balances remain preserved as partial source rows,
+never summed or promoted to a complete confirmed balance.
 Documented query intent is accepted under DEC-017, not proof of undisclosed
 server internals. No reservation/movement operation is implemented.
 
@@ -440,11 +508,11 @@ with aligned per-item provenance; missing description restrictions are counted
 as unverified. Suggestions never enter the reviewed list automatically.
 MCP search_products remains literal; no new tool or lexical mode is released.
 
-Price/stock remote filters remain unimplemented: O5 documents ID arrays but
-requires separate admission/validation; O4 still conflicts between number in
-the schema and array in its example. Current exact local selection is bounded,
-not a directed/global identity lookup. Never strip leading zeros to force an
-identity into a numeric filter. See the [filter plan and cost evidence](docs/api-capabilities.md#o5o4-reinspection-and-future-directed-query-plan-no-filter-implemented).
+DEC-038 implements the directed numeric filters, while retaining lossless
+legacy text lookup. O5 consistently documents ID arrays; O4 still conflicts
+between number in its schema and array in its example/Postman collection.
+See the [current directed-query evidence](docs/api-capabilities.md#directed-identity-queries--dec-038)
+and the separately labelled [historical filter plan](docs/api-capabilities.md#o5o4-reinspection-and-future-directed-query-plan-no-filter-implemented).
 
 Synthetic serialization comparison on the same50-record payload: compact
 text24783 bytes versus spaced27017 bytes (8.27% less), with equivalent JSON
@@ -503,8 +571,12 @@ The delivery is NOT_READY, not FOUNDATION_READY / COMMERCIAL_API_BLOCKED:
 bounded real commercial evidence already exists, but the final release
 criteria are not all established. Sprint13 has current Windows clean-install
 and one-shot real listing evidence plus independent review; global acceptance
-and the final sprint/G6 gate remain pending. Technical SKU, remote price/stock filters and broad coverage
-retain their explicit limits. Application-only capabilities are not new tools.
+and the final sprint/G6 gate remain pending. Technical SKU, real acceptance
+of directed price/stock filters beyond the two bounded successful checks and
+broad coverage retain their explicit limits. Application-only capabilities are
+not new tools. AGENTS.md reconciliation for DEC-038 was approved/applied after
+the maintainer explicitly requested resubmission; the earlier timeout is resolved
+without bypass. The new real-check budget is consumed/closed. See the runbook.
 
 The maintainer may separately choose a project license, review rights and
 third-party notices, inspect the Git index/history and exact publication file

@@ -218,6 +218,375 @@ class InventoryTests(CommercialToolsCase):
         self.assertFalse(result['complete_dataset'])
 
 
+class DirectedCommercialTests(ProductToolsTestCase):
+    """User-supplied identities, with entirely synthetic commercial values."""
+
+    def cases(self):
+        return (
+            (tools.get_product_price, '283688', 'prices',
+             'idsProdutos', 'idProduto', 283688),
+            (tools.check_inventory, '1697854', 'stock',
+             'idsReduzidos', 'idReduzido', 1697854),
+        )
+
+    async def test_reported_product_92361_uses_directed_queries(self):
+        def send(request):
+            body = json.loads(request.content)
+            if request.url.path.endswith('/reduzidos'):
+                if body.get('mascara') == '92361':
+                    return response([row(
+                        idReduzido=1697854, idProduto=283688, mascara='92361',
+                        descricao='Synthetic regression product',
+                    )], totalElements=1)
+            elif request.url.path.endswith('/estoque'):
+                if body.get('idsReduzidos') == [1697854]:
+                    return response([{'idReduzido': 1697854,
+                                      'quantidade': 0}], totalElements=1)
+            elif body.get('idsProdutos') == [283688]:
+                return response([row(
+                    idReduzido=1697854, idProduto=283688, valor=12,
+                    tabelaPreco='Synthetic retail',
+                )], totalElements=1)
+            return response([row(idReduzido=1, idProduto=1)], 1, 985)
+
+        self.handler = send
+        catalog = cast(Any, await tools.search_product_by_code(
+            self.client, '92361',
+        ))
+        product = catalog['items'][0]
+        stock = cast(Any, await tools.check_inventory(
+            self.client, product['reduced_id'],
+        ))
+        price = cast(Any, await tools.get_product_price(
+            self.client, product['product_id'],
+        ))
+        self.assertEqual(stock['status'], 'found')
+        self.assertEqual(stock['items'][0]['quantity'], '0')
+        self.assertEqual(price['status'], 'found')
+        self.assertEqual(price['items'][0]['price'], '12')
+        self.assertEqual(self.bodies(), [
+            {'page': 1, 'limit': 20, 'mascara': '92361'},
+            {'page': 1, 'limit': 20, 'idsReduzidos': [1697854]},
+            {'page': 1, 'limit': 20, 'idsProdutos': [283688]},
+        ])
+        for result in (stock, price):
+            self.assertTrue(result['complete_dataset'])
+            self.assertFalse(result['partial'])
+            self.assertIsNone(result['error'])
+            self.assertEqual(result['pages_fetched'], 1)
+            self.assertEqual(result['rows_received'], 1)
+            self.assertEqual(result['lookup_strategy'], 'remote_id_filter')
+
+    async def test_canonical_boundaries_and_noncanonical_compatibility(self):
+        for function, _, _, key, source, _ in self.cases():
+            for identity in ('0', '9223372036854775807'):
+                with self.subTest(name=function.__name__, identity=identity):
+                    self.handler = lambda req: response([
+                        row(identity, **{source: identity}),
+                    ])
+                    result = await function(self.client, identity)
+                    self.assertEqual(result['status'], 'found')
+                    self.assertEqual(self.bodies()[-1][key], [int(identity)])
+            for identity in ('0001', ' 1 ', '+1', '1.0', '\u0661', 'x' * 256):
+                self.handler = lambda req: response([
+                    row(identity, **{source: identity}),
+                ])
+                result = cast(Any, await function(self.client, identity))
+                self.assertEqual(result['lookup_strategy'],
+                                 'bounded_local_exact')
+                self.assertIn('numeric_id_filter_unavailable',
+                              result['warnings'])
+                self.assertEqual(self.bodies()[-1], {'page': 1, 'limit': 20})
+                field = 'product_id' if source == 'idProduto' else 'reduced_id'
+                self.assertEqual(result['items'][0][field], identity)
+            before = len(self.requests)
+            for identity in ('9223372036854775808', '9' * 256):
+                with self.assertRaises(tools.ToolInputError):
+                    await function(self.client, identity)
+            self.assertEqual(len(self.requests), before)
+
+    async def test_directed_page_rejects_wrong_identity_atomically(self):
+        for function, identity, _, _, source, numeric in self.cases():
+            for other in (numeric + 1, '0' + identity, None):
+                with self.subTest(function=function.__name__, other=other):
+                    self.requests.clear()
+                    self.handler = lambda req: response([
+                        row('a', **{source: numeric}),
+                        row('b', **{source: other}),
+                    ])
+                    result = await function(self.client, identity)
+                    self.assertEqual(result['status'], 'error')
+                    self.assertEqual(result['error'], 'invalid_response')
+                    self.assertEqual(result['items'], [])
+                    self.assertFalse(result['complete_dataset'])
+                    self.assertEqual(len(self.requests), 1)
+
+    async def test_directed_later_invalid_page_keeps_previous_data(self):
+        for function, identity, _, key, source, numeric in self.cases():
+            self.requests.clear()
+
+            def send(request):
+                page = json.loads(request.content)['page']
+                rows = [row('a', **{source: numeric})]
+                if page == 2:
+                    rows = [row('b', **{source: numeric}),
+                            row('c', **{source: numeric + 1})]
+                return response(rows, page, 2)
+
+            self.handler = send
+            result = await function(self.client, identity, 100)
+            self.assertEqual(result['status'], 'partial')
+            self.assertEqual(result['error'], 'invalid_response')
+            self.assertEqual(result['returned_count'], 1)
+            self.assertEqual(result['last_page'], 1)
+            self.assertIsNone(result['next_page'])
+            self.assertEqual(self.bodies(), [
+                {'page': 1, 'limit': 50, key: [numeric]},
+                {'page': 2, 'limit': 50, key: [numeric]},
+            ])
+
+    async def test_directed_zero_unknown_absent_and_partial_are_distinct(self):
+        for fields, quantity, missing in (
+            ({'quantidade': 0}, '0', False),
+            ({'quantidade': None}, None, False), ({}, None, True),
+        ):
+            self.handler = lambda req: response([
+                {'idReduzido': 1697854, **fields},
+            ], totalElements=1)
+            result = cast(Any, await tools.check_inventory(
+                self.client, '1697854',
+            ))
+            self.assertEqual(result['status'], 'found')
+            self.assertEqual(result['items'][0]['quantity'], quantity)
+            self.assertEqual(
+                'quantidade' in result['items'][0]['missing_fields'], missing,
+            )
+            self.assertEqual('quantity_missing' in result['warnings'],
+                             quantity is None)
+            self.assertFalse(result['partial'])
+            self.assertEqual(self.bodies()[-1]['idsReduzidos'], [1697854])
+        for envelope, expected in (
+            ({'result': [], 'page': 1, 'totalPages': 1,
+              'totalElements': 0}, 'not_found'),
+            ({'result': []}, 'partial'),
+            ({'result': [{'idReduzido': 1697854, 'quantidade': 0}],
+              'page': 1, 'totalPages': 985}, 'partial'),
+        ):
+            self.handler = lambda req: httpx.Response(
+                200, stream=Stream(json.dumps(envelope).encode()),
+            )
+            result = await tools.check_inventory(self.client, '1697854', 1)
+            self.assertEqual(result['status'], expected)
+            self.assertEqual(result['complete_dataset'],
+                             expected == 'not_found')
+            self.assertIsNone(result['error'])
+
+    async def test_directed_price_keeps_variants_tables_and_precision(self):
+        def send(request):
+            page = json.loads(request.content)['page']
+            data = (
+                b'{"result":[{"idProduto":283688,"idReduzido":1,'
+                b'"valor":0.123456789012345678901,"valorAtacado":0,'
+                b'"tabelaPreco":"Retail","tabelaPrecoAtacado":"Wholesale"}],'
+                b'"page":1,"totalPages":2,"totalElements":2}'
+                if page == 1 else
+                b'{"result":[{"idProduto":283688,"idReduzido":2,'
+                b'"valor":null,"tabelaPreco":"Other source table"}],'
+                b'"page":2,"totalPages":2,"totalElements":2}'
+            )
+            return httpx.Response(200, stream=Stream(data))
+
+        self.handler = send
+        result = cast(Any, await tools.get_product_price(
+            self.client, '283688', 100,
+        ))
+        self.assertEqual(result['returned_count'], 2)
+        self.assertEqual(result['items'][0]['price'],
+                         '0.123456789012345678901')
+        self.assertEqual(result['items'][0]['wholesale_price'], '0')
+        self.assertEqual(result['items'][1]['price_table'],
+                         'Other source table')
+        self.assertIsNone(result['items'][1]['price'])
+        self.assertTrue(result['complete_dataset'])
+        self.assertEqual(self.bodies(), [
+            {'page': 1, 'limit': 50, 'idsProdutos': [283688]},
+            {'page': 2, 'limit': 50, 'idsProdutos': [283688]},
+        ])
+
+    async def test_directed_failures_never_replay_or_fallback(self):
+        for function, identity, _, key, _, numeric in self.cases():
+            for status, error in ((401, 'authentication_error'),
+                                  (403, 'authorization_error'),
+                                  (404, 'not_found'), (429, 'rate_limited'),
+                                  (500, 'upstream_error'),
+                                  (307, 'upstream_error'), (None, 'timeout')):
+                self.requests.clear()
+
+                def send(request):
+                    if status is None:
+                        raise httpx.ReadTimeout('SECRET')
+                    return httpx.Response(status, stream=Stream(b'SECRET'),
+                                          headers={'Location': '/elsewhere',
+                                                   'Retry-After': '1'})
+
+                self.handler = send
+                result = await function(self.client, identity)
+                self.assertEqual(result['status'], 'error')
+                self.assertEqual(result['error'], error)
+                self.assertEqual(result['items'], [])
+                self.assertEqual(self.bodies(), [
+                    {'page': 1, 'limit': 20, key: [numeric]},
+                ])
+                self.assertNotIn('SECRET', json.dumps(result))
+
+
+    async def test_directed_caps_conflicts_and_later_errors_stay_partial(self):
+        for function, identity, _, key, source, numeric in self.cases():
+            for failure in ('cap', 'conflict', 'http', 'metadata'):
+                self.requests.clear()
+
+                def send(request):
+                    page = json.loads(request.content)['page']
+                    if page == 2:
+                        return httpx.Response(403, stream=Stream(b'SECRET'))
+                    records = [row('a', **{source: numeric}, quantidade=0)]
+                    if failure == 'conflict':
+                        records.append(row(
+                            'a', **{source: numeric}, quantidade=2,
+                        ))
+                    if failure == 'metadata':
+                        return httpx.Response(200, stream=Stream(json.dumps({
+                            'result': records,
+                        }).encode()))
+                    return response(records, 1,
+                                    1 if failure == 'conflict' else 2)
+
+                self.handler = send
+                instance = self.make_client(max_results=2, max_pages=1)
+                if failure == 'http':
+                    instance = self.client
+                result = await function(instance, identity, 100)
+                self.assertEqual(result['status'], 'partial')
+                self.assertFalse(result['complete_dataset'])
+                self.assertEqual(result['error'],
+                                 'authorization_error' if failure == 'http'
+                                 else None)
+                self.assertTrue(result['items'])
+                self.assertEqual(len(self.requests),
+                                 2 if failure == 'http' else 1)
+                self.assertTrue(all(body[key] == [numeric]
+                                    for body in self.bodies()))
+
+    async def test_stock_conflict_uses_reduced_id_not_optional_product(self):
+        for products in ((7, 8), (None, 8), (7, None)):
+            records = [
+                {'idReduzido': 42, 'quantidade': 0},
+                {'idReduzido': 42, 'quantidade': 9},
+            ]
+            for record, product in zip(records, products):
+                if product is not None:
+                    record['idProduto'] = product
+            self.handler = lambda req: response(records, totalElements=2)
+            for name, arguments in (
+                ('check_inventory', {'reduced_id': '42'}),
+                ('list_inventory', {}), ('analyze_inventory', {}),
+            ):
+                with self.subTest(name=name, products=products):
+                    result = await getattr(tools, name)(
+                        self.client, **arguments,
+                    )
+                    self.assertEqual(result['status'], 'partial')
+                    self.assertTrue(result['partial'])
+                    self.assertFalse(result['complete_dataset'])
+                    self.assertIsNone(result['error'])
+                    self.assertIn('conflicting_rows_preserved',
+                                  result['warnings'])
+                    self.assertEqual(result['returned_count'], 2)
+                    self.assertEqual(
+                        [item['quantity'] for item in result['items']],
+                        ['0', '9'],
+                    )
+                    self.assertFalse(result['block_complete'])
+                    self.assertIsNone(result['next_page'])
+
+    async def test_directed_concurrent_ids_and_budgets_do_not_leak(self):
+        ready = anyio.Event()
+        started = 0
+        results = {}
+
+        class Overlap(Stream):
+            async def __aiter__(self):
+                nonlocal started
+                started += 1
+                if started == 3:
+                    ready.set()
+                await ready.wait()
+                async for chunk in super().__aiter__():
+                    yield chunk
+
+        def send(request):
+            body = json.loads(request.content)
+            product = body.get('idsProdutos', [1])[0]
+            reduced = body.get('idsReduzidos', [1])[0]
+            return httpx.Response(200, stream=Overlap(json.dumps({
+                'result': [row(str(reduced), idProduto=product, quantidade=0)],
+                'page': 1, 'totalPages': 1, 'totalElements': 1,
+            }).encode()))
+
+        async def lookup(name, identity, budget):
+            results[(name, identity)] = await getattr(tools, name)(
+                self.client, identity, budget,
+            )
+
+        self.handler = send
+        with anyio.fail_after(2):
+            async with anyio.create_task_group() as group:
+                group.start_soon(lookup, 'check_inventory', '7', 1)
+                group.start_soon(lookup, 'check_inventory', '8', 2)
+                group.start_soon(lookup, 'get_product_price', '9', 3)
+        bodies = sorted(self.bodies(), key=lambda body: body['limit'])
+        self.assertEqual(bodies, [
+            {'page': 1, 'limit': 1, 'idsReduzidos': [7]},
+            {'page': 1, 'limit': 2, 'idsReduzidos': [8]},
+            {'page': 1, 'limit': 3, 'idsProdutos': [9]},
+        ])
+        self.assertEqual(results[('check_inventory', '7')]['items'][0][
+            'reduced_id'], '7')
+        self.assertEqual(results[('check_inventory', '8')]['items'][0][
+            'reduced_id'], '8')
+        self.assertEqual(results[('get_product_price', '9')]['items'][0][
+            'product_id'], '9')
+        self.assertEqual(self.client._max_results, 100)
+        self.assertEqual(self.client._max_pages, 5)
+
+    async def test_directed_cancellation_propagates_after_stream_cleanup(self):
+        for function, identity, _, key, _, numeric in self.cases():
+            started = anyio.Event()
+            returned = []
+
+            class Waiting(Stream):
+                async def __aiter__(self):
+                    started.set()
+                    await anyio.sleep_forever()
+                    yield b''
+
+            stream = Waiting(close_delay=0.01)
+            self.handler = lambda req: httpx.Response(200, stream=stream)
+
+            async def call():
+                returned.append(await function(self.client, identity))
+
+            with anyio.fail_after(2):
+                async with anyio.create_task_group() as group:
+                    group.start_soon(call)
+                    await started.wait()
+                    group.cancel_scope.cancel()
+            self.assertEqual(returned, [])
+            self.assertTrue(stream.closed)
+            self.assertEqual(stream.close_count, 1)
+            self.assertEqual(self.bodies()[-1][key], [numeric])
+
+
 class ListTests(CommercialToolsCase):
     async def test_list_defaults_to_one_page(self):
         function = self.function('list_products')

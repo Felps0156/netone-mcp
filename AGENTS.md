@@ -1,5 +1,77 @@
 # NetOne MCP — Agent Instructions
 
+## Current approved fix — directed stock and price queries
+
+The maintainer requested both fixes and explicitly delegated choices and
+offline execution without intermediate gates. PRD1.15.0 / DEC-038 admits
+strict private product_id for prices (idsProdutos singleton array) and
+reduced_id for stock (idsReduzidos singleton array), without new tools,
+routes, dependencies, arbitrary filters or deposit selection. O4's number/
+array conflict remains in the published OpenAPI; the provisional array
+choice follows its request example and the official Postman collection.
+The subsequently authorized one-shot real checks succeeded as recorded below;
+this does not establish supplier schema correction or universal compatibility.
+Earlier no-new-filter rules below are historical for this narrow fix.
+
+Canonical ASCII numeric text IDs use the remote filter, with a defensive
+0–9223372036854775807 bound; never strip zeros, whitespace or signs.
+Noncanonical text retains bounded exact local compatibility with explicit
+lookup_strategy/warning. No automatic fallback after a directed failure.
+Reject other/missing response identities atomically per page; preserve
+previous valid pages, partiality, null/absence/zero and exact Decimal values.
+Stock conflict groups use reduced_id alone, independently of optional
+product_id metadata; preserve incompatible rows as partial without summing.
+Keep all read-only transport/cleanup protections, eight tools and pins.
+
+Offline final verification:229 tests PASS/10.279s and pip check PASS.
+Independent review identified one pre-existing stock-conflict defect,
+subsequently reproduced and corrected RED-to-GREEN; see docs/runbook.md.
+Sprint/global checkboxes and V1 NOT_READY remain unchanged.
+
+The maintainer subsequently explicitly requested resubmitting this protected
+instruction update and then performing the proposed real tests. This authorized
+one memory-only load_config invocation in the server and at most two new
+query attempts total: one check_inventory stock query and one get_product_price
+prices query, each page1/limit20, using the identities supplied in the request.
+Count actual guarded attempts, stop on error/inconsistent evidence, and do not
+reallocate or replay. No discovery, additional page, retry, redirect, scalar
+fallback, login/rotation, .env write/display, ERP mutation, Git, installs,
+publication or Hermes-registration change. Retain only structural evidence;
+return authorized commercial values only to the operator. Observe same-response
+fidelity, MCP JSON equivalence and completed response/transport/client cleanup.
+Record consumption/closure in docs/runbook.md; no old campaign budget is renewed.
+CONSUMED/CLOSED at2026-10-31T21:39:54Z: one loader invocation, two attempts,
+both HTTP200, one matching row per operation, found/nonpartial and complete
+only within each filtered query. Source fidelity/MCP JSON equivalence and
+two response closes/one transport close/one client close completed. Actual
+tools were called through a generic in-memory MCP session with the production
+factory and guarded real HTTP transport; live stdio was not re-executed.
+No query/read budget remains and no rerun is authorized by this record.
+Plan: docs/superpowers/plans/2026-10-31-directed-commercial-queries.md.
+
+## Previous approved extension — resumable catalog and inventory
+
+The maintainer approved approach A in
+`.hermes/plans/2026-10-31_163933-consulta-completa-produtos-com-estoque.md`
+and authorized execution. PRD1.14.0 / DEC-037 governs this new slice:
+add typed start_page to bounded listings and expose list_inventory as the
+eighth MCP tool. Preserve the existing seven defaults, guarded three-route
+HTTP contract and direct pins. Reconcile catalog/stock only in an external
+MCP consumer's memory, never in the normalizer or a persistent cache.
+Earlier seven-tool/no-resume/no-new-query statements below are historical
+checkpoints superseded only for this extension. Existing sprint/global
+checkboxes and V1 NOT_READY remain unchanged.
+
+The new nonrenewable campaign permits the existing private loader in server
+memory and at most1200 products/stock query attempts, limit<=50, within45
+minutes. Include operational validation in that budget, stop on error or
+inconsistent progress, no automatic retry/redirect. Persist only structural
+evidence; return authorized commercial results only to the operator. Update
+only the netone Hermes registration, allowing eight tools and50 rows/one
+page per block, sampling disabled. No .env mutation/display, credential
+rotation/login, ERP mutation, Git, installs, publication or unrelated work.
+Execution plan: docs/superpowers/plans/2026-10-31-resumable-inventory.md.
+
 ## Scope and current status
 
 Sprint13 execution checkpoint: clean-install195 PASS on Windows/Python3.14.3,

@@ -1,6 +1,6 @@
 # PRD — NetOne MCP: Consulta e Análise Read-Only
 
-> **Versão:** 1.13.0 — 31/10/2026 — vinte tarefas da Sprint13 evidenciadas; aceite global/G6 pendente
+> **Versão:** 1.15.0 — 31/10/2026 — DEC-038: consultas direcionadas de estoque/preço;229 testes offline PASS e duas consultas reais autorizadas HTTP200, com orçamento consumido/encerrado
 > **Estado:** NOT_READY para V1; Sprints anteriores mantêm seus escopos/evidências e a ressalva DEC-027. S13.01–20 executadas/evidenciadas, sem declarar aceite final da sprint enquanto faltarem critérios globais/G6. Regressão offline e instalação limpa195 PASS; leitura privada/consulta única MCP autorizadas separadamente, HTTP200/um item parcial/fidelidade/JSON/cleanup aceitos; orçamento consumido e encerrado. Revisão independente sem Critical/Important. Atualização final de AGENTS aplicada pelo mecanismo normal após pedido explícito de reenvio; timeout anterior resolvido, sem bypass. Sete tools MCP e G3/G4 delimitados preservados. Sem Git/publicação ou renovação de orçamento anterior.
 > **Regra fundamental:** nenhuma operação pode alterar dados comerciais do ERP.
 
@@ -26,6 +26,130 @@ sem validação real. S7.11 permanece aberta; revisão final aprovada. Não
 autoriza banco/sync, preço/estoque adicional, MCP ou Sprints 8+.
 
 Histórico integral: [PRD 1.1.6](docs/history/PRD-1.1.6.md) e [runbook até 1.1.6](docs/history/runbook-through-1.1.6.md). Esses arquivos preservam decisões/evidências e regras da época, não políticas atuais. O timeout anterior da edição protegida foi resolvido, conforme registro no runbook.
+
+## Extensão atual — DEC-038: estoque/preço por identidade
+
+Na autorização inicial, o mantenedor solicitou a correção de check_inventory/get_product_price e
+delegou escolhas e execução sem checkpoints intermediários. Autoriza este
+recorte offline e a revisão mínima do contrato de filtros; proíbe consultas
+reais sem nova autorização. Não acessar .env/configuração privada, renovar
+orçamentos antigos, instalar, executar Git, publicar ou mudar o cadastro Hermes.
+As permissões operacionais históricas de DEC-037 abaixo não estão ativas
+nesta execução. Oito tools, sprints/checklists globais e V1 NOT_READY mantidos.
+
+DEC-038 — decisão do executor sob a delegação explícita do mantenedor:
+
+- Causa: consumers consultavam page/limit sem identidade e selecionavam
+  product_id/reduced_id apenas localmente; um prefixo parcial não confirma
+  ausência/zero. Mais páginas ou catálogo persistente não são a correção mínima.
+- O5 publica idsProdutos:array[number], confirmado na página renderizada,
+  OpenAPI e coleção Postman oficiais. Admitir em prices somente o filtro
+  privado product_id inteiro → idsProdutos=[product_id].
+- O4 ainda tem conflito interno: schema number e exemplo array, inclusive
+  no OpenAPI original. A coleção Postman vinculada pelo artigo oficial também
+  usa array. Escolha técnica provisória: reduced_id inteiro privado em stock
+  → idsReduzidos=[reduced_id], seguindo os dois exemplos oficiais; não alegar
+  correção publicada do schema ou confirmação do fornecedor/servidor.
+  A antiga recusa documental é supersedida somente para implementar/testar
+  esse formato offline, não para declarar o contrato remoto resolvido.
+- Nenhum array/filtro livre entra no MCP. Produtos continuam ID OU mascara;
+  stock só reduced_id e prices só product_id; cada ID inteiro estrito entre0
+  e9223372036854775807, teto defensivo local. Nenhuma seleção de depósito,
+  filtro adicional, combinação arbitrária, nova rota ou dependência.
+- Entradas públicas mantêm strings1–256/default max_results20/caps atuais.
+  Somente a forma ASCII canônica `0|[1-9][0-9]*` dentro do teto vira inteiro
+  sem perda. Forma canônica acima do teto falha antes do envio. Demais IDs
+  textuais preservam a seleção local limitada por compatibilidade, com
+  lookup_strategy=bounded_local_exact e numeric_id_filter_unavailable;
+  nunca remover zeros/espaços/sinais ou transformar códigos comerciais em IDs.
+  Caminho numérico declara lookup_strategy=remote_id_filter. Não há fallback
+  local/escalar após falha, resposta incoerente ou filtro ignorado.
+- Filtro permanece fixo em todas as páginas. Identidade diferente/ausente
+  rejeita a página atomicamente, preservando somente dados válidos anteriores.
+  Percurso limitado continua parcial; completar páginas filtradas não comprova
+  catálogo global, depósito/frescor ou snapshot. Preço mantém variantes/tabelas,
+  montantes nominais/Decimal e moeda desconhecida; não parar no primeiro match.
+- Quantidade zero recebida é zero; null/ausente é desconhecido com aviso.
+  Vazio terminal coerente é not_found no universo visível consultado, nunca
+  zero; metadados insuficientes/cortes/conflitos são partial, erros permanecem.
+  Em stock, conflitos usam apenas reduced_id: diferenças/ausência no idProduto
+  opcional não podem esconder saldos incompatíveis. Preservar linhas conflitantes
+  sem soma e sem complete_dataset; mesma correção vale para listagem/análise.
+- Preservar TLS/origem/Host/allowlist, schema fechado, identity/1MiB, deadlines,
+  zero retries/redirects/fallback, cancelamento e cleanup. A semântica de consulta
+  segue DEC-017; exemplos oficiais não provam efeitos internos do fornecedor.
+- Identificadores fornecidos expressamente no pedido são usados somente na
+  regressão solicitada; descrição/preços/quantidades da fixture são simulados,
+  não dados recebidos do ERP. Nenhuma nova prova operacional é alegada.
+
+Fontes atuais e pendências: docs/api-capabilities.md; evidências de execução:
+docs/runbook.md. Plano/desenho curto:
+[consultas direcionadas](docs/superpowers/plans/2026-10-31-directed-commercial-queries.md).
+Esta decisão supersede as restrições de filtros de preço/estoque anteriores
+apenas neste recorte; as decisões/planos de sprints anteriores são históricos.
+Confirmação definitiva do conflito documental number/array continua pendente;
+a observação real delimitada abaixo não é correção publicada pelo fornecedor.
+A primeira atualização correspondente de AGENTS.md não foi aplicada por timeout
+da aprovação protegida, sem retry/bypass. Posteriormente o mantenedor pediu
+explicitamente reenviar a solicitação e executar os testes reais propostos.
+A alteração restrita foi então aprovada/aplicada pelo mecanismo normal.
+Esta autorização posterior permite um load_config apenas em memória do servidor
+e até duas tentativas novas: check_inventory/stock e get_product_price/prices,
+uma por função, page1/limit20, com as identidades já fornecidas. Sem descoberta,
+páginas adicionais, retry/redirect/fallback, login/rotação, escrita .env/ERP,
+Git, instalação ou publicação. Parar em erro/inconsistência/evidência incompleta,
+reter somente evidência estrutural e retornar valores comerciais só ao operador.
+Registrar consumo/encerramento no runbook; nenhum orçamento antigo é renovado.
+Execução em2026-10-31T21:39:53Z–21:39:54Z: um load_config em memória e duas
+tentativas reais, uma stock e uma prices, ambas HTTP200/uma linha correspondente,
+found/partial=false/error=null e complete_dataset=true somente na consulta
+filtrada. Fidelidade à própria resposta/Decimal/null/ausência e equivalência
+JSON MCP aceitas; dois fechamentos de resposta/um de transporte/um de cliente
+concluídos. Cliente MCP genérico em sessão em memória sobre factory/consumidores
+de produção e transporte HTTP real; stdio real não repetido (regressão offline
+separada). AGENTS.md reconciliado pelo mecanismo protegido normal. Orçamento
+novo CONSUMIDO/ENCERRADO, sem repetição ou permissão contínua. Valores comerciais
+retornados somente ao operador, sem retenção no projeto. Compatibilidade do
+array de stock observada nesta amostra, não universalizada nem tratada como
+correção do schema. Critérios globais/G6/V1 e estados de sprints inalterados.
+
+## Extensão anterior — DEC-037: catálogo e estoque retomáveis
+
+O mantenedor aprovou a abordagem A da proposta
+`.hermes/plans/2026-10-31_163933-consulta-completa-produtos-com-estoque.md`
+e autorizou sua execução. O estado e as proibições de checkpoints anteriores
+neste documento são históricos; são supersedidos apenas neste recorte.
+Não há conclusão automática de sprint, G6 ou V1.
+
+- Acrescentar `start_page` inteiro estrito1–1000000 às listagens, padrão1,
+  sem mudar os sete padrões existentes nem elevar os limites por chamada.
+- Expor `list_inventory`, oitava tool MCP, sobre stock/page/limit já admitido.
+  O modelo não escolhe URL, tenant, depósito, método ou filtros arbitrários.
+- Separar bloco concluído, endpoint esgotado e travessia desde página1;
+  um sufixo terminal nunca comprova sozinho `complete_dataset`.
+- Informar páginas aceitas e próxima página segura; preservar erros e dados
+  anteriores sem avançar sobre páginas inválidas. Tamanho fixo por campanha.
+- Compor catálogo/estoque em memória em consumidor externo MCP, por reduced_id
+  exato, sem join no normalizador, persistência ou soma de depósitos. Quantidade
+  null/ausente é desconhecida; apenas Decimal conhecido>0 entra em saldo positivo.
+- Identificar óleo/oleo/plurais sem diferença de acento/caixa, separando
+  acessórios e descrições ambíguas. Cobertura textual não prova categoria global
+  nem snapshot transacional; reportar desconhecidos/conflitos e escopo visível.
+- Autorização operacional nova e não renovável: loader privado apenas na
+  memória do servidor, até1200 tentativas HTTP products/stock, limit<=50,
+  até45 minutos; validação incluída. Sem retries, redirects, login/rotação,
+  .env write, instalação, Git ou mutação ERP. Parar em erro/inconsistência/teto.
+- Ajuste permitido apenas no cadastro Hermes netone: oito tools,50 linhas,
+  uma página por bloco, sampling desativado; reler e verificar efeito.
+- Persistir somente evidência estrutural em documentação/logs; valores
+  comerciais são apresentados ao operador, não salvos no repositório.
+- Aceite exige regressões offline/stdio e revisão independente, depois
+  páginas posteriores a1 reais e reconciliação de cobertura. Uma campanha
+  parcial deve ser entregue como parcial, sem declarar todos os produtos.
+
+Plano de execução:
+[paginação retomável](docs/superpowers/plans/2026-10-31-resumable-inventory.md).
+Gates, estados e checklists históricos permanecem inalterados.
 
 ## 1. Visão Geral do Produto
 
@@ -81,7 +205,7 @@ flowchart LR
 - `client.py`: HTTPX único, autenticação, guarda de origem/método/rota/schema, streaming, limites, erros, paginação e fechamento.
 - `catalog.py`: modelos imutáveis e normalização consumida pela coleta privada; sem persistência ou join preço/estoque.
 - `tools.py`: funções comerciais preservadas; search_product_by_code é prioritária para código comercial, distinta de codigoSku. DEC-030 expõe sete funções via MCP, sem argumentos de configuração. search_product_by_sku e search_products_expanded continuam somente na aplicação, sem registro por falta de prova operacional própria. Projeção, parcialidade, precisão e proveniência permanecem iguais.
-- Sprint 8 / DEC-029: get_product_price por product_id textual exato local, check_inventory por reduced_id textual exato local e list_products desde page1/uma página default. Preço/estoque usam somente page/limit, sem filtro novo. DEC-030 registra estes consumidores em MCP; moeda MCP permanece null/desconhecida, sem universalizar BRL da instalação. Depósito/frescor não inferidos; limites por chamada não mutam estado compartilhado.
+- Sprint 8 / DEC-029 originalmente implementou preço/estoque por identidade textual exata local. DEC-038 direciona IDs numéricos canônicos por idsProdutos em prices/idsReduzidos em stock, preservando compatibilidade textual não canônica explícita. DEC-030 registra os consumidores em MCP; DEC-037 acrescenta list_inventory e start_page às listagens. Moeda MCP permanece null/desconhecida; depósito/frescor não inferidos e limites/filtros por chamada não mutam estado compartilhado.
 - `analysis.py`: preparação tipada de identidades e agregação pura consumidas por duas análises em tools.py (DEC-033). Sem grafo, adapter fictício, I/O ou registro MCP.
 
 ## 7. Adaptação dos Padrões do SCSI
@@ -238,11 +362,12 @@ Todos os resultados comerciais devem usar estrutura coerente com MCP/SDK escolhi
 
 **Não registrar ferramentas não liberadas.** Se operações distintas dependem de mesma consulta, evitar redundância superficial: pode-se manter preço e estoque dentro de `get_product_details` ou `search_products`, desde que a experiência MCP permaneça clara.
 
-Registry atual DEC-030: search_products, search_product_by_code,
+Registry atual DEC-030/037: search_products, search_product_by_code,
 get_product_details, search_product_by_ean, get_product_price,
-check_inventory e list_products. As assinaturas e limites efetivos são os
+check_inventory, list_products e list_inventory. As assinaturas e limites efetivos são os
 de tools.py, não as propostas históricas da tabela: detalhes usam inteiro;
-preço/estoque, identidades textuais; listagem começa sempre em page1.
+preço/estoque, identidades textuais com adaptação canônica sem perda (DEC-038);
+listagens começam em start_page, padrão1, com limites existentes (DEC-037).
 search_product_by_code recebe code textual1–256 e max_results1–1000/default20.
 Schemas fechados/estritos, sem coerção ou argumento URL/segredo/moeda.
 CallToolResult contém structuredContent e texto JSON equivalente; status
@@ -305,7 +430,7 @@ Token do operador exclusivamente em `netone-auth-token`, confirmado documentalme
 
 ## 16. Segurança e Política Read-Only
 
-Allowlist literal dos três POSTs da seção 10.5, origem/Host fixos, body fechado com inteiros `page` e `limit`; nenhum prefixo/wildcard/body livre. DEC-024 acrescenta somente em products o filtro opcional idsProdutos=[product_id], inteiro estrito validado, sem filtros arbitrários ou alteração de prices/stock. Sua prova própria retornou um produto de identidade correspondente; isso não autoriza chamadas contínuas ou outros filtros. `_query()` valida filtros/constrói body; hook obrigatório antes do transporte valida somente método/origem/Host/rota, sem desserialização duplicada. HTTPS com certificado/hostname verificados, sem redirects nem fallback de rota/método. POST usa zero retries inclusive em timeout, 429 e `Retry-After`; ajuste legado não autoriza repetição. Nenhum controle deve ser removido para fazer probe.
+Allowlist literal dos três POSTs da seção 10.5, origem/Host fixos, body fechado com inteiros `page` e `limit`; nenhum prefixo/wildcard/body livre. Products admite ID OU mascara (DEC-024/025). DEC-038 admite somente product_id inteiro em prices→idsProdutos singleton e reduced_id inteiro em stock→idsReduzidos singleton, formato array provisório conforme exemplos oficiais apesar do conflito de schema. Nenhum filtro arbitrário/depósito/composição; validar entrada antes de HTTP e identidade da resposta atomicamente por página. Prova antiga de products não valida filtros de prices/stock nem autoriza chamadas contínuas. `_query()` valida filtros/constrói body; hook obrigatório antes do transporte valida somente método/origem/Host/rota, sem desserialização duplicada. HTTPS com certificado/hostname verificados, sem redirects nem fallback de rota/método/formato/filtro. POST usa zero retries inclusive em timeout, 429 e `Retry-After`; ajuste legado não autoriza repetição. Nenhum controle deve ser removido para fazer probe.
 
 HTTPX privado, `trust_env=False`, sem proxy/netrc/CA herdados; pool de uma conexão/keepalive. Host privado/single-label definido pelo operador é permitido, mas TLS continua obrigatório e a validação não resolve DNS, protege contra rebinding ou aprova operacionalmente o destino. Sem override de TLS inseguro. Acesso deliberado a privados/reconfiguração do processo confiável não é sandbox.
 
@@ -317,7 +442,7 @@ Códigos estáveis e mensagens fixas sem payload/URL/token/exception context de 
 
 ## 18. Qualidade e Consistência dos Dados
 
-Coleta privada começa em page 1 e mantém page size fixo, default local min(50, max_results). Tetos de páginas/linhas contam linhas recebidas antes de deduplicação. Se orçamento residual não comporta outra página inteira, parar parcial sem alterar offsets. Prazo total da coleta e de cada request: quatro vezes timeout de fase; cleanup de resposta tem até um segundo adicional.
+Coleta privada começa em page 1 por padrão; DEC-037 permite start_page nas listagens, sem completar universo por um sufixo terminal. Mantém page size e filtros fixos, default local min(50, max_results). Tetos de páginas/linhas contam linhas recebidas antes de deduplicação. Se orçamento residual não comporta outra página inteira, parar parcial sem alterar offsets. Prazo total da coleta e de cada request: quatro vezes timeout de fase; cleanup de resposta tem até um segundo adicional. Em DEC-038, complete_dataset descreve o percurso filtrado por identidade ou a seleção textual limitada, nunca todo o catálogo ERP.
 
 Metadados ausentes geram parcialidade; null/inválidos/contraditórios/mutáveis rejeitam a página atomicamente. Não sintetizar totais. Página posterior vazia/repetida sem progresso é parcial, inclusive terminal; primeira vazia terminal coerente é not_found. Duplicatas integrais são removidas com aviso; reduzidos diferentes sobrevivem; conflitos de identidade são preservados e forçam parcialidade. `complete_dataset` refere-se ao percurso do endpoint, não snapshot ou catálogo ERP inteiro. Visibilidade ecommerce/tabela e depósito do usuário continuam limitadores não validados.
 
@@ -1444,7 +1569,7 @@ executada. Resultados/revisão/auditoria final no runbook.
 ## 29. Pendências e Próximas Decisões
 
 - DEC-036 registra S13.01–20 executadas/evidenciadas e revisão independente sem Critical/Important; instalação limpa e regressão195 PASS, uma consulta MCP real HTTP200/um item parcial/fidelidade/JSON/cleanup aceitos, após permissões separadas; leitura/orçamento encerrados. Atualização final de AGENTS aplicada após pedido explícito de reenvio, timeout resolvido sem bypass. Aceite final da sprint/G6/critérios globais pendentes e V1 NOT_READY; sem Git/publicação ou renovação. G5 documental não é auditoria Git/liberação jurídica.
-- Revisão1.9.2 inseriu Sprint9.5 somente como planejamento; DEC-032 registra seu encerramento offline. DEC-033 conclui Sprint10 somente na aplicação, com limiar3 e verificação sintética. DEC-034 conclui revisão offline de segurança/qualidade da Sprint11. Filtros de preço/estoque continuam apenas planejados; O4 permanece documentalmente ambígua e O5 depende de admissão/validação próprias. Busca ampliada/análises continuam fora do MCP; G3/G4 limitados às evidências existentes.
+- Revisão1.9.2 inseriu Sprint9.5 somente como planejamento; DEC-032 registra seu encerramento offline. DEC-033 conclui Sprint10 somente na aplicação, com limiar3 e verificação sintética. DEC-034 conclui revisão offline de segurança/qualidade da Sprint11. DEC-038 implementa filtros dirigidos de preço/estoque e registra duas consultas reais próprias HTTP200/uma linha correspondente cada, com fidelidade/JSON/cleanup aceitos após autorização separada; orçamento consumido/encerrado. O4 permanece documentalmente ambígua: array observado na instalação não corrige schema nem prova compatibilidade universal. AGENTS.md reconciliado após renovação explícita/aprovação protegida, sem bypass. Busca ampliada/análises continuam fora do MCP; G3/G4 limitados às evidências existentes.
 
 - Sprint9 concluída: integração offline e S9.12 real comprovadas conforme DEC-031, G3 PASS no recorte de descoberta e uma listagem page1/limit1. Orçamento consumido/encerrado; não autoriza consulta contínua ou conexão permanente ao Hermes. SKU técnico e busca ampliada permanecem fora do registry. Minor de classificação de diagnóstico corrigido offline na Sprint11, sem ampliar a prova real. Sprint10 conforme DEC-033; V1 NOT_READY.
 

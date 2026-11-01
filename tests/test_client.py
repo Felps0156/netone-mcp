@@ -153,13 +153,74 @@ class ClientTests(unittest.IsolatedAsyncioTestCase):
                     )
         self.assertEqual(self.requests, [])
 
-    async def test_product_filter_is_blocked_for_prices_and_stock(self):
-        for operation in ('prices', 'stock'):
-            with self.subTest(operation=operation):
+    async def test_identity_filters_are_closed_by_operation(self):
+        for operation, filters in (
+            ('stock', {'product_id': 7}),
+            ('products', {'reduced_id': 7}),
+            ('prices', {'reduced_id': 7}),
+            ('prices', {'product_id': 7, 'reduced_id': 8}),
+            ('stock', {'reduced_id': 7, 'product_mask': 'x'}),
+            ('prices', {'product_id': 7, 'product_mask': 'x'}),
+        ):
+            with self.subTest(operation=operation, filters=filters):
                 with self.assertRaises(BlockedOperationError):
-                    await self.client._query(operation, 1, 1, product_id=7)
+                    await cast(Any, self.client)._query(
+                        operation, 1, 1, **filters,
+                    )
                 with self.assertRaises(BlockedOperationError):
-                    await self.client._collect(operation, product_id=7)
+                    await cast(Any, self.client)._collect(operation, **filters)
+        self.assertEqual(self.requests, [])
+
+    async def test_directed_identity_filters_use_singleton_arrays(self):
+        for operation, name, key, source in (
+            ('prices', 'product_id', 'idsProdutos', 'idProduto'),
+            ('stock', 'reduced_id', 'idsReduzidos', 'idReduzido'),
+        ):
+            for value in (0, 7, 9223372036854775807):
+                self.handler = lambda req: response([
+                    row(**cast(Any, {source: value})),
+                ])
+                await cast(Any, self.client)._query(
+                    operation, 1, 1, **{name: value},
+                )
+                self.assertEqual(json.loads(self.requests[-1].content),
+                                 {'page': 1, 'limit': 1, key: [value]})
+                result = await cast(Any, self.client)._collect(
+                    operation, **{name: value},
+                )
+                self.assertEqual(result.status, 'found')
+                self.assertEqual(json.loads(self.requests[-1].content),
+                                 {'page': 1, 'limit': 50, key: [value]})
+
+    async def test_directed_invalid_numeric_filters_never_send(self):
+        class IntegerSubclass(int):
+            pass
+
+        for operation, name in (('prices', 'product_id'),
+                                ('stock', 'reduced_id')):
+            for value in (True, False, -1, 9223372036854775808, '007',
+                          7.0, Decimal(7), IntegerSubclass(7), [7], {}):
+                for collect in (False, True):
+                    with self.subTest(operation=operation, collect=collect):
+                        with self.assertRaises(BlockedOperationError):
+                            if collect:
+                                await cast(Any, self.client)._collect(
+                                    operation, **{name: value},
+                                )
+                            else:
+                                await cast(Any, self.client)._query(
+                                    operation, 1, 1, **{name: value},
+                                )
+        for collect in (False, True):
+            with self.assertRaises(TypeError):
+                if collect:
+                    await cast(Any, self.client)._collect(
+                        'stock', filters={'x': 1},
+                    )
+                else:
+                    await cast(Any, self.client)._query(
+                        'stock', 1, 1, idsReduzidos=[7],
+                    )
         self.assertEqual(self.requests, [])
 
     async def test_none_product_filter_preserves_all_legacy_bodies(self):

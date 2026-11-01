@@ -42,6 +42,14 @@ claim follows. The historical mismatch is not a current diagnosed fault.
 
 ## Private client and request limits
 
+DEC-037 adds listing start_page (strict1–1000000/default1), not a new
+configuration variable or remote filter. max_results/max_pages remain
+per-collection block ceilings, not whole multi-call campaign budgets.
+The authorized Hermes registration uses50 rows/one page per block;
+campaign request/time limits are enforced by its external consumer.
+Keep page_size fixed across calls and do not override a configured cap
+through tool arguments. A suffix terminal block is not complete_dataset.
+
 The public client offers lifecycle/context management, `aclose()` and `is_closed`, not an arbitrary HTTP interface. Private `_query()` validates integer page/limit filters and constructs the closed body. Products accepts either keyword-only product_id (strict integer 0–9223372036854775807, local ceiling, encoded as idsProdutos singleton) or product_mask (string1–256/nonblank/no Unicode C, passed unchanged as mascara), never both. Prices/stock reject both product-specific filters; no generic dictionary is accepted. ID-filtered pages reject any unrelated normalized identity atomically. Mask-filter equality is not assumed from the provider: search_product_by_code selects exact product_mask values locally while retaining partial/error state. Its mandatory request hook checks only method, fixed origin/Host and one of the three literal POST routes in the [API inventory](api-capabilities.md), without deserializing the body a second time. Real calls require separate authorization; startup/shutdown do not query ERP.
 
 Token goes only in `netone-auth-token`. HTTPX uses explicit certificate/hostname verification and its normal CA store, `trust_env=False`, no inherited proxies/netrc/CA overrides, no redirects, zero retries and one connection/keepalive. No caller-supplied transport/hooks/trace options are exposed. `Retry-After`, 429, timeout or a legacy retry setting never causes POST replay or method/route fallback.

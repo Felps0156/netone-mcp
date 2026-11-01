@@ -450,5 +450,5 @@ class AnalysisApplicationTests(ProductToolsTestCase):
         self.assertEqual({tool.name for tool in listed}, {
             'search_products', 'search_product_by_code', 'get_product_details',
             'search_product_by_ean', 'get_product_price', 'check_inventory',
-            'list_products',
+            'list_products', 'list_inventory',
         })

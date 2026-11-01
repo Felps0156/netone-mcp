@@ -7,8 +7,8 @@ Only three commercial query POST routes exist in the private client:
 | Method | Literal path | Internally constructed body |
 |---|---|---|
 | POST | `/app-web/api/v2/produto/reduzidos` | Integer page/limit; optionally idsProdutos=[strict integer] OR mascara=validated string, never both |
-| POST | `/app-web/api/v2/produto/precos` | Integer page/limit only |
-| POST | `/app-web/api/v2/produto/estoque` | Integer page/limit only |
+| POST | `/app-web/api/v2/produto/precos` | Integer page/limit; optionally idsProdutos=[strict integer] |
+| POST | `/app-web/api/v2/produto/estoque` | Integer page/limit; optionally idsReduzidos=[strict integer], provisional array choice under DEC-038 |
 
 `_query()` validates the typed inputs and constructs the closed body.
 The mandatory pre-transport hook checks method, exact configured origin,
@@ -18,6 +18,26 @@ that deliberately accesses the private HTTP client. No generic HTTP/SQL/
 command tool, wildcard route or model-selected destination exists.
 PUT/PATCH/DELETE and other POST/GET operations are not admitted. Login is
 not implemented even though its separate route is documented externally.
+
+DEC-038 admits only private numeric product_id on products/prices, reduced_id
+on stock and commercial product_mask on products (mutually exclusive with ID).
+IDs are strict built-in integers0–9223372036854775807. MCP price/stock inputs
+remain text: canonical ASCII numbers adapt losslessly; canonical overflow
+fails pre-send. Noncanonical IDs keep bounded local exact compatibility,
+explicit lookup_strategy and numeric_id_filter_unavailable, without stripping
+zeros/whitespace/signs. No response-failure fallback or alternate scalar attempt.
+Each filtered page must contain only the requested normalized identity;
+otherwise reject it atomically and preserve only earlier valid pages.
+
+Stock's public number schema still contradicts its array request example;
+the official linked Postman collection also uses array. That evidence supports
+the initial implementation choice, not definitive contract resolution or
+ongoing execution permission. After separate authorization, one array-filtered
+stock query and one product-ID-filtered prices query passed with HTTP200,
+same-response fidelity/JSON and completed cleanup. The single private-read/
+two-attempt budget is consumed and closed; earlier budgets are not renewed.
+This proves only the observed requests, not universal compatibility or
+supplier schema correction. See the DEC-038 runbook ledger.
 
 Read-only is a semantic policy, not a synonym for GET. The maintainer
 accepted official query descriptions and inspected request paths with a
@@ -37,7 +57,7 @@ request in the application. Stop if evidence contradicts intended query use.
 - Keep origin and credentials in operator-controlled process configuration.
   Do not paste secrets into chat, MCP arguments, examples or command lines.
   Preserve existing .env; never replace it with .env.example.
-- Seven strict extra-forbid MCP schemas accept only commercial inputs and
+- Eight strict extra-forbid MCP schemas accept only commercial inputs and
   bounded limits. No tenant, URL, method, headers, credential or currency
   argument is available to the model.
 - `.gitignore` excludes .env/.env.*, .venv, caches and logs, except the
@@ -62,6 +82,15 @@ bound all internal library/network buffers. Phase timeouts and request/
 whole-query deadlines coexist; pages and received rows are capped locally.
 Per-call budgets/filters do not mutate shared settings. Missing/changing/
 contradictory paging evidence cannot create a complete dataset.
+
+DEC-037 permits a strict start_page only on the two listings. Its effective
+page range is checked before HTTP; the query still emits only page/limit.
+Per-block limits do not bound a caller's whole multi-call campaign: the
+authorized external consumer must enforce its own total request/time cap.
+Safe next_page requires validated pagination without error, duplicate,
+conflict or no-progress warnings. A terminal suffix is not a complete
+dataset. A consumer must reconcile metadata/identities across calls and
+must not infer a stable snapshot, a deposit join or provider-side filtering.
 
 External cancellation propagates. Response and client cleanup each have a
 one-second AnyIO shield; expiration is bounded failure, not guaranteed
