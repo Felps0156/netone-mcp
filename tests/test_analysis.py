@@ -286,7 +286,7 @@ class AnalysisApplicationTests(ProductToolsTestCase):
             row(quantidade=2), row(quantidade=2),
         ])
         result = await function(self.client)
-        self.assertTrue(result['collection_complete'])
+        self.assertFalse(result['collection_complete'])
         self.assertFalse(result['complete_dataset'])
         self.assertEqual(result['records_analyzed'], 1)
         self.assertEqual(result['duplicate_records_excluded'], 0)

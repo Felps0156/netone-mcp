@@ -19,6 +19,27 @@ class ContinuationTests(ProductToolsTestCase):
             self.client._collect).parameters)
         return await self.client._collect('products', **kwargs)
 
+    async def test_terminal_duplicates_never_claim_dataset_completeness(self):
+        for operation in ('products', 'stock'):
+            for across_pages in (False, True):
+                with self.subTest(operation=operation, across_pages=across_pages):
+                    def pages(req):
+                        page = json.loads(req.content)['page']
+                        rows = ([row('same'), row(str(page))] if across_pages
+                                else [row('same'), row('same')])
+                        return response(rows, page, 2 if across_pages else 1)
+                    self.handler = pages
+                    result = await self.client._collect(
+                        operation, page_size=2, max_results=4, max_pages=2,
+                    )
+                    self.assertIn('duplicate_rows_removed', result.warnings)
+                    self.assertTrue(result.partial)
+                    self.assertEqual(result.status, 'partial')
+                    self.assertFalse(result.complete_dataset)
+                    self.assertFalse(result.block_complete)
+                    self.assertFalse(result.endpoint_exhausted)
+                    self.assertIsNone(result.next_page)
+
     async def test_terminal_suffix_is_not_a_complete_dataset(self):
         self.handler = lambda req: response([row('last')], 2, 2,
                                              totalElements=3)

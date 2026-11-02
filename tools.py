@@ -80,7 +80,11 @@ def _search_result(
 
 async def search_products(
     client: NetOneClient, query: str, max_results: int = 100,
-    *, max_items: int = 20,
+    *, max_items: int = 20, page_size: int | None = None,
+    max_pages: int | None = None, start_page: int = 1,
+    mode: Literal['literal', 'related'] = 'literal',
+    required_terms: tuple[str, ...] = (),
+    suggested_terms: tuple[str, ...] = (),
 ) -> dict[str, object]:
     """Filter a bounded product traversal, not a remote text-search result.
 
@@ -97,8 +101,28 @@ async def search_products(
             'Query must be 1 to 200 characters without controls.'
         )
     _validate_search_limits(max_results, max_items)
+    _validate_listing(client, max_results, page_size,
+                      client._max_pages if max_pages is None else max_pages,
+                      start_page)
+    if mode not in ('literal', 'related'):
+        raise ToolInputError('Search mode must be literal or related.')
+    if mode == 'related':
+        try:
+            return await search_products_expanded(
+                client, query, required_terms=required_terms,
+                suggested_terms=suggested_terms, max_results=max_results,
+                max_items=max_items, page_size=page_size,
+                max_pages=max_pages, start_page=start_page,
+            )
+        except ValueError:
+            raise ToolInputError('Related search terms are invalid.') from None
+    if required_terms or suggested_terms:
+        raise ToolInputError('Additional terms require related mode.')
     needle = query.strip().casefold()
-    result = await client._collect('products', max_results=max_results)
+    result = await client._collect(
+        'products', max_results=max_results, page_size=page_size,
+        max_pages=max_pages, start_page=start_page,
+    )
     items = tuple(
         item for item in result.items
         if any(
@@ -166,6 +190,8 @@ async def search_products_expanded(
     required_terms: tuple[str, ...] = (),
     suggested_terms: tuple[str, ...] = (),
     max_results: int = 100, max_items: int = 20,
+    page_size: int | None = None, max_pages: int | None = None,
+    start_page: int = 1,
 ) -> dict[str, object]:
     """Search a product term and separate textual restrictions, locally.
 
@@ -194,10 +220,10 @@ async def search_products_expanded(
                 terms.append((candidate, kind))
     patterns = [(term, kind, _lexical_pattern(term)) for term, kind in terms]
     required_patterns = [_lexical_pattern(term) for term in required]
-    result = await client._collect('products', max_results=max_results)
-    if 'duplicate_rows_removed' in result.warnings:
-        result = replace(result, status='partial', partial=True,
-                         complete_dataset=False)
+    result = await client._collect(
+        'products', max_results=max_results, page_size=page_size,
+        max_pages=max_pages, start_page=start_page,
+    )
     candidates: list[tuple[CatalogRecord, dict[str, object], int]] = []
     unverified = 0
     for item in result.items:

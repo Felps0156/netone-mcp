@@ -2,6 +2,19 @@
 
 ## Current boundary
 
+DEC-039 coordinator follow-up: independent review reproduced a consumer
+completeness-validation gap. A regression failed in seven flag/status subcases;
+the consumer now rejects inconsistent status/partial/complete_dataset before
+accepting a page, while preserving legitimate partial suffix blocks. Full
+coordinator regression:250 tests PASS in11.607s; pip check PASS.
+
+The maintainer separately authorized a new real reconciliation campaign:
+at most1200 requests,50 rows/page,45 minutes, stop on completion, limits,
+error or inconsistency; no retries or credential/ERP writes. A fresh local
+production stdio session owns one memory-only configuration load. The campaign
+is in progress; no operational completeness or budget renewal is claimed.
+The DEC-038 and earlier budget-closure statements below remain historical.
+
 PRD1.15.0 / DEC-038 records the directed commercial-query fix,229 offline tests
 and two separately authorized real filtered checks, both HTTP200/one matching
 row/nonpartial with source fidelity/JSON/completed cleanup accepted. One loader
@@ -56,6 +69,40 @@ Current contracts: [README](../README.md), [architecture](architecture.md),
 [security](security.md) and the [current API matrix](api-capabilities.md#current-implementation-matrix).
 
 Current behavior and limits: [configuration](configuration.md). Endpoint contracts, field mapping and unresolved provider ambiguities: [API inventory](api-capabilities.md). Canonical sprint IDs/states/sequence: [PRD section 28](../PRD.md#28-sprints-de-implementação-em-checklist).
+
+## Offline search and reconciliation — DEC-039
+
+The maintainer delegated implementation and synthetic verification without
+intermediate gates. No real configuration/ERP access, Git, installation,
+Hermes-registration change or protected AGENTS.md edit occurred in this slice.
+The operational campaign is separate and owned by the coordinator.
+
+- Root cause: collector partiality ignored duplicate_rows_removed while
+  block_complete already rejected it. Four products/stock terminal-duplicate
+  subcases failed before the shared invariant fix, then passed.
+- New bounded search options and MCP related-mode discovery initially failed
+  because the signature/schema lacked them. The implementation reuses the
+  expanded matcher with one collection; literal defaults remain unchanged.
+- External consumer's initial nine tests failed for its missing module. Further
+  RED regressions exposed discarded intrablock conflicts and a source-conflict
+  warning hidden by projection; both now preserve evidence without a balance.
+- The first full run had243 tests and one stale expectation in
+  test_collector_removed_duplicates_prevent_global_analysis: it expected
+  collection_complete=true for removed duplicates. It now expects false under
+  the corrected common contract; analytical partiality is retained.
+- Final command `.venv/Scripts/python.exe -B -m unittest discover -s tests -v`:
+  **249 tests PASS in11.725s**, including generic MCP session traversal,
+  strict related-mode options, actual synthetic stdio, unchanged eight-tool
+  discovery, global budgets, exact IDs, zero/null/missing/conflicts, metadata
+  drift, error preservation, cancellation and timeout. Safe HTTP diagnostic
+  codes appeared in three application tests, with no raw payload/exception.
+- `.venv/Scripts/python.exe -B -m pip check`: **No broken requirements found.**
+
+Usage/limits are in [README](../README.md#external-mcp-catalogstock-campaign).
+The consumer accepts an initialized local MCP session; it does not load config
+or own startup/cleanup. No real coverage, snapshot, deposit/freshness or Hermes
+hot-reload proof is claimed. Parent review and any separately authorized real
+campaign must use fresh local tool discovery, not a stale connected schema.
 
 ## Directed commercial-query fix — DEC-038
 

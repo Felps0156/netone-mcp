@@ -1,6 +1,6 @@
 # PRD — NetOne MCP: Consulta e Análise Read-Only
 
-> **Versão:** 1.15.0 — 31/10/2026 — DEC-038: consultas direcionadas de estoque/preço;229 testes offline PASS e duas consultas reais autorizadas HTTP200, com orçamento consumido/encerrado
+> **Versão:** 1.16.0 — 02/11/2026 — DEC-039: consistência da coleta, busca MCP configurável e consumidor externo de catálogo/estoque; validação somente offline
 > **Estado:** NOT_READY para V1; Sprints anteriores mantêm seus escopos/evidências e a ressalva DEC-027. S13.01–20 executadas/evidenciadas, sem declarar aceite final da sprint enquanto faltarem critérios globais/G6. Regressão offline e instalação limpa195 PASS; leitura privada/consulta única MCP autorizadas separadamente, HTTP200/um item parcial/fidelidade/JSON/cleanup aceitos; orçamento consumido e encerrado. Revisão independente sem Critical/Important. Atualização final de AGENTS aplicada pelo mecanismo normal após pedido explícito de reenvio; timeout anterior resolvido, sem bypass. Sete tools MCP e G3/G4 delimitados preservados. Sem Git/publicação ou renovação de orçamento anterior.
 > **Regra fundamental:** nenhuma operação pode alterar dados comerciais do ERP.
 
@@ -27,7 +27,40 @@ autoriza banco/sync, preço/estoque adicional, MCP ou Sprints 8+.
 
 Histórico integral: [PRD 1.1.6](docs/history/PRD-1.1.6.md) e [runbook até 1.1.6](docs/history/runbook-through-1.1.6.md). Esses arquivos preservam decisões/evidências e regras da época, não políticas atuais. O timeout anterior da edição protegida foi resolvido, conforme registro no runbook.
 
-## Extensão atual — DEC-038: estoque/preço por identidade
+## Extensão atual — DEC-039: busca e reconciliação offline
+
+O mantenedor solicitou os três ajustes e delegou escolhas/execução sem gates
+intermediários. Este recorte autoriza implementação e testes sintéticos, não
+ERP, .env/configuração privada, Git, instalação ou cadastro Hermes. Oito tools,
+proteções, pins, checklists históricos e V1 NOT_READY permanecem inalterados.
+As restrições anteriores ao modo lexical MCP são supersedidas somente aqui.
+
+- Coletor: duplicatas, conflitos e qualquer bloco inseguro impedem simultaneamente
+  complete_dataset e endpoint_exhausted; partial deriva do mesmo invariante.
+- search_products mantém substring/casefold literal padrão e max_results100
+  (linhas recebidas)/max_items20. Adiciona page_size/null, max_pages/null
+  (padrão usa teto configurado), start_page1 e mode literal|related. Tipos e
+  limites iguais às listagens; configuração continua limitadora. Related reutiliza
+  a função lexical existente, required_terms/suggested_terms até20 cada, uma
+  passagem, sem relaxar restrições, filtro remoto novo ou busca semântica.
+- mcp_consumer.collect_catalog_inventory recebe sessão MCP inicializada, sem
+  loader/transporte próprio, persistência ou tool nova. Usa só list_products e
+  list_inventory, uma página fixa por chamada, desde1 em cada endpoint. Tetos
+  globais explícitos de chamadas/páginas/linhas/tempo; parar em erro/anomalia,
+  sem retry. Comparar totais/progresso entre blocos antes de concluir percurso.
+- Join somente na memória externa por reduced_id textual exato; nenhuma soma,
+  coerção de zeros ou equivalência com product_id. Preservar registros conflitantes
+  sem saldo confirmado; ausente sob corte é unknown, ausência em stock concluído
+  é not_found (não zero); null/ausente nunca vira quantidade. Completude de coleta
+  separada da suficiência de quantidade, sem snapshot/cobertura ERP global.
+- Hermes usa os novos argumentos tipados da tool existente; campanhas reutilizam
+  sessão/adaptador MCP externo autorizado. Nenhuma instalação/alteração do Hermes
+  ou prova ERP decorre dos testes genéricos MCP/stdio sintéticos.
+
+Plano curto: [busca/reconciliação](docs/superpowers/plans/2026-11-02-bounded-search-reconciliation.md).
+Comandos e resultados da regressão offline estão registrados no runbook.
+
+## Extensão anterior — DEC-038: estoque/preço por identidade
 
 Na autorização inicial, o mantenedor solicitou a correção de check_inventory/get_product_price e
 delegou escolhas e execução sem checkpoints intermediários. Autoriza este

@@ -9,6 +9,13 @@ inventing commercial conclusions. It must never modify commercial data.
 
 **NOT_READY for V1. Eight bounded read-only MCP tools are registered.**
 
+PRD1.16.0 / DEC-039 adds explicit search pagination and optional related lexical
+matching to the existing `search_products` tool, plus an external memory-only
+MCP catalog/stock consumer. Literal defaults and the eight-tool registry stay
+compatible. Duplicate terminal rows now force consistent partial/incomplete
+flags in every collector consumer. This extension has offline evidence only;
+no ERP/configuration access or Hermes registration change was performed.
+
 PRD1.15.0 / DEC-038 fixes canonical numeric price/stock identity lookups
 using closed singleton-ID filters. After separate authorization, both actual
 MCP consumers passed one real page1/limit20 query each: HTTP200, one matching
@@ -23,6 +30,61 @@ The maintainer approved this extension and a separate bounded operational
 campaign; execution evidence is recorded in the runbook. Earlier Sprint13
 and seven-tool/no-new-query statements below are historical checkpoints,
 not the current extension's interface or authorization.
+
+### External MCP catalog/stock campaign
+
+`mcp_consumer.py` is a reusable **consumer**, not a ninth server tool. An
+initialized SDK MCP session or an adapter with asynchronous
+`call_tool(name, arguments)` returning `CallToolResult` can be supplied by an
+authorized host, including a Hermes-side integration. It never discovers
+credentials, loads `.env`, opens a transport, persists data or changes Hermes.
+The caller owns authorization, session startup/cleanup and safe disclosure.
+
+```python
+from mcp_consumer import collect_catalog_inventory
+
+# session is an already initialized, operator-authorized MCP ClientSession.
+result = await collect_catalog_inventory(
+    session, page_size=50, max_calls=200, max_pages=200,
+    max_rows=10_000, timeout_seconds=60,
+)
+```
+
+These are global ceilings across **both** endpoints, not promised coverage or
+permission to query. Defaults are shown above. All are strict positive integers;
+page_size is at most50, calls/pages/rows at most1000000, time at most3600 seconds.
+Each call uses only `list_products` or `list_inventory`, `max_pages=1`, a fixed
+page_size and matching row budget. Server configuration caps still apply. If
+the configured row cap is smaller, choose a smaller page_size; the consumer
+stops on the tool's safe input error rather than retrying or changing offsets.
+It reserves a full page before a call, starts each endpoint at1, validates
+contiguous progress/stable totals, and stops on the first anomaly/error/ceiling.
+It never issues a speculative page after a known terminal block or a separate
+request per catalog identity. Cancellation propagates; timeout returns partial.
+The caller must cancel/close its session when appropriate; the module does not
+own the SDK transport or claim remote cancellation completion.
+
+`catalog`/`inventory` retain source records and accepted progress; top-level
+`rows_received`/`pages_fetched` include structurally reported fetched work even
+when a page is rejected, while per-endpoint counters describe accepted pages.
+Exact `reduced_id` strings are the sole join key: `001` is not `1`, and neither
+is a product_id or business code. `items` has one entry per catalog reduced ID
+with `catalog_records`, `inventory_records`, `quantity` and `stock_status`:
+positive/zero/negative/unknown/not_found/conflict. No quantities are summed.
+Missing stock in an unfinished traversal is unknown; a missing row after a
+complete visible stock traversal is not_found, **not zero**. Null/absent quantity
+is unknown. Conflicting records remain available but have no confirmed balance;
+a block-level source-conflict warning conservatively excludes all identities
+in that block because per-row conflict provenance is unavailable. Identical
+rows are deduplicated with a warning and make coverage partial. Stock-only
+identities appear in `inventory_only_ids` and the inventory source records.
+
+`collection_complete` requires both visible endpoint traversals to finish
+safely from1. `partial` also covers unknown/conflicting reconciled quantities;
+`complete_dataset` requires both coverage and sufficient reconciled data.
+No snapshot, ERP-global visibility, semantic-category coverage, deposit identity,
+freshness, availability or delivery guarantee follows. A budget-limited result
+is deliberately delivered as partial. Do not persist commercial output by default.
 
 ### Resumable listing blocks
 
@@ -129,6 +191,7 @@ do not prove global coverage, snapshot, permissions or general readiness.
 - `client.py`: HTTPX authentication, literal allowlist, bounded streaming/pagination and safe errors.
 - `catalog.py`: immutable normalized records consumed by private collection.
 - `tools.py`: bounded commercial consumers with distinct search inspection/output limits, called by MCP adapters without exposing the private client or settings.
+- `mcp_consumer.py`: external read-only MCP traversal and exact in-memory catalog/stock reconciliation; no transport/configuration ownership or persistence.
 - `analysis.py`: immutable identity preparation and pure aggregation for the two application-only analysis consumers below; no framework or I/O.
 
 IDs/SKU/EAN preserve leading zeros. Decimal prices/quantities serialize as strings; absent/null/zero remain distinct. The projection includes identity, description, classification, EAN, retail/wholesale source prices and tables, quantity, notes, optional source block flag and raw last-change data. Photos, color, size and discount calculations are excluded. Pagination is bounded and reports incomplete/conflicting data as partial; completeness is not an ERP-wide snapshot.
@@ -240,8 +303,9 @@ Read-only hints are advisory, not credentials or a guarantee of server
 internals, repeat safety, availability or delivery. API text is data,
 never instructions.
 
-Technical search_product_by_sku and search_products_expanded are excluded:
-neither has its own real-function acceptance. No analysis/write tool,
+Technical search_product_by_sku remains excluded from MCP under DEC-027.
+DEC-039 exposes lexical search through mode=related on search_products, not
+as a separate search_products_expanded tool. No analysis/write tool,
 arbitrary HTTP/SQL or settings selection is exposed. Existing application
 functions remain available independently, with their prior limitations.
 
@@ -489,7 +553,20 @@ cap can inspect page1/limit50 and page2/limit50 and find a record at row51;
 max_results20 cannot. A config cap10 always prevails. max_items1 limits
 output without changing the inspection budget. A partial miss is inconclusive.
 
-### Expanded lexical search (application only, not an MCP mode)
+### Expanded lexical search (application and optional MCP mode)
+
+Under DEC-039, Hermes and other MCP clients may call the same `search_products`
+tool with mode='related', query='manopla LS2', max_results=100, max_items=20,
+page_size=50 and max_pages=2. required_terms/suggested_terms accept lists of
+at most20 strings1–200, nonblank/no controls (also nonempty after lexical
+normalization). They require related mode. Omit mode to keep literal matching.
+start_page defaults to1 (strict1–1000000); max_pages defaults to null (configured
+ceiling), or strict1–100; page_size defaults to null (min50/effective row cap),
+or strict1–1000 fitting the effective budget. All configured caps prevail;
+suffix searches remain partial and terminal metadata prevents extra requests.
+These pagination options also work in literal mode. The existing application
+expanded helper accepts them too. No remote text filter or new tool is added.
+
 
 `await tools.search_products_expanded(client, 'manopla LS2', max_results=100,
 max_items=20)` may also find a textual `Punho LS2`, using only the reviewed
@@ -506,7 +583,8 @@ Internal punctuation/metacharacters are literal. Source strings and exact
 codes remain unchanged. Direct matches precede reviewed/suggested matches,
 with aligned per-item provenance; missing description restrictions are counted
 as unverified. Suggestions never enter the reviewed list automatically.
-MCP search_products remains literal; no new tool or lexical mode is released.
+MCP search_products keeps literal defaults; related mode is explicit and
+shares the same single bounded collection.
 
 DEC-038 implements the directed numeric filters, while retaining lossless
 legacy text lookup. O5 consistently documents ID arrays; O4 still conflicts

@@ -95,7 +95,10 @@ class MCPStdioTests(unittest.IsolatedAsyncioTestCase):
     async def test_generic_stdio_default_search_reaches_second_page(self):
         await self.exercise(search=True)
 
-    async def exercise(self, search=False):
+    async def test_generic_stdio_related_search_uses_one_shared_pass(self):
+        await self.exercise(search=True, related=True)
+
+    async def exercise(self, search=False, related=False):
         fixture = Path(__file__).with_name('mcp_stdio_fixture.py').resolve()
         # The runtime's TMPDIR is managed Hermes scratch, not system temp.
         with tempfile.TemporaryFile(mode='w+', encoding='utf-8') as stderr:
@@ -124,7 +127,11 @@ class MCPStdioTests(unittest.IsolatedAsyncioTestCase):
                                              rejected.model_dump_json())
                         reply = await session.call_tool(
                             'search_products' if search else 'list_products',
-                            {'query': 'Synthetic'} if search else {'max_results': 1},
+                            ({'query': 'manopla', 'mode': 'related',
+                              'suggested_terms': ['Synthetic', 'Synthetic'],
+                              'max_pages': 2, 'page_size': 50} if related else
+                             {'query': 'Synthetic'}) if search else
+                            {'max_results': 1},
                         )
                         self.assertFalse(reply.isError)
                         data = reply.structuredContent
@@ -138,6 +145,10 @@ class MCPStdioTests(unittest.IsolatedAsyncioTestCase):
                         self.assertIsNone(item['ean'])
                         self.assertEqual(json.loads(reply.content[0].text),
                                          data)
+                        if related:
+                            self.assertEqual(data['matches'][0]['match_type'],
+                                             'suggested')
+                            self.assertEqual(len(data['search_terms']), 3)
                         if search:
                             self.assertEqual(data['rows_received'], 51)
                             self.assertEqual(data['pages_fetched'], 2)

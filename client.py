@@ -460,10 +460,7 @@ class NetOneClient:
             last_page + 1 if block_complete and not complete
             and last_page is not None and last_page < 1_000_000 else None
         )
-        partial = (
-            start_page != 1 or not complete
-            or 'conflicting_rows_preserved' in warnings
-        )
+        partial = start_page != 1 or not complete or not block_complete
         status = (
             'partial' if partial else 'found' if items else 'not_found'
         )

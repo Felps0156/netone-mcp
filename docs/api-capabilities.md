@@ -2,6 +2,15 @@
 
 ## Current implementation matrix
 
+PRD1.16.0 / DEC-039 adds search pagination and optional related lexical mode
+on the same search_products tool (literal defaults preserved). Typed terms
+share one bounded local traversal, never a new remote filter or semantic proof.
+The external mcp_consumer.py uses only list_products/list_inventory to validate
+cross-block coverage and reconcile exact reduced_id strings in memory under
+global call/page/row/time ceilings. Duplicates now consistently force collector
+partiality and prevent dataset completeness. Eight tools and three HTTP routes
+remain; this extension has synthetic offline evidence only, no new ERP budget.
+
 PRD1.15.0 / DEC-038 adds directed numeric price/stock identity filters to
 the same three literal query routes, with no public signature/default or
 registry change. After separately authorized real checks, both filter paths
